@@ -22,6 +22,14 @@ interface Props {
   total: number;
   demo: boolean;
   cancelled?: boolean;
+  /** Ör. "KDV tevkifatı 2/10 (624)". Boşsa tevkifat yok. */
+  withholdingLabel?: string;
+  withholdingAmount?: number;
+  payableAmount?: number;
+  /** "YALNIZ: ... TÜRK LİRASI" */
+  amountInWords?: string;
+  iban?: string;
+  bankName?: string;
 }
 
 /** Fatura belge önizlemesi. Demo faturalar açıkça işaretlenir. */
@@ -71,13 +79,32 @@ export const InvoicePreview = memo(function InvoicePreview(p: Props) {
         <View style={styles.totals}>
           <Row label="Ara toplam" value={formatCurrency(p.subtotal, { decimals: 2 })} />
           <Row label={`KDV (%${p.vatRate})`} value={formatCurrency(p.vatAmount, { decimals: 2 })} />
+          {p.withholdingLabel ? (
+            <>
+              <Row label="Vergiler dahil toplam" value={formatCurrency(p.total, { decimals: 2 })} />
+              <Row label={p.withholdingLabel} value={`−${formatCurrency(p.withholdingAmount ?? 0, { decimals: 2 })}`} />
+            </>
+          ) : null}
           <View style={styles.grand}>
-            <Text variant="subheading" tone="inverse">Genel toplam</Text>
+            <Text variant="subheading" tone="inverse">{p.withholdingLabel ? 'Ödenecek tutar' : 'Genel toplam'}</Text>
             <Text variant="subheading" tone="inverse" style={[styles.num, p.cancelled && { textDecorationLine: 'line-through' }]}>
-              {formatCurrency(p.total, { decimals: 2 })}
+              {formatCurrency(p.withholdingLabel ? (p.payableAmount ?? p.total) : p.total, { decimals: 2 })}
             </Text>
           </View>
         </View>
+
+        {p.amountInWords || p.iban ? (
+          <View style={styles.note}>
+            <Text variant="caption" tone="tertiary">Açıklama</Text>
+            {p.amountInWords ? <Text variant="label">{p.amountInWords}</Text> : null}
+            {p.iban ? (
+              <Text variant="bodySmall" tone="secondary">
+                IBAN: {p.iban}
+                {p.bankName ? ` (${p.bankName})` : ''}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
       </View>
       {p.demo ? (
         <View pointerEvents="none" style={styles.stamp}>
@@ -108,6 +135,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   grand: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.ink, padding: spacing.md, borderRadius: radius.sm, marginTop: spacing.xs },
   num: { fontVariant: ['tabular-nums'] },
+  note: { gap: 2, padding: spacing.md, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong },
   stamp: { position: 'absolute', top: '42%', left: 0, right: 0, alignItems: 'center', transform: [{ rotate: '-18deg' }] },
   stampText: { fontSize: 64, fontWeight: '800', letterSpacing: 12, color: 'rgba(11,11,12,0.05)' },
 });

@@ -164,6 +164,9 @@ export interface ApiInvoiceListItem {
   description: string | null;
   customerEmail: string | null;
   jobCount: number;
+  withholdingCode: string | null;
+  withholdingAmount: number;
+  payableAmount: number;
 }
 
 export interface ApiInvoiceDetail extends Omit<ApiInvoiceListItem, 'firstJobId' | 'firstJobNumber' | 'description' | 'jobCount'> {
@@ -172,6 +175,12 @@ export interface ApiInvoiceDetail extends Omit<ApiInvoiceListItem, 'firstJobId' 
   lastError: string | null;
   items: { jobId: string; jobNumber: string; jobDate: string; storeName: string; description: string; lineTotal: number }[];
   email: { recipientEmail: string; status: 'Pending' | 'Sent' | 'Failed'; sentAt: string | null } | null;
+  withholdingName: string | null;
+  withholdingRate: number;
+  amountInWords: string;
+  iban: string | null;
+  bankName: string | null;
+  requiresSmsSignature: boolean;
 }
 
 export interface ApiActiveJobLocation {
@@ -417,6 +426,9 @@ export function invoiceFromApiList(i: ApiInvoiceListItem): Invoice {
     // Liste yanıtında e-posta durumu yoktur; detay açıldığında güncellenir.
     email: { to: i.customerEmail ?? '', status: i.status === 'Issued' ? 'queued' : 'not_sent' },
     externalId: i.eArchiveInvoiceNumber ?? undefined,
+    withholdingCode: i.withholdingCode ?? undefined,
+    withholdingAmount: i.withholdingAmount ?? 0,
+    payableAmount: i.payableAmount ?? i.grandTotal,
     createdAt: i.createdAt,
   };
 }
@@ -447,6 +459,15 @@ export function invoiceFromApiDetail(i: ApiInvoiceDetail): Invoice {
       : { to: i.customerEmail ?? '', status: 'not_sent' },
     externalId: i.eArchiveInvoiceNumber ?? undefined,
     ettn: i.eArchiveReference ?? undefined,
+    withholdingCode: i.withholdingCode ?? undefined,
+    withholdingName: i.withholdingName ?? undefined,
+    withholdingRate: i.withholdingRate,
+    withholdingAmount: i.withholdingAmount,
+    payableAmount: i.payableAmount,
+    amountInWords: i.amountInWords,
+    iban: i.iban ?? undefined,
+    bankName: i.bankName ?? undefined,
+    requiresSmsSignature: i.requiresSmsSignature,
     createdAt: i.createdAt,
   };
 }

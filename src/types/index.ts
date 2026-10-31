@@ -219,6 +219,19 @@ export interface Invoice {
   vatAmount: number;
   total: number;
   email: { to: string; status: InvoiceEmailStatus; sentAt?: ISODateTime };
+  /** KDV tevkifatı (kod yoksa tevkifat yok). Oran KDV'nin yüzdesidir: 2/10 → 20. */
+  withholdingCode?: string;
+  withholdingName?: string;
+  withholdingRate?: number;
+  withholdingAmount?: number;
+  /** Ödenecek tutar: genel toplam − tevkifat. */
+  payableAmount?: number;
+  /** "YALNIZ: ... TÜRK LİRASI" */
+  amountInWords?: string;
+  iban?: string;
+  bankName?: string;
+  /** GİB portalında taslak; kesilmesi için SMS koduyla imzalanmalı. */
+  requiresSmsSignature?: boolean;
   /** e-Arşiv entegrasyonunda dolacak alanlar. */
   externalId?: string;
   ettn?: string;
@@ -237,7 +250,13 @@ export interface InvoiceItem {
 export type InvoiceInput = Pick<Invoice, 'issueDate' | 'description' | 'subtotal' | 'vatRate'> & {
   jobId?: string;
   jobIds?: string[];
+  /** KDV tevkifat kodu; null: tevkifat yok. */
+  withholdingCode?: string | null;
+  /** Boşsa firmanın varsayılan IBAN'ı kullanılır. */
+  iban?: string;
 };
+
+export type { WithholdingType } from '@/utils/invoiceText';
 
 export interface InvoiceFilter {
   customerId?: string;

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { IN_PROGRESS_STATUSES, isInProgress } from '@/constants/jobStatus';
-import { customerService, dashboardService } from '@/services';
+import { customerService, dashboardService, invoiceService } from '@/services';
 import { errorMessage } from '@/services/errors';
 import { matchesJobFilter } from '@/services/jobService';
 import { useData } from '@/store';
-import type { CustomerAddress, JobFilter, MonthRevenue, StopType, TransportJob, User, Vehicle } from '@/types';
+import type { CustomerAddress, JobFilter, MonthRevenue, StopType, TransportJob, User, Vehicle, WithholdingType } from '@/types';
 import { todayISO } from '@/utils/format';
 
 export const useJobs = () => useData((s) => s.jobs);
@@ -91,6 +91,11 @@ export function useMonthRevenue(year: number, month: number): RemoteState<MonthR
 /** Müşterinin önceki işlerinde kullanılan adresler (koordinatlarıyla). */
 export function useCustomerAddresses(customerId: string | undefined, type?: StopType): RemoteState<CustomerAddress[]> {
   return useRemote(customerId ? `${customerId}-${type ?? 'all'}` : null, () => customerService.addresses(customerId!, type));
+}
+
+/** KDV tevkifat kodları (API modunda sunucudan). */
+export function useWithholdingTypes(): RemoteState<WithholdingType[]> {
+  return useRemote('withholding-types', () => invoiceService.withholdingTypes());
 }
 
 export interface DashboardStats {

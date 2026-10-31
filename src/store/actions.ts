@@ -132,6 +132,22 @@ export const invoiceActions = {
     }
     return inv;
   },
+  sendSignSms: (id: string) => eArchiveGateway.sendSignSms(id),
+  /** SMS koduyla imzalar. İşler yalnızca GİB imzayı onaylarsa "Faturalandırıldı" olur. */
+  async sign(id: string, operationId: string, code: string) {
+    const inv = await eArchiveGateway.sign(id, operationId, code);
+    const ids = new Set(inv.jobIds?.length ? inv.jobIds : [inv.jobId]);
+    set((s) => ({
+      invoices: upsert(s.invoices, inv),
+      jobs: inv.status === 'earsiv_issued' ? s.jobs.map((j) => (ids.has(j.id) ? { ...j, billingStatus: 'invoiced' as const } : j)) : s.jobs,
+    }));
+    return inv;
+  },
+  async discardDraft(id: string) {
+    const inv = await eArchiveGateway.discardDraft(id);
+    set((s) => ({ invoices: upsert(s.invoices, inv) }));
+    return inv;
+  },
   async createDemo(input: InvoiceInput, actorId: string) {
     const inv = await invoiceService.createDemo(input, actorId);
     const jobIdSet = new Set(inv.jobIds?.length ? inv.jobIds : [inv.jobId]);

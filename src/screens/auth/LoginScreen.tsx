@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandMark } from '@/components/BrandMark';
 import { Button, Input, Text } from '@/components/ui';
+import { APP_CONFIG } from '@/constants/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { errorMessage } from '@/services/errors';
 import { colors, hitSlop, radius, spacing } from '@/theme';
@@ -111,26 +112,28 @@ export default function LoginScreen() {
           <Button label="Giriş yap" size="lg" onPress={submit} loading={loading} fullWidth />
         </View>
 
-        <View style={styles.demo}>
-          <Text variant="caption" tone="inverseMuted" align="center">Demo hesaplar · şifre 123456</Text>
-          <View style={styles.demoRow}>
-            {DEMO_ACCOUNTS.map((a) => (
-              <Pressable
-                key={a.email}
-                onPress={() => {
-                  setEmail(a.email);
-                  setPassword('123456');
-                  setErrors({});
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${a.label} demo hesabını doldur`}
-                style={({ pressed }) => [styles.demoChip, pressed && { opacity: 0.7 }]}>
-                <Text variant="label" tone="inverse">{a.label}</Text>
-                <Text variant="bodySmall" tone="inverseMuted">{a.email}</Text>
-              </Pressable>
-            ))}
+        {APP_CONFIG.dataSource === 'mock' ? (
+          <View style={styles.demo}>
+            <Text variant="caption" tone="inverseMuted" align="center">Demo hesaplar · şifre 123456</Text>
+            <View style={styles.demoRow}>
+              {DEMO_ACCOUNTS.map((a) => (
+                <Pressable
+                  key={a.email}
+                  onPress={() => {
+                    setEmail(a.email);
+                    setPassword('123456');
+                    setErrors({});
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${a.label} demo hesabını doldur`}
+                  style={({ pressed }) => [styles.demoChip, pressed && { opacity: 0.7 }]}>
+                  <Text variant="label" tone="inverse">{a.label}</Text>
+                  <Text variant="bodySmall" tone="inverseMuted">{a.email}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
+        ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );

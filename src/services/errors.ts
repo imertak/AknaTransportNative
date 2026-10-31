@@ -6,6 +6,8 @@ export type ServiceErrorCode =
   | 'conflict'
   | 'not_implemented'
   | 'network'
+  | 'unavailable'
+  | 'session_expired'
   | 'unknown';
 
 /** Servis katmanından ekranlara taşınan, kullanıcıya gösterilebilir hata. */

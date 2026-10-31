@@ -4,7 +4,7 @@ import { Badge, type BadgeTone } from '@/components/ui';
 import type { Invoice, InvoiceStatus } from '@/types';
 
 export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
-  demo_draft: 'Demo taslak',
+  demo_draft: 'Taslak',
   demo_created: 'Demo',
   cancelled: 'İptal',
   earsiv_pending: 'e-Arşiv bekliyor',

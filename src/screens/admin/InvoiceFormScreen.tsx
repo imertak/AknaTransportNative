@@ -15,6 +15,8 @@ import { invoiceActions } from '@/store';
 import { colors, radius, spacing } from '@/theme';
 import { formatAmountInput, formatCurrency, formatDate, parseAmount, todayISO } from '@/utils/format';
 
+const apiMode = APP_CONFIG.dataSource === 'api';
+
 export default function InvoiceFormScreen() {
   const { jobId: presetJob } = useLocalSearchParams<{ jobId?: string }>();
   const user = useCurrentUser();
@@ -66,7 +68,7 @@ export default function InvoiceFormScreen() {
     setErrors(e);
     if (Object.keys(e).length) return;
     const inv = await run(() => invoiceActions.createDemo({ jobId, issueDate, description: description.trim(), subtotal: amount, vatRate }, user.id), {
-      success: 'Demo fatura oluşturuldu.',
+      success: apiMode ? 'Taslak fatura oluşturuldu.' : 'Demo fatura oluşturuldu.',
     });
     if (inv) router.replace(routes.invoice(inv.id));
   };
@@ -84,12 +86,14 @@ export default function InvoiceFormScreen() {
 
   return (
     <Screen>
-      <NavHeader title="Fatura oluştur" subtitle="Demo fatura" />
+      <NavHeader title="Fatura oluştur" subtitle={apiMode ? 'Taslak fatura' : 'Demo fatura'} />
       <ScrollContent keyboard>
         <View style={styles.notice}>
           <Info size={18} color={colors.text} />
           <Text variant="bodySmall" style={{ flex: 1 }}>
-            Bu aşamada oluşturulan faturalar demo belgedir; resmi e-Arşiv faturası kesilmez ve müşteriye e-posta gönderilmez. Entegrasyon API aşamasında etkinleşecektir.
+            {apiMode
+              ? 'Fatura taslak olarak oluşturulur ve resmi değildir. Tutar işin fiyatından hesaplanır. Resmi e-Arşiv faturası, sağlayıcı bağlandıktan sonra fatura detayındaki "e-Arşiv\'e gönder" ile kesilir ve müşteriye e-postayla gönderilir.'
+              : 'Bu aşamada oluşturulan faturalar demo belgedir; resmi e-Arşiv faturası kesilmez ve müşteriye e-posta gönderilmez. Entegrasyon API aşamasında etkinleşecektir.'}
           </Text>
         </View>
 
@@ -98,7 +102,17 @@ export default function InvoiceFormScreen() {
             <SelectField label="İş" required searchable options={jobOptions} value={jobId || null} onChange={selectJob} error={errors.job} placeholder="Tamamlanan iş seçin" />
             <DateField label="Fatura tarihi" required value={issueDate} onChange={setIssueDate} />
             <Input label="Açıklama" required multiline value={description} onChangeText={setDescription} error={errors.description} />
-            <Input label="Ara toplam (KDV hariç)" required keyboardType="decimal-pad" suffix="TL" value={subtotal} onChangeText={(v) => setSubtotal(formatAmountInput(v))} error={errors.subtotal} />
+            <Input
+              label="Ara toplam (KDV hariç)"
+              required
+              keyboardType="decimal-pad"
+              suffix="TL"
+              value={subtotal}
+              onChangeText={(v) => setSubtotal(formatAmountInput(v))}
+              error={errors.subtotal}
+              editable={!apiMode}
+              hint={apiMode ? 'İşin fiyatından alınır. Değiştirmek için iş kaydını düzenleyin.' : undefined}
+            />
             <View style={{ gap: spacing.xs + 2 }}>
               <Text variant="label" tone="secondary">KDV oranı</Text>
               <SegmentedControl value={String(vatRate)} onChange={(v) => setVatRate(Number(v))} options={APP_CONFIG.vatRates.map((r) => ({ value: String(r), label: `%${r}` }))} />
@@ -109,7 +123,7 @@ export default function InvoiceFormScreen() {
         {job ? (
           <Section title="Önizleme">
             <InvoicePreview
-              invoiceNo="DEMO-…"
+              invoiceNo={apiMode ? 'TASLAK' : 'DEMO-…'}
               issueDate={issueDate}
               jobNo={job.jobNo}
               customer={customer}
@@ -126,7 +140,7 @@ export default function InvoiceFormScreen() {
       </ScrollContent>
       <BottomBar>
         <Button label="Vazgeç" variant="secondary" onPress={() => router.back()} style={{ flex: 1 }} />
-        <Button label="Demo fatura oluştur" onPress={submit} loading={pending} style={{ flex: 2 }} />
+        <Button label={apiMode ? 'Taslak fatura oluştur' : 'Demo fatura oluştur'} onPress={submit} loading={pending} style={{ flex: 2 }} />
       </BottomBar>
     </Screen>
   );

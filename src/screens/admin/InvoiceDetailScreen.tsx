@@ -1,14 +1,16 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ban, ClipboardList, Mail, Printer, Send, Share2, ShieldCheck } from 'lucide-react-native';
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { InvoicePreview } from '@/components/invoices/InvoicePreview';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
+import { APP_CONFIG } from '@/constants/config';
 import { Button, Card, EmptyState, InfoRow, NavHeader, Screen, ScrollContent, Section } from '@/components/ui';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useCustomer, useInvoice } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
-import { eArchiveGateway, reportService } from '@/services';
+import { reportService } from '@/services';
 import { invoiceActions } from '@/store';
 import { spacing } from '@/theme';
 import type { InvoiceEmailStatus } from '@/types';
@@ -30,6 +32,11 @@ export default function InvoiceDetailScreen() {
   const print = useAsyncAction();
   const action = useAsyncAction();
 
+  // Liste yanıtında e-posta/e-Arşiv ayrıntıları yoktur; detay açılınca fatura tazelenir.
+  useEffect(() => {
+    if (id) invoiceActions.refresh(id).catch(() => {});
+  }, [id]);
+
   if (!invoice) {
     return (
       <Screen>
@@ -43,6 +50,16 @@ export default function InvoiceDetailScreen() {
 
   const isDemo = invoice.mode === 'demo';
   const cancelled = invoice.status === 'cancelled';
+  const eArchiveLabel =
+    invoice.status === 'earsiv_failed'
+      ? 'Gönderim başarısız · tekrar deneyebilirsiniz'
+      : isDemo
+        ? APP_CONFIG.dataSource === 'api'
+          ? 'Kesilmedi · taslak belge'
+          : 'Bağlı değil · demo belge'
+        : invoice.ettn
+          ? `ETTN ${invoice.ettn}`
+          : 'Gönderim bekleniyor';
 
   const cancel = async () => {
     const ok = await confirm({ title: 'Faturayı iptal et', message: `${invoice.invoiceNo} iptal edilecek ve iş yeniden faturalanabilir hale gelecek.`, confirmLabel: 'İptal et', destructive: true });
@@ -75,7 +92,7 @@ export default function InvoiceDetailScreen() {
         <Section title="Durum">
           <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
             <InfoRow icon={ShieldCheck} label="Fatura türü" value={<InvoiceStatusBadge invoice={invoice} />} />
-            <InfoRow icon={ShieldCheck} label="e-Arşiv" value={isDemo ? 'Bağlı değil · demo belge' : invoice.ettn ? `ETTN ${invoice.ettn}` : 'Gönderim bekleniyor'} />
+            <InfoRow icon={ShieldCheck} label="e-Arşiv" value={eArchiveLabel} />
             <InfoRow icon={Mail} label="E-posta" value={`${EMAIL_LABEL[invoice.email.status]}${invoice.email.to ? ` · ${invoice.email.to}` : ''}`} />
             <InfoRow icon={ClipboardList} label="İş" value={invoice.jobNo} onPress={() => router.push(routes.job(invoice.jobId))} />
             <InfoRow label="Oluşturulma" value={formatDateTime(invoice.createdAt)} last />
@@ -88,8 +105,8 @@ export default function InvoiceDetailScreen() {
             icon={Send}
             variant="secondary"
             loading={action.pending}
-            onPress={() => action.run(() => eArchiveGateway.issue(invoice.id))}
-            accessibilityHint="e-Arşiv entegrasyonu API aşamasında etkinleşecek"
+            onPress={() => action.run(() => invoiceActions.issue(invoice.id), { success: 'Fatura e-Arşiv sağlayıcısına gönderildi.' })}
+            accessibilityHint="Faturayı e-Arşiv sağlayıcısı üzerinden resmi faturaya dönüştürür"
           />
         ) : null}
         {!cancelled ? <Button label="Faturayı iptal et" variant="danger" icon={Ban} onPress={cancel} /> : null}

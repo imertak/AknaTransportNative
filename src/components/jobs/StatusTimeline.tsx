@@ -20,7 +20,7 @@ export const StatusTimeline = memo(function StatusTimeline({ events, users }: { 
           <View style={styles.body}>
             <Text variant="subheading" tone={i === 0 ? 'default' : 'secondary'}>{JOB_STATUS_LABEL[e.status]}</Text>
             <Text variant="bodySmall" tone="tertiary">
-              {formatDateTime(e.at)} · {users.get(e.byUserId)?.fullName ?? 'Sistem'}
+              {formatDateTime(e.at)} · {users.get(e.byUserId)?.fullName ?? e.byUserName ?? 'Sistem'}
             </Text>
             {e.note ? <Text variant="bodySmall" tone="secondary">{e.note}</Text> : null}
           </View>

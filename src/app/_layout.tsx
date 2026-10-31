@@ -30,9 +30,12 @@ function RootNavigator() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: 'slide_from_right' }}>
       <Stack.Screen name="index" options={{ animation: 'none' }} />
-      <Stack.Protected guard={!signedIn}>
+      <Stack.Protected guard={status === 'signedOut'}>
         <Stack.Screen name="login" />
         <Stack.Screen name="forgot-password" />
+      </Stack.Protected>
+      <Stack.Protected guard={status === 'passwordChange'}>
+        <Stack.Screen name="change-password" />
       </Stack.Protected>
       <Stack.Protected guard={signedIn && viewMode === 'admin'}>
         <Stack.Screen name="admin" />

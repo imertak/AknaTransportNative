@@ -8,7 +8,7 @@ export type BadgeTone = 'neutral' | 'strong' | 'solid' | 'outline' | 'muted' | '
 
 const TONES: Record<BadgeTone, { bg: string; fg: string; border: string }> = {
   neutral: { bg: colors.surfaceSunken, fg: colors.textSecondary, border: colors.surfaceSunken },
-  strong: { bg: '#D9D9D6', fg: colors.text, border: '#D9D9D6' },
+  strong: { bg: colors.borderStrong, fg: colors.text, border: colors.borderStrong },
   solid: { bg: colors.ink, fg: colors.textInverse, border: colors.ink },
   outline: { bg: colors.surface, fg: colors.text, border: colors.text },
   muted: { bg: 'transparent', fg: colors.textTertiary, border: colors.border },

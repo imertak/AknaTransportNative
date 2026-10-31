@@ -1,169 +1,208 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { isTrackable } from '@/constants/jobStatus';
 import { useDriverJobs } from '@/hooks/useData';
-import { locationService, shouldPublish, type LocationPermission } from '@/services';
 import { errorMessage } from '@/services/errors';
-import { locationActions } from '@/store';
+import {
+  flushQueue,
+  isTrackingRunning,
+  pendingLocationCount,
+  prepareTracking,
+  startTracking,
+  stopTracking,
+  trackingEvents,
+  type PrepareResult,
+} from '@/services/tracking';
+import { refreshAll } from '@/store';
 import type { LocationFix, TransportJob } from '@/types';
 import { useAuth } from './AuthContext';
 
 export type TrackingStatus =
-  | 'off' // kullanıcı paylaşımı kapattı
-  | 'no_job' // takip edilecek aktif iş yok
+  | 'no_job' // kabul edilmiş/devam eden iş yok
   | 'starting'
   | 'active'
-  | 'paused' // uygulama arka planda
-  | 'denied'
+  | 'denied' // izin veya konum servisi eksik
   | 'error';
 
 interface LocationContextValue {
   status: TrackingStatus;
-  sharing: boolean;
-  permission: LocationPermission | null;
+  /** Takip edilen (kabul edilmiş ve devam eden) işler. Birden fazla olabilir. */
+  trackingJobs: TransportJob[];
+  /** Geriye uyumluluk: ilk takip edilen iş. */
   trackingJob: TransportJob | undefined;
   lastFix: LocationFix | null;
   lastPublishedAt: number | null;
+  /** Ağ yokken cihazda bekleyen konum sayısı. */
+  pending: number;
   error: string | null;
-  startSharing(): Promise<boolean>;
-  stopSharing(): void;
+  /** Web önizlemede takip yalnızca sayfa açıkken çalışır. */
+  foregroundOnly: boolean;
+  /**
+   * İş kabulünden önce çağrılır: konum servisi ve (native'de) arka plan izni yoksa işletim
+   * sisteminin izin penceresi açılır. ok:false dönerse iş kabul edilmemelidir.
+   */
+  ensureReady(): Promise<PrepareResult>;
+  /** Kabulden hemen sonra takibi başlatır. Başlatılamazsa hata fırlatır. */
+  startNow(): Promise<void>;
+  /** Oturum kapatılırken takibi durdurur. */
+  stopSharing(): Promise<void>;
+  /** İzin değiştiyse veya hata sonrası tekrar dener. */
+  retry(): Promise<void>;
 }
 
 const LocationContext = createContext<LocationContextValue | null>(null);
 
 /**
- * Şoför konum paylaşımını yönetir.
- * - Yalnızca kullanıcının yolda/yükleme/teslimat aşamasındaki bir işi varken çalışır.
- * - İşletim sistemi seviyesinde mesafe/süre eşikleri ile GPS uyanmaları azaltılır.
- * - Yayın öncesi `shouldPublish` ile anlamsız güncellemeler elenir.
- * - İlk aşamada uygulama arka plana geçince izleme duraklatılır (batarya ve
- *   izin yükü olmadan). Arka plan takibi için expo-task-manager ile
- *   `startLocationUpdatesAsync` API aşamasında eklenecek.
+ * Zorunlu konum takibi: şoförün kabul edilmiş veya devam eden işi olduğu sürece arka planda
+ * çalışır, hiçbiri kalmayınca (tamamlandı/iptal) durur. Kullanıcıdan ayrıca "paylaş" onayı
+ * istenmez; yalnızca işletim sisteminin izinleri gerekir.
  */
 export function LocationProvider({ children }: { children: ReactNode }) {
   const { user, status: authStatus } = useAuth();
   const { open } = useDriverJobs(user?.id);
-  const trackingJob = useMemo(() => open.find((j) => isTrackable(j.status)), [open]);
+  const trackingJobs = useMemo(() => open.filter((j) => isTrackable(j.status)), [open]);
+  const driverId = authStatus === 'signedIn' ? user?.id : undefined;
+  const shouldTrack = !!driverId && trackingJobs.length > 0;
 
-  const [sharing, setSharing] = useState(false);
-  const [permission, setPermission] = useState<LocationPermission | null>(null);
-  const [appState, setAppState] = useState<AppStateStatus>((AppState.currentState as AppStateStatus | null) ?? 'active');
-  const [runState, setRunState] = useState<'idle' | 'starting' | 'running' | 'error'>('idle');
+  const [runState, setRunState] = useState<'idle' | 'starting' | 'running' | 'denied' | 'error'>('idle');
   const [lastFix, setLastFix] = useState<LocationFix | null>(null);
   const [lastPublishedAt, setLastPublishedAt] = useState<number | null>(null);
+  const [pending, setPending] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const lastPublished = useRef<LocationFix | null>(null);
+  const reconciling = useRef<Promise<void> | null>(null);
 
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', setAppState);
-    return () => sub.remove();
-  }, []);
+  useEffect(
+    () =>
+      trackingEvents.subscribe((e) => {
+        if (e.type === 'fix') setLastFix(e.fix);
+        else if (e.type === 'published') {
+          setLastPublishedAt(e.at);
+          setPending(e.pending);
+          setError(null);
+        } else if (e.type === 'queued') setPending(e.pending);
+        else if (e.type === 'no_active_job') {
+          setRunState('idle');
+          // Sunucuya göre aktif iş yok: yerel listeyi tazele.
+          refreshAll().catch(() => {});
+        } else if (e.type === 'error') setError(e.message);
+      }),
+    [],
+  );
 
-  // Oturum kapanınca veya iş bitince paylaşımı sıfırla
-  useEffect(() => {
-    if (authStatus !== 'signedIn' || !trackingJob) {
-      setSharing(false);
-      lastPublished.current = null;
-    }
-  }, [authStatus, trackingJob]);
-
-  const jobId = trackingJob?.id;
-  const driverId = user?.id;
-  const shouldRun = sharing && !!jobId && !!driverId && appState === 'active' && permission === 'granted';
-
-  useEffect(() => {
-    if (!shouldRun || !jobId || !driverId) {
+  /** İstenen durumla (takip edilecek iş var/yok) gerçek durumu eşitler. İzin penceresi açmaz. */
+  const reconcile = useCallback(async () => {
+    if (!shouldTrack || !driverId) {
+      if (await isTrackingRunning()) await stopTracking();
       setRunState('idle');
+      setPending(0);
       return;
     }
-    let stop: (() => void) | null = null;
-    let cancelled = false;
-    setRunState('starting');
-    setError(null);
-
-    const handleFix = (fix: LocationFix) => {
-      if (!shouldPublish(lastPublished.current, fix)) return;
-      lastPublished.current = fix;
-      setLastFix(fix);
-      setLastPublishedAt(Date.now());
-      locationActions.publish({ jobId, driverId, fix }).catch(() => {});
-    };
-
-    (async () => {
-      try {
-        if (!(await locationService.servicesEnabled())) {
-          throw new Error('Cihazın konum servisleri kapalı. Ayarlardan açın.');
-        }
-        const first = await locationService.getCurrent();
-        if (cancelled) return;
-        lastPublished.current = null; // yeni oturumda ilk konum her zaman yayınlanır
-        handleFix(first);
-        stop = await locationService.watch(handleFix, (reason) => {
-          setError(reason);
-          setRunState('error');
-        });
-        if (cancelled) stop();
-        else setRunState('running');
-      } catch (e) {
-        if (!cancelled) {
-          setError(errorMessage(e, 'Konum alınamadı.'));
-          setRunState('error');
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      stop?.();
-    };
-  }, [shouldRun, jobId, driverId]);
-
-  // Kullanıcı ayarlardan izin verip geri dönebilir: ön plana gelince izni tazele
-  useEffect(() => {
-    if (authStatus === 'signedIn' && appState === 'active') locationService.getPermission().then(setPermission).catch(() => setPermission('undetermined'));
-  }, [authStatus, appState]);
-
-  const startSharing = useCallback(async () => {
-    try {
-      let p = await locationService.getPermission();
-      if (p !== 'granted') p = await locationService.requestPermission();
-      setPermission(p);
-      if (p !== 'granted') {
-        setError('Konum izni verilmedi. Ayarlardan izin vererek paylaşımı başlatabilirsiniz.');
-        return false;
-      }
-      setError(null);
-      setSharing(true);
-      return true;
-    } catch (e) {
-      setError(errorMessage(e, 'Konum izni alınamadı.'));
-      return false;
+    const ready = await prepareTracking(false);
+    if (!ready.ok) {
+      setRunState('denied');
+      setError(ready.message);
+      return;
     }
+    try {
+      if (!(await isTrackingRunning())) setRunState('starting');
+      await startTracking(driverId);
+      setRunState('running');
+      setError(null);
+      setPending(await pendingLocationCount());
+    } catch (e) {
+      setRunState('error');
+      setError(errorMessage(e, 'Konum takibi başlatılamadı.'));
+    }
+  }, [shouldTrack, driverId]);
+
+  const runReconcile = useCallback(() => {
+    const p = (reconciling.current ?? Promise.resolve()).then(reconcile, reconcile);
+    reconciling.current = p.finally(() => {
+      if (reconciling.current === p) reconciling.current = null;
+    });
+    return p;
+  }, [reconcile]);
+
+  useEffect(() => {
+    void runReconcile();
+  }, [runReconcile, trackingJobs.length]);
+
+  // Ön plana dönünce izinleri yeniden kontrol et ve bekleyen konumları gönder.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s !== 'active') return;
+      void runReconcile();
+      flushQueue().catch(() => {});
+    });
+    return () => sub.remove();
+  }, [runReconcile]);
+
+  const ensureReady = useCallback(async () => {
+    const r = await prepareTracking(true);
+    if (!r.ok) setError(r.message);
+    return r;
   }, []);
 
-  const stopSharing = useCallback(() => {
-    setSharing(false);
-    lastPublished.current = null;
+  const userId = user?.id;
+  const startNow = useCallback(async () => {
+    if (!userId) throw new Error('Oturum bulunamadı.');
+    setRunState('starting');
+    try {
+      await startTracking(userId);
+      setRunState('running');
+      setError(null);
+    } catch (e) {
+      setRunState('error');
+      const message = errorMessage(e, 'Konum takibi başlatılamadı.');
+      setError(message);
+      throw new Error(message);
+    }
+  }, [userId]);
+
+  const stopSharing = useCallback(async () => {
+    await stopTracking().catch(() => {});
+    setRunState('idle');
+    setLastFix(null);
+    setPending(0);
   }, []);
 
-  const status: TrackingStatus = !trackingJob
+  const retry = useCallback(async () => {
+    const r = await prepareTracking(true);
+    if (!r.ok) {
+      setRunState('denied');
+      setError(r.message);
+      return;
+    }
+    await runReconcile();
+  }, [runReconcile]);
+
+  const status: TrackingStatus = !shouldTrack
     ? 'no_job'
-    : permission === 'denied'
-      ? 'denied'
-      : !sharing
-        ? 'off'
+    : runState === 'running'
+      ? 'active'
+      : runState === 'denied'
+        ? 'denied'
         : runState === 'error'
           ? 'error'
-          : appState !== 'active'
-            ? 'paused'
-            : runState === 'running'
-              ? 'active'
-              : 'starting';
+          : 'starting';
 
-  const value = useMemo(
-    () => ({ status, sharing, permission, trackingJob, lastFix, lastPublishedAt, error, startSharing, stopSharing }),
-    [status, sharing, permission, trackingJob, lastFix, lastPublishedAt, error, startSharing, stopSharing],
+  const value = useMemo<LocationContextValue>(
+    () => ({
+      status,
+      trackingJobs,
+      trackingJob: trackingJobs[0],
+      lastFix,
+      lastPublishedAt,
+      pending,
+      error,
+      foregroundOnly: Platform.OS === 'web',
+      ensureReady,
+      startNow,
+      stopSharing,
+      retry,
+    }),
+    [status, trackingJobs, lastFix, lastPublishedAt, pending, error, ensureReady, startNow, stopSharing, retry],
   );
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
 }

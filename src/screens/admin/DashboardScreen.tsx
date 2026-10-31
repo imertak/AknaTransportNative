@@ -1,7 +1,7 @@
 import { router, type Href } from "expo-router";
-import { ArrowLeftRight, Truck, UserRound } from "lucide-react-native";
-import { useMemo } from "react";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { ArrowLeftRight, Building2, ChevronLeft, ChevronRight, Truck, UserRound } from "lucide-react-native";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
 import { JobRow } from "@/components/jobs/JobRow";
 import {
@@ -11,6 +11,7 @@ import {
   Card,
   EmptyState,
   IconButton,
+  ListItem,
   PageHeader,
   Screen,
   Section,
@@ -23,12 +24,13 @@ import {
   useDashboardStats,
   useJobs,
   useLocations,
+  useMonthRevenue,
   useUsers,
   useVehicles,
 } from "@/hooks/useData";
 import { useRefresh } from "@/hooks/useRefresh";
 import { routes } from "@/navigation/routes";
-import { colors, spacing } from "@/theme";
+import { colors, hitSlop, spacing } from "@/theme";
 import type { JobStatus, TransportJob } from "@/types";
 import {
   MONTH_NAMES,
@@ -51,6 +53,15 @@ export default function DashboardScreen() {
   const vehicles = useVehicles();
   const locations = useLocations();
   const { refreshing, onRefresh } = useRefresh();
+  const now = new Date();
+  const [period, setPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
+  const revenue = useMonthRevenue(period.year, period.month);
+  const isCurrentMonth = period.year === now.getFullYear() && period.month === now.getMonth() + 1;
+  const shiftMonth = (delta: number) =>
+    setPeriod((p) => {
+      const d = new Date(p.year, p.month - 1 + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() + 1 };
+    });
 
   const recentCreated = useMemo(
     () =>
@@ -83,7 +94,8 @@ export default function DashboardScreen() {
         out.push({
           userId: u.id,
           name: u.fullName,
-          plate: vehicles.find((v) => v.id === u.vehicleId)?.plate,
+          // İşe seçilen araç; yoksa şoföre atanmış ilk aktif araç.
+          plate: job.vehiclePlate ?? vehicles.find((v) => v.isActive && v.driverId === u.id)?.plate,
           job,
         });
     }
@@ -113,20 +125,42 @@ export default function DashboardScreen() {
               icon={UserRound}
               label="Profilim"
               tone="dark"
-              onPress={() => router.push("/admin/profile" as any)}
+              onPress={() => router.push(routes.profile("admin"))}
             />
           }
         >
           <View style={styles.revenue}>
+            <View style={styles.periodRow}>
+              <Pressable onPress={() => shiftMonth(-1)} hitSlop={hitSlop} accessibilityRole="button" accessibilityLabel="Önceki ay">
+                <ChevronLeft size={18} color={colors.textInverseMuted} />
+              </Pressable>
+              <Text variant="bodySmall" tone="inverseMuted">
+                {MONTH_NAMES[period.month - 1]} {period.year} nakliye geliri
+              </Text>
+              <Pressable
+                onPress={() => shiftMonth(1)}
+                disabled={isCurrentMonth}
+                hitSlop={hitSlop}
+                accessibilityRole="button"
+                accessibilityLabel="Sonraki ay"
+                style={isCurrentMonth && { opacity: 0.3 }}>
+                <ChevronRight size={18} color={colors.textInverseMuted} />
+              </Pressable>
+            </View>
+            {revenue.data ? (
+              <Text variant="display" tone="inverse" style={styles.tabular}>
+                {formatCurrency(revenue.data.revenue)}
+              </Text>
+            ) : revenue.error ? (
+              <Pressable onPress={revenue.reload} accessibilityRole="button">
+                <Text variant="bodySmall" tone="inverse">Gelir alınamadı: {revenue.error} · Tekrar dene</Text>
+              </Pressable>
+            ) : (
+              <ActivityIndicator color={colors.textInverse} style={styles.revenueLoading} />
+            )}
             <Text variant="bodySmall" tone="inverseMuted">
-              {MONTH_NAMES[new Date().getMonth()]} ayı nakliye geliri
-            </Text>
-            <Text variant="display" tone="inverse" style={styles.tabular}>
-              {formatCurrency(stats.monthlyRevenue)}
-            </Text>
-            <Text variant="bodySmall" tone="inverseMuted">
-              {stats.completed} tamamlanan iş · Açık işler{" "}
-              {formatCurrency(stats.openValue)}
+              {revenue.data ? `${revenue.data.completedJobs} tamamlanan iş · İptaller hariç` : " "}
+              {isCurrentMonth ? ` · Açık işler ${formatCurrency(stats.openValue)}` : ""}
             </Text>
           </View>
         </PageHeader>
@@ -176,7 +210,14 @@ export default function DashboardScreen() {
             icon={ArrowLeftRight}
             variant="secondary"
             onPress={() => setViewMode("driver")}
+            accessibilityHint="Rolünüz değişmez; yalnızca şoför ekranlarına geçersiniz"
           />
+
+          <Card padded={false}>
+            <ListItem icon={Building2} title="Müşteriler" subtitle="Müşteri kayıtları ve geçmiş işler" onPress={() => router.push(routes.customers)} />
+            <View style={styles.sep} />
+            <ListItem icon={Truck} title="Araçlar" subtitle="Araç kaydı ve şoföre atama" onPress={() => router.push(routes.vehicles)} />
+          </Card>
 
           <Section
             title={`Aktif şoförler · ${activeDrivers.length}`}
@@ -291,6 +332,9 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing.huge },
   revenue: { gap: spacing.xs, paddingTop: spacing.xs },
+  periodRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  revenueLoading: { alignSelf: "flex-start", height: 38 },
+  sep: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderStrong, marginLeft: 64 },
   tabular: { fontVariant: ["tabular-nums"] },
   body: { padding: spacing.lg, gap: spacing.xxl },
   statsScroll: { gap: spacing.sm, paddingHorizontal: spacing.lg },

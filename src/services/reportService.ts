@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
 import type { Customer, DateRange, Invoice, JobsReport, TransportJob } from '@/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
+import { composeJobText } from '@/utils/stops';
 import { jobService } from './registry';
 import { ServiceError } from './errors';
 import { APP_CONFIG } from '@/constants/config';
@@ -22,7 +23,7 @@ const BASE_CSS = `
   @page { margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { background: #fff; }
-  body { font-family: -apple-system, 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif; color: #0B0B0C; -webkit-print-color-adjust: exact; }
+  body { font-family: -apple-system, 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif; color: #000000; -webkit-print-color-adjust: exact; }
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 `;
 
@@ -58,17 +59,17 @@ function paginate<T>(rows: T[], weight: (row: T) => number, firstCapacity: numbe
   return pages;
 }
 
-function jobsReportHtml(report: JobsReport): string {
+function jobsReportHtml(report: JobsReport, title = 'NAKLİYE İŞLERİ DÖKÜMÜ'): string {
   const generated = formatDateTime(report.generatedAt);
   const rangeLabel = `${formatDate(report.range.from)} – ${formatDate(report.range.to)}`;
-  const pages = paginate(report.jobs, (j) => Math.max(1, Math.ceil(j.description.length / 62)), 14, 19, 4);
+  const pages = paginate(report.jobs, (j) => Math.max(1, Math.ceil(composeJobText(j.routeDescription, j.description).length / 62)), 14, 19, 4);
   const totalPages = pages.length;
 
   const header = `
     <header class="head">
       <div>
         <div class="brand">AKNA TRANSPORT</div>
-        <div class="doc">NAKLİYE İŞLERİ DÖKÜMÜ</div>
+        <div class="doc">${esc(title)}</div>
       </div>
       <div class="meta">
         <div><span>Dönem</span>${rangeLabel}</div>
@@ -95,7 +96,7 @@ function jobsReportHtml(report: JobsReport): string {
             <td>${formatDate(j.date)}</td>
             <td class="strong">${esc(j.storeName)}</td>
             <td>${VEHICLE_TYPE_LABEL[j.vehicleType]}</td>
-            <td>${esc(j.description)}</td>
+            <td>${esc(composeJobText(j.routeDescription, j.description))}</td>
             <td class="num strong">${formatCurrency(j.price)}</td>
           </tr>`,
         )
@@ -122,24 +123,24 @@ function jobsReportHtml(report: JobsReport): string {
     ${BASE_CSS}
     .page { width: ${A4_LANDSCAPE.width}px; height: ${A4_LANDSCAPE.height}px; padding: 34px 40px 46px; position: relative; overflow: hidden; page-break-after: always; }
     .page:last-child { page-break-after: auto; }
-    .head { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 14px; border-bottom: 2px solid #0B0B0C; margin-bottom: 16px; }
+    .head { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 14px; border-bottom: 2px solid #000000; margin-bottom: 16px; }
     .brand { font-size: 20px; font-weight: 800; letter-spacing: 3px; }
-    .doc { font-size: 11px; font-weight: 600; letter-spacing: 2px; color: #55555A; margin-top: 4px; }
+    .doc { font-size: 11px; font-weight: 600; letter-spacing: 2px; color: #555555; margin-top: 4px; }
     .meta { display: flex; gap: 28px; font-size: 11px; font-weight: 600; }
-    .meta span { display: block; font-size: 8.5px; letter-spacing: 1.2px; text-transform: uppercase; color: #8A8A8F; margin-bottom: 3px; font-weight: 600; }
-    .mini { font-size: 9px; letter-spacing: 1.4px; color: #8A8A8F; font-weight: 600; padding-bottom: 10px; border-bottom: 1px solid #CFCFCC; margin-bottom: 12px; }
+    .meta span { display: block; font-size: 8.5px; letter-spacing: 1.2px; text-transform: uppercase; color: #888888; margin-bottom: 3px; font-weight: 600; }
+    .mini { font-size: 9px; letter-spacing: 1.4px; color: #888888; font-weight: 600; padding-bottom: 10px; border-bottom: 1px solid #CCCCCC; margin-bottom: 12px; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10.5px; }
-    th { text-align: left; font-size: 8.5px; letter-spacing: 1.1px; text-transform: uppercase; color: #fff; background: #0B0B0C; padding: 8px 10px; font-weight: 600; }
+    th { text-align: left; font-size: 8.5px; letter-spacing: 1.1px; text-transform: uppercase; color: #fff; background: #000000; padding: 8px 10px; font-weight: 600; }
     th.num { text-align: right; }
-    td { padding: 8px 10px; border-bottom: 1px solid #E3E3E0; vertical-align: top; line-height: 1.4; }
-    tbody tr:nth-child(even) td { background: #F7F7F6; }
+    td { padding: 8px 10px; border-bottom: 1px solid #E0E0E0; vertical-align: top; line-height: 1.4; }
+    tbody tr:nth-child(even) td { background: #F5F5F5; }
     .strong { font-weight: 600; }
-    .empty { text-align: center; color: #8A8A8F; padding: 28px; }
-    .totals { margin-left: auto; width: 300px; margin-top: 16px; border: 1px solid #0B0B0C; }
+    .empty { text-align: center; color: #888888; padding: 28px; }
+    .totals { margin-left: auto; width: 300px; margin-top: 16px; border: 1px solid #000000; }
     .totals .row { display: flex; justify-content: space-between; padding: 9px 12px; font-size: 11px; }
-    .totals .row + .row { border-top: 1px solid #E3E3E0; }
-    .totals .grand { background: #0B0B0C; color: #fff; font-size: 12.5px; }
-    footer { position: absolute; left: 40px; right: 40px; bottom: 20px; display: flex; justify-content: space-between; font-size: 8.5px; color: #8A8A8F; border-top: 1px solid #E3E3E0; padding-top: 8px; letter-spacing: 0.3px; }
+    .totals .row + .row { border-top: 1px solid #E0E0E0; }
+    .totals .grand { background: #000000; color: #fff; font-size: 12.5px; }
+    footer { position: absolute; left: 40px; right: 40px; bottom: 20px; display: flex; justify-content: space-between; font-size: 8.5px; color: #888888; border-top: 1px solid #E0E0E0; padding-top: 8px; letter-spacing: 0.3px; }
   </style></head><body>${body}</body></html>`;
 }
 
@@ -158,22 +159,22 @@ function invoiceHtml(invoice: Invoice, customer: Customer | null): string {
   <style>
     ${BASE_CSS}
     .page { width: ${A4_PORTRAIT.width}px; min-height: ${A4_PORTRAIT.height}px; padding: 40px 42px; position: relative; }
-    .banner { border: 1px dashed #0B0B0C; padding: 8px 12px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px; margin-bottom: 22px; }
+    .banner { border: 1px dashed #000000; padding: 8px 12px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px; margin-bottom: 22px; }
     .watermark { position: absolute; top: 330px; left: 0; right: 0; text-align: center; font-size: 120px; font-weight: 800; color: rgba(0,0,0,0.05); letter-spacing: 18px; transform: rotate(-24deg); }
-    .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0B0B0C; padding-bottom: 16px; }
+    .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000000; padding-bottom: 16px; }
     .brand { font-size: 18px; font-weight: 800; letter-spacing: 3px; }
-    .muted { color: #8A8A8F; }
-    .label { font-size: 8px; letter-spacing: 1.2px; text-transform: uppercase; color: #8A8A8F; font-weight: 600; margin-bottom: 3px; }
+    .muted { color: #888888; }
+    .label { font-size: 8px; letter-spacing: 1.2px; text-transform: uppercase; color: #888888; font-weight: 600; margin-bottom: 3px; }
     .title { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-align: right; }
     .grid { display: flex; gap: 24px; margin: 22px 0; font-size: 10.5px; line-height: 1.5; }
     .grid > div { flex: 1; }
     table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
-    th { text-align: left; font-size: 8px; letter-spacing: 1.1px; text-transform: uppercase; background: #0B0B0C; color: #fff; padding: 8px 10px; }
-    td { padding: 10px; border-bottom: 1px solid #E3E3E0; }
+    th { text-align: left; font-size: 8px; letter-spacing: 1.1px; text-transform: uppercase; background: #000000; color: #fff; padding: 8px 10px; }
+    td { padding: 10px; border-bottom: 1px solid #E0E0E0; }
     .totals { margin-left: auto; width: 240px; margin-top: 18px; font-size: 11px; }
-    .totals div { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #E3E3E0; }
-    .totals .grand { border: none; background: #0B0B0C; color: #fff; padding: 9px 10px; font-weight: 700; margin-top: 6px; }
-    footer { position: absolute; left: 42px; right: 42px; bottom: 28px; font-size: 8.5px; color: #8A8A8F; border-top: 1px solid #E3E3E0; padding-top: 8px; }
+    .totals div { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #E0E0E0; }
+    .totals .grand { border: none; background: #000000; color: #fff; padding: 9px 10px; font-weight: 700; margin-top: 6px; }
+    footer { position: absolute; left: 42px; right: 42px; bottom: 28px; font-size: 8.5px; color: #888888; border-top: 1px solid #E0E0E0; padding-top: 8px; }
   </style></head><body><div class="page">
     ${isDemo ? `<div class="watermark">${DRAFT.stamp}</div><div class="banner">${DRAFT.stamp} BELGE — Bu belge uygulama içinde oluşturulmuş bir önizlemedir. Resmi e-Arşiv faturası değildir ve mali geçerliliği yoktur.</div>` : ''}
     <div class="head">
@@ -191,14 +192,20 @@ function invoiceHtml(invoice: Invoice, customer: Customer | null): string {
       </div>
       <div>
         <div class="label">Fatura bilgileri</div>
-        İş no: ${esc(invoice.jobNo)}<br/>
+        İş no: ${esc(invoice.jobNos?.length ? invoice.jobNos.join(', ') : invoice.jobNo)}<br/>
         Durum: ${INVOICE_STATUS_TEXT[invoice.status]}<br/>
         ${invoice.ettn ? `ETTN: ${esc(invoice.ettn)}` : ''}
       </div>
     </div>
     <table>
       <thead><tr><th>Açıklama</th><th class="num" style="width:110px">Tutar</th></tr></thead>
-      <tbody><tr><td>${esc(invoice.description)}</td><td class="num">${formatCurrency(invoice.subtotal, { decimals: 2 })}</td></tr></tbody>
+      <tbody>${
+        invoice.items?.length
+          ? invoice.items
+              .map((it) => `<tr><td>${esc(it.jobNo)} · ${formatDate(it.jobDate)} · ${esc(it.description)}</td><td class="num">${formatCurrency(it.amount, { decimals: 2 })}</td></tr>`)
+              .join('')
+          : `<tr><td>${esc(invoice.description)}</td><td class="num">${formatCurrency(invoice.subtotal, { decimals: 2 })}</td></tr>`
+      }</tbody>
     </table>
     <div class="totals">
       <div><span>Ara toplam</span><span class="num">${formatCurrency(invoice.subtotal, { decimals: 2 })}</span></div>
@@ -274,6 +281,20 @@ export const reportService = {
   async shareInvoice(invoice: Invoice, customer: Customer | null) {
     const uri = await htmlToPdf(invoiceHtml(invoice, customer), A4_PORTRAIT, fileSafe(`${invoice.invoiceNo}.pdf`));
     await share(uri, invoice.invoiceNo);
+  },
+
+  /** Faturadaki işlerin dökümü (demo mod; API modunda sunucu PDF'i kullanılır). */
+  async shareInvoiceJobReport(invoice: Invoice, jobs: TransportJob[]) {
+    const sorted = [...jobs].sort((a, b) => a.date.localeCompare(b.date) || a.jobNo.localeCompare(b.jobNo));
+    const report: JobsReport = {
+      range: { from: sorted[0]?.date ?? invoice.issueDate, to: sorted[sorted.length - 1]?.date ?? invoice.issueDate },
+      jobs: sorted,
+      totalCount: sorted.length,
+      totalAmount: sorted.reduce((sum, j) => sum + j.price, 0),
+      generatedAt: new Date().toISOString(),
+    };
+    const uri = await htmlToPdf(jobsReportHtml(report, `${invoice.invoiceNo} · İŞ DÖKÜMÜ`), A4_LANDSCAPE, fileSafe(`${invoice.invoiceNo}_Is_Dokumu.pdf`));
+    await share(uri, `${invoice.invoiceNo} iş dökümü`);
   },
 
   async printInvoice(invoice: Invoice, customer: Customer | null) {

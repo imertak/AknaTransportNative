@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   segment: { flexDirection: 'row', backgroundColor: colors.surfaceSunken, borderRadius: radius.md, padding: 3 },
   segmentDark: { backgroundColor: colors.inkRaised, borderWidth: 1, borderColor: colors.inkLine },
   segmentItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: radius.sm + 1, paddingHorizontal: spacing.xs },
-  segmentActive: { backgroundColor: colors.surface, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  segmentActive: { backgroundColor: colors.surface, shadowColor: colors.ink, shadowOpacity: 0.06, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
   segmentActiveDark: { backgroundColor: colors.surface },
   chip: {
     flexDirection: 'row',

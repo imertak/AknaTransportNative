@@ -1,27 +1,33 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ban, Building2, CalendarDays, FileText, Hand, Mail, Navigation, Pencil, Phone, ReceiptText, Truck, UserRound, UserRoundCog } from 'lucide-react-native';
+import { Ban, Building2, CalendarDays, CarFront, FileText, Hand, Mail, Pencil, Phone, ReceiptText, Truck, UserRound, UserRoundCog } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { DriverActionCard } from '@/components/jobs/DriverActionCard';
 import { LocationShareCard } from '@/components/jobs/LocationShareCard';
-import { RouteLine } from '@/components/jobs/RouteLine';
+import { BillingStatusBadge } from '@/components/jobs/BillingStatusBadge';
+import { StopList } from '@/components/jobs/StopList';
 import { StatusTimeline } from '@/components/jobs/StatusTimeline';
 import { Button, Card, EmptyState, IconButton, InfoRow, NavHeader, OptionSheet, Screen, ScrollContent, Section, StatusBadge, Text, type SelectOption } from '@/components/ui';
 import { isClosed, isTrackable } from '@/constants/jobStatus';
 import { can } from '@/constants/permissions';
 import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
 import { useAuth, useCurrentUser } from '@/contexts/AuthContext';
+import { useLocationTracking } from '@/contexts/LocationContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
-import { useAssignableUsers, useCustomer, useInvoice, useJob, useUserMap } from '@/hooks/useData';
+import { useAssignableUsers, useCustomer, useInvoice, useJob, useUserMap, useVehicles } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
 import { jobActions } from '@/store';
-import { spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { confirm } from '@/utils/confirm';
 import { formatCurrency, formatDateLong, formatPhone } from '@/utils/format';
-import { callPhone, openDirections, sendEmail } from '@/utils/links';
+import { callPhone, sendEmail } from '@/utils/links';
 
 const UNASSIGN = '__unassign';
+const NO_VEHICLE = '__none';
+
+/** Atama akışı: önce şoför, sonra (varsa) o şoförün aktif araçlarından biri. */
+type AssignStep = { kind: 'driver' } | { kind: 'vehicle'; driverId: string; purpose: 'assign' | 'claim' } | null;
 
 export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,8 +38,10 @@ export default function JobDetailScreen() {
   const invoice = useInvoice(job?.invoiceId);
   const userMap = useUserMap();
   const assignable = useAssignableUsers();
+  const vehicles = useVehicles();
+  const { ensureReady, startNow } = useLocationTracking();
   const { run, pending } = useAsyncAction();
-  const [assignOpen, setAssignOpen] = useState(false);
+  const [step, setStep] = useState<AssignStep>(null);
 
   // Liste verisinde durum geçmişi yoktur (API); detay açılınca iş tazelenir.
   useEffect(() => {
@@ -66,17 +74,53 @@ export default function JobDetailScreen() {
   const driver = job.driverId ? userMap.get(job.driverId) : undefined;
   const closed = isClosed(job.status);
 
-  const assign = async (value: string) => {
-    const driverId = value === UNASSIGN ? null : value;
-    await run(() => jobActions.assign(job.id, driverId, user.id), {
+  const vehiclesOf = (driverId: string) => vehicles.filter((v) => v.isActive && v.driverId === driverId);
+
+  const doAssign = async (driverId: string | null, vehicleId?: string) => {
+    await run(() => jobActions.assign(job.id, driverId, user.id, vehicleId ?? null), {
       success: driverId ? `İş ${userMap.get(driverId)?.fullName ?? ''} kullanıcısına atandı.` : 'Atama kaldırıldı.',
     });
   };
 
-  const takeOver = async () => {
-    const ok = await confirm({ title: 'İşi üstlen', message: 'Bu iş size atanacak ve kabul edilmiş sayılacak. Şoför ekranlarından takip edebilirsiniz.', confirmLabel: 'Üstlen' });
-    if (ok) await run(() => jobActions.takeOver(job.id, user.id), { success: 'İşi üstlendiniz.' });
+  const pickDriver = (value: string) => {
+    if (value === UNASSIGN) return void doAssign(null);
+    const own = vehiclesOf(value);
+    // OptionSheet kapanma animasyonundan sonra araç seçimi açılır.
+    if (own.length > 1) setTimeout(() => setStep({ kind: 'vehicle', driverId: value, purpose: 'assign' }), 250);
+    else void doAssign(value, own[0]?.id);
   };
+
+  const doClaim = async (vehicleId?: string) => {
+    // Üstlenilen iş kabul edilmiş sayılır; konum takibi zorunlu olduğundan önce izinler kontrol edilir.
+    const ready = await ensureReady();
+    if (!ready.ok) {
+      await confirm({ title: 'Konum izni gerekli', message: ready.message, confirmLabel: 'Tamam' });
+      return;
+    }
+    const claimed = await run(() => jobActions.takeOver(job.id, user.id, vehicleId ?? null));
+    if (!claimed) return;
+    await startNow().catch(() => {});
+  };
+
+  const takeOver = async () => {
+    const ok = await confirm({
+      title: 'İşi üstlen',
+      message: 'Bu iş size atanacak ve kabul edilmiş sayılacak. Kabul ile konum takibi başlar; şoför ekranlarından yürütebilirsiniz.',
+      confirmLabel: 'Üstlen',
+    });
+    if (!ok) return;
+    const own = vehiclesOf(user.id);
+    if (own.length > 1) setStep({ kind: 'vehicle', driverId: user.id, purpose: 'claim' });
+    else await doClaim(own[0]?.id);
+  };
+
+  const vehicleStepOptions: SelectOption[] =
+    step?.kind === 'vehicle'
+      ? [
+          ...vehiclesOf(step.driverId).map((v) => ({ value: v.id, label: v.plate, description: [v.brand, v.model].filter(Boolean).join(' ') })),
+          { value: NO_VEHICLE, label: 'Araç seçmeden devam et', description: 'Araç daha sonra seçilebilir' },
+        ]
+      : [];
 
   const cancel = async () => {
     const ok = await confirm({ title: 'İşi iptal et', message: `${job.jobNo} numaralı iş iptal edilecek. Bu işlem geri alınamaz.`, confirmLabel: 'İptal et', destructive: true });
@@ -99,34 +143,41 @@ export default function JobDetailScreen() {
           <Text variant="heading">{job.storeName}</Text>
           <View style={styles.metaRow}>
             <View style={styles.meta}>
-              <CalendarDays size={15} color="#8A8A8F" />
+              <CalendarDays size={15} color={colors.textTertiary} />
               <Text variant="bodySmall" tone="secondary">{formatDateLong(job.date)}</Text>
             </View>
             <View style={styles.meta}>
-              <Truck size={15} color="#8A8A8F" />
+              <Truck size={15} color={colors.textTertiary} />
               <Text variant="bodySmall" tone="secondary">{VEHICLE_TYPE_LABEL[job.vehicleType]}</Text>
             </View>
+            {job.vehiclePlate ? (
+              <View style={styles.meta}>
+                <CarFront size={15} color={colors.textTertiary} />
+                <Text variant="bodySmall" tone="secondary">{job.vehiclePlate}</Text>
+              </View>
+            ) : null}
           </View>
+          {isAdminView && job.status === 'completed' ? <BillingStatusBadge status={job.billingStatus} /> : null}
         </Card>
 
         {isMine ? <DriverActionCard job={job} /> : null}
         {isMine && isTrackable(job.status) ? <LocationShareCard /> : null}
 
-        <Section title="Güzergah">
+        <Section title={`Güzergah · ${job.stops.length} durak`}>
           <Card style={{ gap: spacing.lg }}>
-            <RouteLine pickup={job.pickupAddress} delivery={job.deliveryAddress} />
-            {!closed ? (
-              <View style={styles.row}>
-                <Button label="Yüklemeye git" variant="secondary" size="sm" icon={Navigation} onPress={() => openDirections(job.pickupAddress, job.pickupPoint)} style={{ flex: 1 }} />
-                <Button label="Teslimata git" variant="secondary" size="sm" icon={Navigation} onPress={() => openDirections(job.deliveryAddress, job.deliveryPoint)} style={{ flex: 1 }} />
-              </View>
-            ) : null}
+            <StopList stops={job.stops} navigable={!closed} />
           </Card>
         </Section>
 
         <Section title="Yapılan nakliye">
           <Card style={{ gap: spacing.md }}>
-            <Text>{job.description}</Text>
+            <Text>{job.routeDescription || '—'}</Text>
+            {job.description ? (
+              <View style={styles.notes}>
+                <Text variant="caption" tone="tertiary">Açıklama</Text>
+                <Text variant="bodySmall" tone="secondary">{job.description}</Text>
+              </View>
+            ) : null}
             {job.notes ? (
               <View style={styles.notes}>
                 <Text variant="caption" tone="tertiary">Ek açıklama</Text>
@@ -147,10 +198,11 @@ export default function JobDetailScreen() {
 
         <Section title="Atama">
           <Card style={{ gap: spacing.md }}>
-            <InfoRow icon={UserRoundCog} label="Şoför" value={driver ? `${driver.fullName}${driver.id === user.id ? ' (Ben)' : ''}` : 'Atanmadı'} last />
+            <InfoRow icon={UserRoundCog} label="Şoför" value={driver ? `${driver.fullName}${driver.id === user.id ? ' (Ben)' : ''}` : 'Atanmadı'} />
+            <InfoRow icon={CarFront} label="Araç" value={job.vehiclePlate ?? 'Seçilmedi'} last />
             {isAdminView && !closed ? (
               <View style={styles.row}>
-                <Button label={driver ? 'Şoförü değiştir' : 'Şoföre ata'} variant="secondary" size="sm" icon={UserRoundCog} onPress={() => setAssignOpen(true)} style={{ flex: 1 }} />
+                <Button label={driver ? 'Şoförü değiştir' : 'Şoföre ata'} variant="secondary" size="sm" icon={UserRoundCog} onPress={() => setStep({ kind: 'driver' })} style={{ flex: 1 }} />
                 {!isMine && can(user, 'jobs.takeOver') ? <Button label="İşi üstlen" variant="secondary" size="sm" icon={Hand} onPress={takeOver} style={{ flex: 1 }} /> : null}
               </View>
             ) : null}
@@ -161,7 +213,7 @@ export default function JobDetailScreen() {
           <Section title="Fatura">
             {invoice ? (
               <Card onPress={() => router.push(routes.invoice(invoice.id))} style={styles.invoice}>
-                <ReceiptText size={20} color="#0B0B0C" />
+                <ReceiptText size={20} color={colors.text} />
                 <View style={{ flex: 1 }}>
                   <Text variant="subheading">{invoice.invoiceNo}</Text>
                   <Text variant="bodySmall" tone="secondary">{invoice.mode === 'demo' ? 'Demo fatura · resmi değildir' : 'e-Arşiv faturası'} · {formatCurrency(invoice.total, { decimals: 2 })}</Text>
@@ -185,7 +237,21 @@ export default function JobDetailScreen() {
         {isAdminView && !closed ? <Button label="İşi iptal et" variant="danger" icon={Ban} onPress={cancel} loading={pending} /> : null}
       </ScrollContent>
 
-      <OptionSheet visible={assignOpen} onClose={() => setAssignOpen(false)} title="Şoför seç" options={assignOptions} value={job.driverId} onSelect={assign} />
+      <OptionSheet visible={step?.kind === 'driver'} onClose={() => setStep(null)} title="Şoför seç" options={assignOptions} value={job.driverId} onSelect={pickDriver} searchable />
+      <OptionSheet
+        visible={step?.kind === 'vehicle'}
+        onClose={() => setStep(null)}
+        title="Araç seç"
+        options={vehicleStepOptions}
+        value={job.vehicleId ?? null}
+        onSelect={(v) => {
+          const current = step;
+          if (current?.kind !== 'vehicle') return;
+          const vehicleId = v === NO_VEHICLE ? undefined : v;
+          if (current.purpose === 'claim') void doClaim(vehicleId);
+          else void doAssign(current.driverId, vehicleId);
+        }}
+      />
     </Screen>
   );
 }
@@ -196,7 +262,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   row: { flexDirection: 'row', gap: spacing.sm },
-  notes: { gap: 2, paddingTop: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#CFCFCC' },
+  notes: { gap: 2, paddingTop: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderStrong },
   listCard: { paddingHorizontal: spacing.lg },
   invoice: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
 });

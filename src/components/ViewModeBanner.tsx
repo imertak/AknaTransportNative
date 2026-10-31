@@ -1,5 +1,5 @@
 import { ArrowLeftRight } from 'lucide-react-native';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,11 +10,16 @@ export function ViewModeBanner() {
   const { user, viewMode, setViewMode } = useAuth();
   if (user?.role !== 'admin' || viewMode !== 'driver') return null;
   return (
-    <Pressable onPress={() => setViewMode('admin')} style={({ pressed }) => [styles.banner, pressed && { opacity: 0.8 }]} accessibilityRole="button">
-      <ArrowLeftRight size={16} color={colors.text} />
-      <Text variant="bodySmall" style={{ flex: 1 }}>
-        Şoför görünümündesiniz. Yönetici paneline dönmek için dokunun.
-      </Text>
+    <Pressable
+      onPress={() => setViewMode('admin')}
+      style={({ pressed }) => [styles.banner, pressed && { opacity: 0.8 }]}
+      accessibilityRole="button"
+      accessibilityLabel="Yönetici görünümüne dön">
+      <ArrowLeftRight size={18} color={colors.textInverse} />
+      <View style={{ flex: 1 }}>
+        <Text variant="subheading" tone="inverse">Yönetici görünümüne dön</Text>
+        <Text variant="bodySmall" tone="inverseMuted">Şu an şoför görünümündesiniz. Rolünüz değişmez.</Text>
+      </View>
     </Pressable>
   );
 }
@@ -24,10 +29,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.ink,
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
     padding: spacing.md,
   },
 });

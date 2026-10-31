@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ClipboardList, Plus, SlidersHorizontal } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { JobCard } from '@/components/jobs/JobCard';
@@ -38,10 +38,12 @@ export default function JobsScreen() {
   const customers = useCustomers();
   const { refreshing, onRefresh } = useRefresh();
 
-  // Dashboard'dan gelen durum filtresi
-  useEffect(() => {
+  // Dashboard'dan gelen durum filtresi (parametre değişince render sırasında uygulanır).
+  const [lastStatusParam, setLastStatusParam] = useState(params.status);
+  if (params.status !== lastStatusParam) {
+    setLastStatusParam(params.status);
     if (isGroup(params.status)) setGroup(params.status);
-  }, [params.status]);
+  }
 
   const filter = useMemo<JobFilter>(
     () => ({ ...advanced, query: query.trim() || undefined, statuses: GROUPS.find((g) => g.value === group)?.statuses }),

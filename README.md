@@ -11,7 +11,17 @@ Nakliye operasyonlarını yönetmek için React Native (Expo) mobil uygulaması.
 npm install
 npx expo start        # Expo Go veya development build ile açın
 npx tsc --noEmit      # tip kontrolü
+npm run lint          # ESLint (eslint-config-expo)
 ```
+
+### Ortam değişkenleri
+
+| Değişken | Ne için | Zorunlu mu |
+|---|---|---|
+| `EXPO_PUBLIC_API_BASE_URL` | API adresi. Boşsa uygulama demo modunda çalışır. | API modu için evet |
+| `GOOGLE_MAPS_ANDROID_API_KEY` | Android'de harita (react-native-maps, Google sağlayıcı). `app.config.ts` derleme sırasında okur; koda yazılmaz. | Android haritası için evet |
+
+Anahtarı `.env.local` dosyasına veya EAS Secrets'a koyun. Anahtar yoksa Android'de "Haritada kontrol et" penceresi harita yerine "Harita sağlayıcısı yapılandırılmamış" uyarısı gösterir; sahte harita veya koordinat gösterilmez. iOS Apple Haritalar'ı kullanır ve anahtar istemez. Web önizlemede harita ve adres arama yoktur.
 
 ### API'ye bağlı çalıştırma (yerel)
 
@@ -37,7 +47,7 @@ API modunda bilinmesi gerekenler:
 - Erişim token'ı süresi dolunca sessizce yenilenir; yenilenemezse giriş ekranına dönülür.
 - Faturalar "Taslak" olarak oluşturulur ve tutar işin fiyatından hesaplanır. "e-Arşiv'e gönder" sağlayıcı yapılandırılana kadar hata verir ve fatura taslak kalır.
 - Şoför hesapları müşteri ve fatura listelerini görmez (API yetkisi). İş detayında firma adı görünür, müşteri iletişim bilgisi görünmez.
-- Araç/plaka kaydı API'de henüz yoktur; plaka alanları boş kalır.
+- Araçları yalnızca yönetici ekler, düzenler ve şoföre atar (Panel > Araçlar). İş atarken önce şoför, sonra o şoförün aracı seçilir.
 
 ### Demo hesaplar (demo modu)
 
@@ -52,7 +62,7 @@ Ek demo şoförler: `murat@akna.com`, `emre@akna.com` (şifre aynı). Demo veril
 
 - Expo SDK 58, React Native 0.88, React 19, TypeScript (strict)
 - Expo Router (dosya tabanlı navigasyon, `Stack.Protected` ile rol koruması)
-- Eklenen paketler (hepsi `npx expo install` ile SDK uyumlu sürümde): `lucide-react-native`, `react-native-svg`, `expo-location`, `react-native-maps`, `expo-print`, `expo-sharing`, `expo-file-system`, `@react-native-async-storage/async-storage`, `expo-secure-store`
+- Eklenen paketler (hepsi `npx expo install` ile SDK uyumlu sürümde): `lucide-react-native`, `react-native-svg`, `expo-location`, `react-native-maps`, `expo-task-manager`, `expo-print`, `expo-sharing`, `expo-file-system`, `@react-native-async-storage/async-storage`, `expo-secure-store`
 
 ## Klasör yapısı
 
@@ -83,12 +93,15 @@ src/
 
 **İş akışı.** Bekliyor → Atandı → Kabul Edildi → Yolda → Yükleme Yapılıyor → Teslimat Yapılıyor → Tamamlandı (veya İptal Edildi). Şoför aksiyonları `constants/jobStatus.ts` içindeki `DRIVER_FLOW` ile tanımlıdır ve servis tarafında da doğrulanır.
 
-**Konum takibi.** `services/locationService.ts` cihaz GPS'ine erişen tek noktadır; `contexts/LocationContext.tsx` takibi yönetir:
-- Yalnızca kullanıcının Yolda / Yükleme / Teslimat aşamasında bir işi varken çalışır, iş bitince kendiliğinden durur.
-- İşletim sistemi seviyesinde 40 m / 15 sn eşikleri ile gereksiz GPS uyanmaları azaltılır.
-- `shouldPublish` 30 m'den az hareketi ve 20 sn'den sık güncellemeyi eler; araç duruyorsa 2 dakikada bir canlılık güncellemesi gönderilir.
-- "Yola çık" aksiyonunda paylaşım otomatik başlar; şoför istediğinde durdurabilir.
-- Bu aşamada uygulama arka plana geçince izleme duraklatılır (ekranda açıkça gösterilir). Arka plan takibi için API aşamasında `expo-task-manager` + `Location.startLocationUpdatesAsync` ve arka plan izinleri eklenecek; konumlar toplu olarak API'ye gönderilip yöneticiye SignalR ile iletilecek.
+**Konum takibi (zorunlu).** `services/tracking/` cihaz GPS'ine erişen tek noktadır; `contexts/LocationContext.tsx` durumu yönetir:
+- Şoför "İşi kabul et" dediğinde önce konum servisi, ön plan ve arka plan izni kontrol edilir; izin yoksa iş kabul edilmez. Kabulden sonra takip hemen başlar.
+- Native'de `expo-task-manager` + `Location.startLocationUpdatesAsync` ile gerçek arka plan takibi yapılır (Android'de kalıcı bildirimli ön plan servisi, iOS'ta "Her Zaman" izni ve mavi gösterge). Görev `_layout.tsx` en başta import edildiği için uygulama arka planda başlatıldığında da tanımlıdır.
+- Noktalar önce cihazdaki kuyruğa (AsyncStorage, en fazla 1000 nokta) yazılır, 100'lük gruplarla `POST /api/locations/me` ile gönderilir. Ağ yoksa kuyrukta bekler, bağlantı gelince gönderilir.
+- İş tamamlanınca veya iptal edilince (ya da sunucu aktif iş olmadığını bildirince) takip durur ve kuyruk temizlenir.
+- 30 m / 15 sn eşikleri ve toplu teslim ile pil ve veri kullanımı azaltılır.
+- Web önizlemede yalnızca sayfa açıkken çalışır ve kartta bu açıkça yazar.
+
+**Gerçek cihazda test.** Arka plan konumu Expo Go'da çalışmaz; development build gerekir (`npx expo run:android` / `npx expo run:ios` veya EAS development build). Android'de konum iznini "Her zaman izin ver", iOS'ta "Her Zaman" olarak verin. Android'de takip sırasında "AKNA Transport · iş takibi açık" bildirimi görünür.
 
 **Fatura.** Demo modunda yalnızca demo fatura oluşturulur. Demo faturalar `DEMO-` önekiyle numaralanır, her yerde "resmi fatura değildir" olarak işaretlenir ve e-posta gönderilmez. e-Arşiv ve e-posta için sözleşmeler hazırdır; çağrıldıklarında açıkça "API aşamasında etkinleşecek" hatası verirler.
 
@@ -96,6 +109,7 @@ src/
 
 ## Bilinen notlar
 
-- `react-native-maps` Expo Go'da çalışır. Android için mağaza/development build alınırken Google Maps API anahtarı gerekir (`app.json` > `android.config.googleMaps.apiKey`).
+- Android haritası için `GOOGLE_MAPS_ANDROID_API_KEY` gerekir (yukarıdaki tablo).
 - Web önizlemesinde harita yerine konum listesi gösterilir; uygulamanın hedefi iOS ve Android'dir.
-- Repoda ESLint yapılandırması bulunmuyor; `npx expo lint` ilk çalıştırmada yapılandırmayı otomatik ekler.
+- Adres geçmişi API modunda müşterinin önceki işlerinden gelir; "Geçmiş adresler" ile seçilir.
+- Fatura ve iş dökümü PDF'leri API modunda sunucudan indirilir; demo modunda cihazda üretilir.

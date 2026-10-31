@@ -1,3 +1,5 @@
+// Arka plan konum görevi modül yüklenirken tanımlanmalıdır (uygulama arka planda başlatılsa da).
+import '@/services/tracking';
 import { Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';

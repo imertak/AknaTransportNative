@@ -10,6 +10,8 @@ export const colors = {
   inkRaised: '#111111',
   inkLine: '#222222',
   inkMuted: '#888888',
+  /** Siyah butonun basılı hali. */
+  inkPressed: '#2A2A2A',
 
   background: '#F5F5F5',
   surface: '#FFFFFF',
@@ -26,6 +28,7 @@ export const colors = {
 
   danger: '#D32F2F',
   dangerSoft: '#FFEBEE',
+  dangerBorder: '#F2C4C4',
 
   accent: '#D32F2F',
   accentSoft: '#FFEBEE',
@@ -71,7 +74,7 @@ export const typography = {
 export type TypographyVariant = keyof typeof typography;
 
 export const shadow: ViewStyle = Platform.select({
-  ios: { shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  ios: { shadowColor: colors.ink, shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   android: { elevation: 1 },
   default: {},
 }) as ViewStyle;

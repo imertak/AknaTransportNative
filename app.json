@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0B0B0C",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -29,7 +29,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0B0B0C",
+          "backgroundColor": "#000000",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200
         }
@@ -39,9 +39,11 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Aktif nakliye işi sırasında aracınızın konumunu yöneticinizle paylaşmak için konum izni gerekir.",
-          "isIosBackgroundLocationEnabled": false,
-          "isAndroidBackgroundLocationEnabled": false
+          "locationWhenInUsePermission": "Kabul ettiğiniz nakliye işi sürerken aracınızın konumunu yöneticinizle paylaşmak için konum izni gerekir.",
+          "locationAlwaysAndWhenInUsePermission": "Kabul ettiğiniz nakliye işi sürerken uygulama arka plandayken de aracınızın konumu paylaşılır. Takip yalnızca aktif iş süresince çalışır ve iş tamamlanınca veya iptal edilince durur.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ]
     ],
@@ -49,6 +51,6 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "backgroundColor": "#0B0B0C"
+    "backgroundColor": "#000000"
   }
 }

@@ -1,9 +1,10 @@
-import { ArrowRight, CircleCheck } from 'lucide-react-native';
-import { memo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ArrowRight, CircleCheck, MapPinOff } from 'lucide-react-native';
+import { memo, useState } from 'react';
+import { Linking, StyleSheet, View } from 'react-native';
 
 import { Button, Card, Text } from '@/components/ui';
 import { DRIVER_FLOW, IN_PROGRESS_STATUSES } from '@/constants/jobStatus';
+import { useToast } from '@/contexts/ToastContext';
 import { useCurrentUser } from '@/contexts/AuthContext';
 import { useLocationTracking } from '@/contexts/LocationContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
@@ -17,8 +18,10 @@ const STEPS = ['assigned', ...IN_PROGRESS_STATUSES, 'completed'] as const;
 /** Şoförün işi bir sonraki aşamaya taşıdığı kart. */
 export const DriverActionCard = memo(function DriverActionCard({ job }: { job: TransportJob }) {
   const user = useCurrentUser();
-  const { sharing, startSharing } = useLocationTracking();
+  const { ensureReady, startNow } = useLocationTracking();
+  const toast = useToast();
   const { run, pending } = useAsyncAction();
+  const [blocked, setBlocked] = useState<{ message: string; settings: boolean } | null>(null);
   const action = DRIVER_FLOW[job.status];
   if (!action || job.driverId !== user.id) return null;
 
@@ -29,11 +32,27 @@ export const DriverActionCard = memo(function DriverActionCard({ job }: { job: T
       const ok = await confirm({ title: 'İşi tamamla', message: 'Teslimatın tamamlandığını onaylıyor musunuz? Bu işlem geri alınamaz.', confirmLabel: 'Tamamla' });
       if (!ok) return;
     }
-    const updated = await run(() => jobActions.advance(job.id, action.next, user.id), {
-      success: action.next === 'completed' ? 'İş tamamlandı.' : `Durum güncellendi: ${action.label}`,
+    if (action.next === 'accepted') {
+      // Konum takibi zorunlu: izin/servis yoksa iş kabul edilmez.
+      const ready = await ensureReady();
+      if (!ready.ok) {
+        setBlocked({ message: ready.message, settings: !ready.canAskAgain || ready.code === 'background_denied' });
+        return;
+      }
+      setBlocked(null);
+      const accepted = await run(() => jobActions.advance(job.id, 'accepted', user.id));
+      if (!accepted) return;
+      try {
+        await startNow();
+        toast.show('İş kabul edildi. Konum takibi başladı.', 'success');
+      } catch (e) {
+        toast.show(`İş kabul edildi ancak konum takibi başlatılamadı: ${e instanceof Error ? e.message : ''} Tekrar deneyin.`, 'error');
+      }
+      return;
+    }
+    await run(() => jobActions.advance(job.id, action.next, user.id), {
+      success: action.next === 'completed' ? 'İş tamamlandı. Konum takibi durduruldu.' : `Durum güncellendi: ${action.label}`,
     });
-    // Yola çıkıldığında konum paylaşımını otomatik başlat
-    if (updated && action.next === 'on_the_way' && !sharing) void startSharing();
   };
 
   return (
@@ -48,6 +67,16 @@ export const DriverActionCard = memo(function DriverActionCard({ job }: { job: T
         <Text variant="heading">{action.label}</Text>
         <Text variant="bodySmall" tone="secondary">{action.description}</Text>
       </View>
+      {blocked ? (
+        <View style={styles.blocked} accessibilityRole="alert">
+          <View style={styles.blockedHead}>
+            <MapPinOff size={16} color={colors.danger} />
+            <Text variant="subheading" tone="danger">Konum izni olmadan iş kabul edilemez</Text>
+          </View>
+          <Text variant="bodySmall" tone="secondary">{blocked.message}</Text>
+          {blocked.settings ? <Button label="Ayarları aç" variant="secondary" size="sm" onPress={() => Linking.openSettings().catch(() => {})} /> : null}
+        </View>
+      ) : null}
       <Button
         label={action.label}
         size="lg"
@@ -66,4 +95,6 @@ const styles = StyleSheet.create({
   progress: { flexDirection: 'row', gap: 4 },
   seg: { flex: 1, height: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceSunken },
   segDone: { backgroundColor: colors.ink },
+  blocked: { gap: spacing.xs, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.dangerSoft },
+  blockedHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });

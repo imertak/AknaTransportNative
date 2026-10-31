@@ -154,3 +154,22 @@ export async function httpAll<T>(path: string, query: HttpOptions['query'] = {})
   }
   return out;
 }
+
+/** Kimlik doğrulamalı ikili indirme (PDF). 401'de token bir kez yenilenir. */
+export async function httpBinary(path: string, init: HttpOptions = {}): Promise<ArrayBuffer> {
+  if (!APP_CONFIG.apiBaseUrl) {
+    throw new ServiceError('not_implemented', 'API adresi henüz yapılandırılmadı.');
+  }
+  const token = getToken();
+  const withAccept = { ...init, headers: { Accept: 'application/pdf, application/octet-stream', ...(init.headers as Record<string, string> | undefined) } };
+  let res = await send(path, withAccept, token);
+  if (res.status === 401 && token) {
+    const fresh = await refreshOnce();
+    if (fresh) res = await send(path, withAccept, fresh);
+  }
+  if (!res.ok) throw await toError(res, false);
+  return res.arrayBuffer();
+}
+
+/** Arka plan görevleri gibi oturum bağlamı olmayan yerlerde token sağlayıcının kurulu olup olmadığı. */
+export const hasToken = () => !!getToken();

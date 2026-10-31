@@ -5,7 +5,8 @@ import { Text } from '@/components/ui';
 import { colors, spacing } from '@/theme';
 
 /** Yükleme → teslimat güzergahı. Daire: yükleme, kare: teslimat. */
-export const RouteLine = memo(function RouteLine({ pickup, delivery, compact }: { pickup: string; delivery: string; compact?: boolean }) {
+/** extraStops: ilk yükleme ve son teslimat dışındaki durak sayısı (çok duraklı işler). */
+export const RouteLine = memo(function RouteLine({ pickup, delivery, compact, extraStops = 0 }: { pickup: string; delivery: string; compact?: boolean; extraStops?: number }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.rail}>
@@ -17,6 +18,7 @@ export const RouteLine = memo(function RouteLine({ pickup, delivery, compact }: 
         <View>
           {!compact ? <Text variant="caption" tone="tertiary">Yükleme</Text> : null}
           <Text variant={compact ? 'bodySmall' : 'body'} numberOfLines={compact ? 1 : 3}>{pickup}</Text>
+          {extraStops > 0 ? <Text variant="bodySmall" tone="tertiary">+{extraStops} ara durak</Text> : null}
         </View>
         <View>
           {!compact ? <Text variant="caption" tone="tertiary">Teslimat</Text> : null}

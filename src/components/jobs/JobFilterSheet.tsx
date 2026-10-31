@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { Button, DateField, SelectField, Sheet, type SelectOption } from '@/components/ui';
@@ -21,10 +21,12 @@ export function JobFilterSheet({ visible, value, onClose, onApply }: Props) {
   const customers = useCustomers();
   const users = useAssignableUsers();
   const [draft, setDraft] = useState<AdvancedFilter>(value);
-
-  useEffect(() => {
+  // Sayfa her açıldığında taslak güncel filtreden başlar.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) setDraft(value);
-  }, [visible, value]);
+  }
 
   const customerOptions = useMemo<SelectOption[]>(() => [{ value: ANY, label: 'Tüm müşteriler' }, ...customers.map((c) => ({ value: c.id, label: c.companyName }))], [customers]);
   const driverOptions = useMemo<SelectOption[]>(

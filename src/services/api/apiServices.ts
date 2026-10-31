@@ -1,18 +1,22 @@
 import type {
   AuthService,
   CustomerService,
+  DashboardService,
   EArchiveGateway,
   InvoiceMailer,
   InvoiceService,
   JobService,
   LocationRepository,
   UserService,
+  VehicleService,
 } from '../contracts';
 import { ServiceError } from '../errors';
-import { http, httpAll } from '../http';
-import type { JobStatus, Session, User } from '@/types';
+import { savePdf } from '../files';
+import { http, httpAll, httpBinary } from '../http';
+import type { InvoiceFilter, JobStatus, LocationFix, Session, User } from '@/types';
 import { isEmail } from '@/utils/validation';
 import {
+  customerAddressFromApi,
   customerFromApi,
   customerToApi,
   invoiceFromApiDetail,
@@ -21,15 +25,22 @@ import {
   jobFromApi,
   jobToApi,
   locationFromApi,
+  monthRevenueFromApi,
+  stopTypeToApi,
   userFromApi,
+  vehicleFromApi,
+  vehicleToApi,
   type ApiActiveJobLocation,
   type ApiAuthResponse,
   type ApiCustomer,
+  type ApiCustomerAddress,
   type ApiInvoiceDetail,
   type ApiInvoiceListItem,
   type ApiJob,
   type ApiJobDetail,
+  type ApiMonthRevenue,
   type ApiUser,
+  type ApiVehicle,
 } from './mappers';
 
 /**
@@ -121,8 +132,20 @@ export const apiUserService: UserService = {
     if (!isAdmin()) return currentUser ? [currentUser] : [];
     return (await httpAll<ApiUser>('/api/users')).map(userFromApi);
   },
-  // Araç/plaka kaydı API'de henüz yok.
-  listVehicles: async () => [],
+  listVehicles: () => (isAdmin() ? apiVehicleService.list() : apiVehicleService.listMine()),
+};
+
+export const apiVehicleService: VehicleService = {
+  list: async () => (await httpAll<ApiVehicle>('/api/vehicles')).map(vehicleFromApi),
+  listMine: async () => (await http<ApiVehicle[]>('/api/vehicles/my')).map(vehicleFromApi),
+  create: async (input) => vehicleFromApi(await http<ApiVehicle>('/api/vehicles', { method: 'POST', json: vehicleToApi(input) })),
+  update: async (id, input) => vehicleFromApi(await http<ApiVehicle>(`/api/vehicles/${id}`, { method: 'PUT', json: vehicleToApi(input) })),
+  assign: async (id, driverId) => vehicleFromApi(await http<ApiVehicle>(`/api/vehicles/${id}/assign`, { method: 'POST', json: { driverId } })),
+  unassign: async (id) => vehicleFromApi(await http<ApiVehicle>(`/api/vehicles/${id}/unassign`, { method: 'POST', json: {} })),
+};
+
+export const apiDashboardService: DashboardService = {
+  revenue: async (year, month) => monthRevenueFromApi(await http<ApiMonthRevenue>('/api/dashboard/revenue', { query: { year, month } })),
 };
 
 export const apiCustomerService: CustomerService = {
@@ -138,6 +161,12 @@ export const apiCustomerService: CustomerService = {
     // İşi olan müşteri silinmez, pasife alınır; her iki durumda da listeden kalkar.
     await http(`/api/customers/${id}`, { method: 'DELETE' });
   },
+  async addresses(customerId, type) {
+    const list = await http<ApiCustomerAddress[]>(`/api/customers/${customerId}/addresses`, {
+      query: { stopType: type ? stopTypeToApi(type) : undefined, limit: 50 },
+    });
+    return list.map(customerAddressFromApi);
+  },
 };
 
 /** Şoför akışındaki hedef durum → API eylemi. */
@@ -148,6 +177,8 @@ const ADVANCE_ACTION: Partial<Record<JobStatus, string>> = {
   delivering: 'start-delivery',
   completed: 'complete',
 };
+
+const BILLING_TO_API = { not_invoiced: 'NotInvoiced', in_draft: 'InDraft', invoiced: 'Invoiced' } as const;
 
 const jobAction = async (id: string, action: string, json: unknown = {}) =>
   jobDetailFromApi(await http<ApiJobDetail>(`/api/jobs/${id}/${action}`, { method: 'PATCH', json }));
@@ -161,6 +192,7 @@ export const apiJobService: JobService = {
       driverId: filter.driverId,
       startDate: filter.dateFrom,
       endDate: filter.dateTo,
+      billingStatus: filter.billingStatus ? BILLING_TO_API[filter.billingStatus] : undefined,
     });
     return jobs.map((j) => jobFromApi(j));
   },
@@ -170,23 +202,29 @@ export const apiJobService: JobService = {
   async create(input) {
     const detail = await http<ApiJobDetail>('/api/jobs', {
       method: 'POST',
-      json: { ...jobToApi(input), assignedDriverId: input.driverId || null },
+      json: { ...jobToApi(input), assignedDriverId: input.driverId || null, assignedVehicleId: (input.driverId && input.vehicleId) || null },
     });
     return jobDetailFromApi(detail);
   },
 
   async update(id, input) {
     let job = jobDetailFromApi(await http<ApiJobDetail>(`/api/jobs/${id}`, { method: 'PUT', json: jobToApi(input) }));
-    // Güncelleme isteği şoförü değiştirmez; değiştiyse atama ayrı yapılır.
+    // Güncelleme isteği şoförü/aracı değiştirmez; değiştiyse atama ayrı yapılır.
     const nextDriver = input.driverId || undefined;
-    if (nextDriver !== job.driverId && job.status !== 'completed' && job.status !== 'cancelled') {
-      job = await jobAction(id, 'assign', { driverId: nextDriver ?? null, note: 'Şoför değiştirildi' });
+    const nextVehicle = (nextDriver && input.vehicleId) || undefined;
+    const changed = nextDriver !== job.driverId || nextVehicle !== job.vehicleId;
+    if (changed && job.status !== 'completed' && job.status !== 'cancelled') {
+      job = await jobAction(id, 'assign', {
+        driverId: nextDriver ?? null,
+        vehicleId: nextVehicle ?? null,
+        note: nextDriver !== job.driverId ? 'Şoför değiştirildi' : 'Araç değiştirildi',
+      });
     }
     return job;
   },
 
-  assign: (id, driverId) => jobAction(id, 'assign', { driverId }),
-  takeOver: (id) => jobAction(id, 'claim'),
+  assign: (id, driverId, _actorId, vehicleId) => jobAction(id, 'assign', { driverId, vehicleId: (driverId && vehicleId) || null }),
+  takeOver: (id, _actorId, vehicleId) => jobAction(id, 'claim', { vehicleId: vehicleId || null }),
 
   advance(id, next) {
     const action = ADVANCE_ACTION[next];
@@ -197,10 +235,23 @@ export const apiJobService: JobService = {
   cancel: (id, _actorId, reason) => jobAction(id, 'cancel', { reason: reason ?? null }),
 };
 
+const INVOICE_STATUS_TO_API: Record<NonNullable<InvoiceFilter['status']>, string> = {
+  draft: 'Draft',
+  issued: 'Issued',
+  cancelled: 'Cancelled',
+  failed: 'Failed',
+};
+
 export const apiInvoiceService: InvoiceService = {
-  async list() {
+  async list(filter = {}) {
     if (!isAdmin()) return [];
-    return (await httpAll<ApiInvoiceListItem>('/api/invoices')).map(invoiceFromApiList);
+    const list = await httpAll<ApiInvoiceListItem>('/api/invoices', {
+      customerId: filter.customerId,
+      startDate: filter.dateFrom,
+      endDate: filter.dateTo,
+      status: filter.status ? INVOICE_STATUS_TO_API[filter.status] : undefined,
+    });
+    return list.map(invoiceFromApiList);
   },
 
   get: async (id) => invoiceFromApiDetail(await http<ApiInvoiceDetail>(`/api/invoices/${id}`)),
@@ -212,12 +263,24 @@ export const apiInvoiceService: InvoiceService = {
   async createDemo(input) {
     const detail = await http<ApiInvoiceDetail>('/api/invoices', {
       method: 'POST',
-      json: { jobIds: [input.jobId], invoiceDate: input.issueDate, vatRate: input.vatRate, notes: input.description.trim() || null },
+      // Tutar sunucuda işlerin fiyatından hesaplanır; aynı müşteriye ait birden fazla iş tek faturada birleşir.
+      json: {
+        jobIds: input.jobIds?.length ? input.jobIds : input.jobId ? [input.jobId] : [],
+        invoiceDate: input.issueDate,
+        vatRate: input.vatRate,
+        notes: input.description.trim() || null,
+      },
     });
     return invoiceFromApiDetail(detail);
   },
 
   cancel: async (id) => invoiceFromApiDetail(await http<ApiInvoiceDetail>(`/api/invoices/${id}/cancel`, { method: 'POST', json: {} })),
+
+  async downloadPdf(id, kind) {
+    const path = kind === 'invoice' ? `/api/invoices/${id}/pdf` : `/api/invoices/${id}/job-report/pdf`;
+    const bytes = await httpBinary(path);
+    return savePdf(bytes, kind === 'invoice' ? `Fatura_${id}.pdf` : `Is_Dokumu_${id}.pdf`);
+  },
 };
 
 export const apiEArchiveGateway: EArchiveGateway = {
@@ -245,27 +308,32 @@ export const apiInvoiceMailer: InvoiceMailer = {
 
 const nonNegative = (v: number | null) => (v != null && Number.isFinite(v) && v >= 0 ? v : null);
 
+/** Cihazlar bilinmeyen değerler için -1 döndürebilir; API negatif değer kabul etmez. */
+const toPoint = (fix: LocationFix) => ({
+  latitude: fix.latitude,
+  longitude: fix.longitude,
+  accuracy: nonNegative(fix.accuracy),
+  speed: nonNegative(fix.speed),
+  heading: nonNegative(fix.heading) != null && fix.heading! <= 360 ? fix.heading : null,
+  recordedAt: new Date(fix.timestamp).toISOString(),
+});
+
 export const apiLocationRepository: LocationRepository = {
   async publish(location) {
-    const { fix } = location;
-    await http('/api/locations/update', {
-      method: 'POST',
-      json: {
-        jobId: location.jobId,
-        latitude: fix.latitude,
-        longitude: fix.longitude,
-        // Cihazlar bilinmeyen değerler için -1 döndürebilir; API negatif değer kabul etmez.
-        accuracy: nonNegative(fix.accuracy),
-        speed: nonNegative(fix.speed),
-        heading: nonNegative(fix.heading) != null && fix.heading! <= 360 ? fix.heading : null,
-        recordedAt: new Date(fix.timestamp).toISOString(),
-      },
-    });
+    await http('/api/locations/update', { method: 'POST', json: { jobId: location.jobId, ...toPoint(location.fix) } });
   },
 
   async listActive() {
     const list = await http<ApiActiveJobLocation[]>('/api/locations/active-jobs');
     return list.map(locationFromApi).filter((l) => l !== null);
+  },
+
+  async publishMine(_driverId: string, fixes: LocationFix[]) {
+    const res = await http<{ jobIds: string[] }>('/api/locations/me', {
+      method: 'POST',
+      json: { points: fixes.map(toPoint) },
+    });
+    return res.jobIds ?? [];
   },
 
   // İş tamamlanınca/iptal edilince sunucu konumu zaten aktif listeden çıkarır.

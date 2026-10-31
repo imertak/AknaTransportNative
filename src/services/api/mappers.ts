@@ -1,17 +1,25 @@
 import type {
   Customer,
+  CustomerAddress,
   CustomerInput,
   Invoice,
   InvoiceEmailStatus,
   InvoiceStatus,
+  JobBillingStatus,
   JobInput,
   JobStatus,
+  JobStop,
+  MonthRevenue,
+  StopType,
   JobStatusEvent,
   TransportJob,
   User,
+  Vehicle,
+  VehicleInput,
   VehicleLocation,
   VehicleType,
 } from '@/types';
+import { buildRouteDescription, orderStops, toStops } from '@/utils/stops';
 
 /**
  * .NET API DTO'ları ile uygulama modelleri arasındaki dönüşümler.
@@ -77,6 +85,51 @@ export interface ApiJob {
   invoiceId: string | null;
   createdAt: string;
   updatedAt: string | null;
+  routeDescription: string;
+  stops: ApiJobStop[];
+  assignedVehicleId: string | null;
+  assignedVehiclePlate: string | null;
+  billingStatus: 'NotInvoiced' | 'InDraft' | 'Invoiced';
+}
+
+export interface ApiJobStop {
+  id: string;
+  stopType: 'Pickup' | 'Delivery';
+  sequence: number;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  description: string | null;
+}
+
+export interface ApiVehicle {
+  id: string;
+  plateNumber: string;
+  brand: string | null;
+  model: string | null;
+  vehicleType: string;
+  isActive: boolean;
+  description: string | null;
+  driverId: string | null;
+  driverName: string | null;
+  assignedAt: string | null;
+}
+
+export interface ApiCustomerAddress {
+  stopType: 'Pickup' | 'Delivery';
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  useCount: number;
+  lastUsedAt: string;
+}
+
+export interface ApiMonthRevenue {
+  year: number;
+  month: number;
+  revenue: number;
+  completedJobs: number;
+  currency: string;
 }
 
 export interface ApiJobHistory {
@@ -110,12 +163,14 @@ export interface ApiInvoiceListItem {
   firstJobNumber: string | null;
   description: string | null;
   customerEmail: string | null;
+  jobCount: number;
 }
 
-export interface ApiInvoiceDetail extends Omit<ApiInvoiceListItem, 'firstJobId' | 'firstJobNumber' | 'description'> {
+export interface ApiInvoiceDetail extends Omit<ApiInvoiceListItem, 'firstJobId' | 'firstJobNumber' | 'description' | 'jobCount'> {
   notes: string | null;
   eArchiveReference: string | null;
-  items: { jobId: string; jobNumber: string; description: string }[];
+  lastError: string | null;
+  items: { jobId: string; jobNumber: string; jobDate: string; storeName: string; description: string; lineTotal: number }[];
   email: { recipientEmail: string; status: 'Pending' | 'Sent' | 'Failed'; sentAt: string | null } | null;
 }
 
@@ -142,6 +197,10 @@ const toPascal = (v: string) => v.replace(/(^|_)([a-z])/g, (_, __, c: string) =>
 export const jobStatusFromApi = (v: string) => toSnake(v) as JobStatus;
 export const vehicleTypeFromApi = (v: string) => toSnake(v) as VehicleType;
 export const vehicleTypeToApi = (v: VehicleType) => toPascal(v);
+export const stopTypeFromApi = (v: ApiJobStop['stopType']): StopType => (v === 'Pickup' ? 'pickup' : 'delivery');
+export const stopTypeToApi = (v: StopType): ApiJobStop['stopType'] => (v === 'pickup' ? 'Pickup' : 'Delivery');
+export const billingStatusFromApi = (v: ApiJob['billingStatus'] | undefined): JobBillingStatus =>
+  v === 'Invoiced' ? 'invoiced' : v === 'InDraft' ? 'in_draft' : 'not_invoiced';
 
 // ---- Varlık dönüşümleri ----
 
@@ -201,7 +260,28 @@ export function historyFromApi(h: ApiJobHistory): JobStatusEvent {
   };
 }
 
+function stopsFromApi(j: ApiJob): JobStop[] {
+  if (j.stops?.length) {
+    return orderStops(
+      j.stops.map((x) => ({
+        id: x.id,
+        type: stopTypeFromApi(x.stopType),
+        sequence: x.sequence,
+        address: x.address,
+        point: point(x.latitude, x.longitude),
+        description: x.description ?? undefined,
+      })),
+    );
+  }
+  // Durak tablosundan önceki kayıtlar: özet adreslerden türetilir.
+  return [
+    { type: 'pickup', sequence: 1, address: j.pickupAddress, point: point(j.pickupLatitude, j.pickupLongitude) },
+    { type: 'delivery', sequence: 1, address: j.deliveryAddress, point: point(j.deliveryLatitude, j.deliveryLongitude) },
+  ];
+}
+
 export function jobFromApi(j: ApiJob, history: ApiJobHistory[] = []): TransportJob {
+  const stops = stopsFromApi(j);
   return {
     id: j.id,
     jobNo: j.jobNumber,
@@ -212,7 +292,10 @@ export function jobFromApi(j: ApiJob, history: ApiJobHistory[] = []): TransportJ
     vehicleType: vehicleTypeFromApi(j.vehicleType),
     pickupAddress: j.pickupAddress,
     deliveryAddress: j.deliveryAddress,
-    description: j.description,
+    stops,
+    // Eski kayıtlarda güzergah alanı boş olabilir; duraklardan üretilir.
+    routeDescription: j.routeDescription?.trim() || buildRouteDescription(stops),
+    description: j.description ?? '',
     price: j.price,
     driverId: j.assignedDriverId ?? undefined,
     notes: j.notes ?? '',
@@ -222,6 +305,9 @@ export function jobFromApi(j: ApiJob, history: ApiJobHistory[] = []): TransportJ
     pickupPoint: point(j.pickupLatitude, j.pickupLongitude),
     deliveryPoint: point(j.deliveryLatitude, j.deliveryLongitude),
     invoiceId: j.invoiceId ?? undefined,
+    billingStatus: billingStatusFromApi(j.billingStatus),
+    vehicleId: j.assignedVehicleId ?? undefined,
+    vehiclePlate: j.assignedVehiclePlate ?? undefined,
     createdBy: j.createdByUserId,
     createdAt: j.createdAt,
     updatedAt: j.updatedAt ?? j.createdAt,
@@ -236,13 +322,60 @@ export function jobToApi(input: JobInput) {
     jobDate: input.date,
     storeName: input.storeName.trim(),
     vehicleType: vehicleTypeToApi(input.vehicleType),
-    pickupAddress: input.pickupAddress.trim(),
-    deliveryAddress: input.deliveryAddress.trim(),
-    description: input.description.trim(),
+    stops: toStops(input.stops).map((x) => ({
+      stopType: stopTypeToApi(x.type),
+      address: x.address,
+      latitude: x.point?.latitude ?? null,
+      longitude: x.point?.longitude ?? null,
+      description: x.description ?? null,
+    })),
+    description: input.description.trim() || null,
     price: input.price,
     notes: orNull(input.notes ?? ''),
   };
 }
+
+export function vehicleFromApi(v: ApiVehicle): Vehicle {
+  return {
+    id: v.id,
+    plate: v.plateNumber,
+    type: vehicleTypeFromApi(v.vehicleType),
+    brand: v.brand ?? '',
+    model: v.model ?? '',
+    isActive: v.isActive,
+    description: v.description ?? '',
+    driverId: v.driverId ?? undefined,
+    driverName: v.driverName ?? undefined,
+    assignedAt: v.assignedAt ?? undefined,
+  };
+}
+
+export function vehicleToApi(v: VehicleInput) {
+  return {
+    plateNumber: v.plate.trim(),
+    brand: orNull(v.brand),
+    model: orNull(v.model),
+    vehicleType: vehicleTypeToApi(v.type),
+    description: orNull(v.description),
+    isActive: v.isActive,
+  };
+}
+
+export const customerAddressFromApi = (a: ApiCustomerAddress): CustomerAddress => ({
+  type: stopTypeFromApi(a.stopType),
+  address: a.address,
+  point: point(a.latitude, a.longitude),
+  useCount: a.useCount,
+  lastUsedAt: a.lastUsedAt,
+});
+
+export const monthRevenueFromApi = (r: ApiMonthRevenue): MonthRevenue => ({
+  year: r.year,
+  month: r.month,
+  revenue: r.revenue,
+  completedJobs: r.completedJobs,
+  currency: r.currency,
+});
 
 /**
  * Taslak ve hatalı faturalar resmi değildir (uygulamada "demo" modu). Gönderimde/kesilmiş
@@ -274,6 +407,7 @@ export function invoiceFromApiList(i: ApiInvoiceListItem): Invoice {
     customerName: i.customerName,
     jobId: i.firstJobId ?? '',
     jobNo: i.firstJobNumber ?? '',
+    jobCount: i.jobCount,
     issueDate: i.invoiceDate,
     description: i.description ?? '',
     subtotal: i.subTotal,
@@ -297,6 +431,11 @@ export function invoiceFromApiDetail(i: ApiInvoiceDetail): Invoice {
     customerName: i.customerName,
     jobId: first?.jobId ?? '',
     jobNo: first?.jobNumber ?? '',
+    jobIds: i.items.map((x) => x.jobId),
+    jobNos: i.items.map((x) => x.jobNumber),
+    jobCount: i.items.length,
+    items: i.items.map((x) => ({ jobId: x.jobId, jobNo: x.jobNumber, jobDate: x.jobDate, storeName: x.storeName, description: x.description, amount: x.lineTotal })),
+    lastError: i.lastError ?? undefined,
     issueDate: i.invoiceDate,
     description: i.notes ?? first?.description ?? '',
     subtotal: i.subTotal,

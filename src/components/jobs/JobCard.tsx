@@ -35,7 +35,7 @@ export const JobCard = memo(function JobCard({ job, onPress, showPrice, driverNa
         </View>
       </View>
       <View style={styles.route}>
-        <RouteLine pickup={job.pickupAddress} delivery={job.deliveryAddress} compact />
+        <RouteLine pickup={job.pickupAddress} delivery={job.deliveryAddress} compact extraStops={Math.max(0, job.stops.length - 2)} />
       </View>
       {showPrice || driverName !== undefined ? (
         <View style={styles.footer}>

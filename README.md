@@ -1,56 +1,72 @@
-# Welcome to your Expo app 👋
+# AKNA Transport
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Nakliye operasyonlarını yönetmek için React Native (Expo) mobil uygulaması. Bu aşamada yalnızca frontend geliştirildi. Tüm veriler cihazda saklanan demo verilerle, servis katmanı üzerinden çalışır. Mimari, ileride .NET Web API'ye bağlanacak şekilde kuruldu.
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Çalıştırma
 
 ```bash
-npm run reset-project
+npm install
+npx expo start        # Expo Go veya development build ile açın
+npx tsc --noEmit      # tip kontrolü
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+### Demo hesaplar
 
-### Other setup steps
+| Rol | E-posta | Şifre |
+|---|---|---|
+| Yönetici | admin@akna.com | 123456 |
+| Şoför | driver@akna.com | 123456 |
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Ek demo şoförler: `murat@akna.com`, `emre@akna.com` (şifre aynı). Demo veriler Profil > "Demo verilerini sıfırla" ile başlangıç durumuna döndürülebilir.
 
-## Learn more
+## Teknoloji
 
-To learn more about developing your project with Expo, look at the following resources:
+- Expo SDK 58, React Native 0.88, React 19, TypeScript (strict)
+- Expo Router (dosya tabanlı navigasyon, `Stack.Protected` ile rol koruması)
+- Eklenen paketler (hepsi `npx expo install` ile SDK uyumlu sürümde): `lucide-react-native`, `react-native-svg`, `expo-location`, `react-native-maps`, `expo-print`, `expo-sharing`, `expo-file-system`, `@react-native-async-storage/async-storage`, `expo-secure-store`
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Klasör yapısı
 
-## Join the community
+```
+src/
+  app/            Expo Router rotaları (ince dosyalar; ekranları screens/ altından export eder)
+    admin/        Yönetici sekmeleri ve detay ekranları
+    driver/       Şoför sekmeleri ve iş detayı
+  screens/        auth/, admin/, driver/, shared/ ekranları
+  components/     ui/ (tasarım sistemi), jobs/, invoices/, map/
+  contexts/       AuthContext, LocationContext, ToastContext
+  services/       Servis sözleşmeleri (contracts.ts), mock implementasyonlar, registry.ts
+  store/          İstemci önbelleği (useSyncExternalStore) ve aksiyonlar
+  hooks/          Veri seçicileri ve yardımcı hook'lar
+  constants/      İş durumları, araç tipleri, yetkiler, yapılandırma
+  navigation/     Rota yardımcıları, sekme ayarları
+  types/          Merkezi veri modelleri (User, Customer, TransportJob, Invoice, Vehicle, Location...)
+  theme/          Renk, tipografi, boşluk ve köşe değerleri
+  data/           Demo başlangıç verisi (Excel iş dökümündeki kayıtlar dahil)
+  utils/          TL / tarih biçimlendirme, doğrulama, geo hesapları
+```
 
-Join our community of developers creating universal apps.
+## Mimari notlar
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+**Servis katmanı.** Ekranlar mock veriye doğrudan erişmez. `services/contracts.ts` içindeki arayüzler (`AuthService`, `JobService`, `CustomerService`, `InvoiceService`, `LocationRepository`, `EArchiveGateway`, `InvoiceMailer`) hem mock hem gelecekteki API implementasyonlarının sözleşmesidir. API'ye geçişte yalnızca `services/registry.ts` içindeki atamalar değişir; `services/http.ts` Bearer token ve hata eşlemesi olan hazır bir istemci sunar (`EXPO_PUBLIC_API_BASE_URL`).
+
+**Rol yönetimi.** Yetkiler `constants/permissions.ts` içinde merkezi tanımlıdır; ekranlar rol yerine yetki sorgular (`can(user, 'jobs.assign')`). Hangi rota grubunun erişilebilir olduğu `app/_layout.tsx` içinde oturum durumu ve görünüm moduna göre belirlenir. Yönetici, Profil'den şoför görünümüne geçebilir; işi kendine atayabilir veya "İşi üstlen" ile doğrudan alabilir.
+
+**İş akışı.** Bekliyor → Atandı → Kabul Edildi → Yolda → Yükleme Yapılıyor → Teslimat Yapılıyor → Tamamlandı (veya İptal Edildi). Şoför aksiyonları `constants/jobStatus.ts` içindeki `DRIVER_FLOW` ile tanımlıdır ve servis tarafında da doğrulanır.
+
+**Konum takibi.** `services/locationService.ts` cihaz GPS'ine erişen tek noktadır; `contexts/LocationContext.tsx` takibi yönetir:
+- Yalnızca kullanıcının Yolda / Yükleme / Teslimat aşamasında bir işi varken çalışır, iş bitince kendiliğinden durur.
+- İşletim sistemi seviyesinde 40 m / 15 sn eşikleri ile gereksiz GPS uyanmaları azaltılır.
+- `shouldPublish` 30 m'den az hareketi ve 20 sn'den sık güncellemeyi eler; araç duruyorsa 2 dakikada bir canlılık güncellemesi gönderilir.
+- "Yola çık" aksiyonunda paylaşım otomatik başlar; şoför istediğinde durdurabilir.
+- Bu aşamada uygulama arka plana geçince izleme duraklatılır (ekranda açıkça gösterilir). Arka plan takibi için API aşamasında `expo-task-manager` + `Location.startLocationUpdatesAsync` ve arka plan izinleri eklenecek; konumlar toplu olarak API'ye gönderilip yöneticiye SignalR ile iletilecek.
+
+**Fatura.** Bu aşamada yalnızca demo fatura oluşturulur. Demo faturalar `DEMO-` önekiyle numaralanır, her yerde "resmi fatura değildir" olarak işaretlenir ve e-posta gönderilmez. e-Arşiv ve e-posta için sözleşmeler hazırdır; çağrıldıklarında açıkça "API aşamasında etkinleşecek" hatası verirler.
+
+**PDF iş dökümü.** `services/reportService.ts` A4 yatay, siyah-beyaz, sayfa numaralı ve oluşturulma tarihli HTML üretir; `expo-print` ile PDF'e çevrilip `expo-sharing` ile paylaşılır veya doğrudan yazdırılır. Örnek: 19.10.2026–22.10.2026 aralığı 7 iş ve 36.500 TL toplam verir.
+
+## Bilinen notlar
+
+- `react-native-maps` Expo Go'da çalışır. Android için mağaza/development build alınırken Google Maps API anahtarı gerekir (`app.json` > `android.config.googleMaps.apiKey`).
+- Web önizlemesinde harita yerine konum listesi gösterilir; uygulamanın hedefi iOS ve Android'dir.
+- Repoda ESLint yapılandırması bulunmuyor; `npx expo lint` ilk çalıştırmada yapılandırmayı otomatik ekler.

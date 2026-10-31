@@ -13,7 +13,7 @@ import type {
 import { ServiceError } from '../errors';
 import { savePdf } from '../files';
 import { http, httpAll, httpBinary } from '../http';
-import type { InvoiceFilter, JobStatus, LocationFix, Session, User } from '@/types';
+import type { InvoiceFilter, JobStatus, LocationFix, Session, User, WithholdingType } from '@/types';
 import { isEmail } from '@/utils/validation';
 import {
   customerAddressFromApi,
@@ -269,6 +269,9 @@ export const apiInvoiceService: InvoiceService = {
         invoiceDate: input.issueDate,
         vatRate: input.vatRate,
         notes: input.description.trim() || null,
+        withholdingCode: input.withholdingCode ?? null,
+        noWithholding: !input.withholdingCode,
+        iban: input.iban?.trim() || null,
       },
     });
     return invoiceFromApiDetail(detail);
@@ -281,6 +284,8 @@ export const apiInvoiceService: InvoiceService = {
     const bytes = await httpBinary(path);
     return savePdf(bytes, kind === 'invoice' ? `Fatura_${id}.pdf` : `Is_Dokumu_${id}.pdf`);
   },
+
+  withholdingTypes: () => http<WithholdingType[]>('/api/invoices/withholding-types'),
 };
 
 export const apiEArchiveGateway: EArchiveGateway = {
@@ -297,6 +302,14 @@ export const apiEArchiveGateway: EArchiveGateway = {
   async cancel(invoiceId, reason) {
     await http(`/api/invoices/${invoiceId}/cancel`, { method: 'POST', json: { reason } });
   },
+  async sendSignSms(invoiceId) {
+    const r = await http<{ operationId: string; maskedPhone: string | null }>(`/api/invoices/${invoiceId}/earchive/sms`, { method: 'POST' });
+    return { operationId: r.operationId, maskedPhone: r.maskedPhone ?? undefined };
+  },
+  sign: async (invoiceId, operationId, code) =>
+    invoiceFromApiDetail(await http<ApiInvoiceDetail>(`/api/invoices/${invoiceId}/earchive/sign`, { method: 'POST', json: { operationId, code } })),
+  discardDraft: async (invoiceId) =>
+    invoiceFromApiDetail(await http<ApiInvoiceDetail>(`/api/invoices/${invoiceId}/earchive/discard`, { method: 'POST' })),
 };
 
 export const apiInvoiceMailer: InvoiceMailer = {

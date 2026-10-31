@@ -1,12 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ban, ChevronRight, FileSpreadsheet, Mail, Printer, Send, Share2, ShieldCheck, TriangleAlert } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { Ban, ChevronRight, FileSpreadsheet, Mail, MessageSquareLock, Printer, Send, Share2, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { InvoicePreview } from '@/components/invoices/InvoicePreview';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
 import { APP_CONFIG } from '@/constants/config';
-import { Button, Card, EmptyState, InfoRow, NavHeader, Screen, ScrollContent, Section, Text } from '@/components/ui';
+import { Button, Card, EmptyState, InfoRow, Input, NavHeader, Screen, ScrollContent, Section, Sheet, Text } from '@/components/ui';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useCustomer, useInvoice, useJobs } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
@@ -35,6 +35,10 @@ export default function InvoiceDetailScreen() {
   const jobReport = useAsyncAction();
   const print = useAsyncAction();
   const action = useAsyncAction();
+  const signing = useAsyncAction();
+  /** GİB portalı imza SMS'i: kod istendiğinde dolar. */
+  const [challenge, setChallenge] = useState<{ operationId: string; maskedPhone?: string } | null>(null);
+  const [smsCode, setSmsCode] = useState('');
 
   // Liste yanıtında e-posta/e-Arşiv ayrıntıları yoktur; detay açılınca fatura tazelenir.
   useEffect(() => {
@@ -61,7 +65,9 @@ export default function InvoiceDetailScreen() {
         ? APP_CONFIG.dataSource === 'api'
           ? 'Kesilmedi · taslak belge'
           : 'Bağlı değil · demo belge'
-        : invoice.ettn
+        : invoice.requiresSmsSignature
+          ? 'GİB portalında taslak · SMS ile imza bekliyor'
+          : invoice.ettn
           ? `ETTN ${invoice.ettn}`
           : 'Gönderim bekleniyor';
 
@@ -82,6 +88,41 @@ export default function InvoiceDetailScreen() {
     const uri = await invoiceService.downloadPdf(invoice.id, 'job-report');
     if (uri) await sharePdf(uri, `${invoice.invoiceNo} iş dökümü`);
     else await reportService.shareInvoiceJobReport(invoice, jobs.filter((j) => items.some((it) => it.jobId === j.id)));
+  };
+
+  const issue = async () => {
+    const inv = await action.run(() => invoiceActions.issue(invoice.id));
+    if (!inv) return;
+    if (inv.requiresSmsSignature) {
+      // GİB portalı: taslak oluştu, kesmek için SMS ile imza gerekir.
+      await requestSms();
+    }
+  };
+
+  const requestSms = async () => {
+    const c = await signing.run(() => invoiceActions.sendSignSms(invoice.id));
+    if (c) {
+      setSmsCode('');
+      setChallenge(c);
+    }
+  };
+
+  const sign = async () => {
+    if (!challenge) return;
+    const inv = await signing.run(() => invoiceActions.sign(invoice.id, challenge.operationId, smsCode.trim()), {
+      error: 'Fatura imzalanamadı.',
+    });
+    if (inv?.status === 'earsiv_issued') setChallenge(null);
+  };
+
+  const discard = async () => {
+    const ok = await confirm({
+      title: 'Portal taslağını sil',
+      message: 'GİB e-Arşiv portalındaki imzalanmamış taslak silinecek ve fatura yeniden düzenlenebilir taslak olacak.',
+      confirmLabel: 'Taslağı sil',
+      destructive: true,
+    });
+    if (ok) await action.run(() => invoiceActions.discardDraft(invoice.id), { success: 'Portal taslağı silindi.' });
   };
 
   const cancel = async () => {
@@ -105,6 +146,12 @@ export default function InvoiceDetailScreen() {
           total={invoice.total}
           demo={isDemo}
           cancelled={cancelled}
+          withholdingLabel={invoice.withholdingCode ? `KDV tevkifatı ${(invoice.withholdingRate ?? 0) / 10}/10 (${invoice.withholdingCode})` : undefined}
+          withholdingAmount={invoice.withholdingAmount}
+          payableAmount={invoice.payableAmount}
+          amountInWords={invoice.amountInWords}
+          iban={invoice.iban}
+          bankName={invoice.bankName}
         />
 
         <View style={styles.row}>
@@ -140,6 +187,9 @@ export default function InvoiceDetailScreen() {
           <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
             <InfoRow icon={ShieldCheck} label="Fatura türü" value={<InvoiceStatusBadge invoice={invoice} />} />
             <InfoRow icon={ShieldCheck} label="e-Arşiv" value={eArchiveLabel} />
+            {invoice.withholdingCode ? (
+              <InfoRow label="Tevkifat" value={`${invoice.withholdingCode} · ${invoice.withholdingName ?? ''}`} />
+            ) : null}
             <InfoRow icon={Mail} label="E-posta" value={`${EMAIL_LABEL[invoice.email.status]}${invoice.email.to ? ` · ${invoice.email.to}` : ''}`} />
             <InfoRow label="Oluşturulma" value={formatDateTime(invoice.createdAt)} last />
           </Card>
@@ -152,18 +202,57 @@ export default function InvoiceDetailScreen() {
           </View>
         ) : null}
 
+        {invoice.requiresSmsSignature ? (
+          <View style={styles.notice}>
+            <MessageSquareLock size={16} color={colors.text} />
+            <Text variant="bodySmall" style={{ flex: 1 }}>
+              Fatura GİB e-Arşiv portalında taslak olarak oluşturuldu ama henüz kesilmedi. Kesmek için portalda kayıtlı telefona gelen SMS koduyla imzalayın.
+            </Text>
+          </View>
+        ) : null}
+
         {isDemo && !cancelled ? (
           <Button
             label="e-Arşiv'e gönder"
             icon={Send}
             variant="secondary"
             loading={action.pending}
-            onPress={() => action.run(() => invoiceActions.issue(invoice.id), { success: 'Fatura e-Arşiv sağlayıcısına gönderildi.' })}
+            onPress={issue}
             accessibilityHint="Faturayı e-Arşiv sağlayıcısı üzerinden resmi faturaya dönüştürür"
           />
         ) : null}
-        {!cancelled ? <Button label="Faturayı iptal et" variant="danger" icon={Ban} onPress={cancel} /> : null}
+        {invoice.requiresSmsSignature ? (
+          <>
+            <Button label="SMS ile imzala ve kes" icon={MessageSquareLock} loading={signing.pending} onPress={requestSms} />
+            <Button label="Portal taslağını sil" icon={Trash2} variant="secondary" loading={action.pending} onPress={discard} />
+          </>
+        ) : !cancelled ? (
+          <Button label="Faturayı iptal et" variant="danger" icon={Ban} onPress={cancel} />
+        ) : null}
       </ScrollContent>
+
+      <Sheet
+        visible={challenge !== null}
+        onClose={() => setChallenge(null)}
+        title="SMS ile imzala"
+        subtitle={challenge?.maskedPhone ? `Kod ${challenge.maskedPhone} numarasına gönderildi.` : 'Kod portalda kayıtlı telefona gönderildi.'}
+        footer={
+          <View style={styles.row}>
+            <Button label="Yeni kod" variant="secondary" style={{ flex: 1 }} disabled={signing.pending} onPress={requestSms} />
+            <Button label="İmzala" style={{ flex: 2 }} loading={signing.pending} disabled={smsCode.trim().length < 4} onPress={sign} />
+          </View>
+        }>
+        <Input
+          label="SMS kodu"
+          value={smsCode}
+          onChangeText={setSmsCode}
+          keyboardType="number-pad"
+          autoComplete="sms-otp"
+          textContentType="oneTimeCode"
+          maxLength={10}
+          hint="İmza mali işlem oluşturur: fatura kesilir ve müşteriye e-postası gönderilir."
+        />
+      </Sheet>
     </Screen>
   );
 }
@@ -175,4 +264,5 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.lg },
   itemBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderStrong },
   error: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, borderRadius: 12, backgroundColor: colors.dangerSoft },
+  notice: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.ink },
 });

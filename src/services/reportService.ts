@@ -210,8 +210,23 @@ function invoiceHtml(invoice: Invoice, customer: Customer | null): string {
     <div class="totals">
       <div><span>Ara toplam</span><span class="num">${formatCurrency(invoice.subtotal, { decimals: 2 })}</span></div>
       <div><span>KDV (%${invoice.vatRate})</span><span class="num">${formatCurrency(invoice.vatAmount, { decimals: 2 })}</span></div>
-      <div class="grand"><span>Genel toplam</span><span class="num">${formatCurrency(invoice.total, { decimals: 2 })}</span></div>
+      ${
+        invoice.withholdingCode
+          ? `<div><span>Vergiler dahil toplam</span><span class="num">${formatCurrency(invoice.total, { decimals: 2 })}</span></div>
+      <div><span>KDV tevkifatı ${(invoice.withholdingRate ?? 0) / 10}/10 (${esc(invoice.withholdingCode)})</span><span class="num">−${formatCurrency(invoice.withholdingAmount ?? 0, { decimals: 2 })}</span></div>
+      <div class="grand"><span>Ödenecek tutar</span><span class="num">${formatCurrency(invoice.payableAmount ?? invoice.total, { decimals: 2 })}</span></div>`
+          : `<div class="grand"><span>Genel toplam</span><span class="num">${formatCurrency(invoice.total, { decimals: 2 })}</span></div>`
+      }
     </div>
+    ${
+      invoice.amountInWords || invoice.iban
+        ? `<div style="margin-top:16px;padding:8px 10px;border:1px solid #E0E0E0;font-size:11px">
+      <div style="font-size:9px;color:#555">AÇIKLAMA</div>
+      ${invoice.amountInWords ? `<div style="font-weight:600;margin-top:3px">${esc(invoice.amountInWords)}</div>` : ''}
+      ${invoice.iban ? `<div style="margin-top:3px">IBAN: ${esc(invoice.iban)}${invoice.bankName ? ` (${esc(invoice.bankName)})` : ''}</div>` : ''}
+    </div>`
+        : ''
+    }
     <footer>Oluşturulma: ${formatDateTime(invoice.createdAt)}${isDemo ? ` · ${DRAFT.word} belge, resmi geçerliliği yoktur.` : ''}</footer>
   </div></body></html>`;
 }

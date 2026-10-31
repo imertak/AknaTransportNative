@@ -45,7 +45,8 @@ Giriş bilgileri API'nin hesaplarıdır: ilk yönetici API'deki `Seed:AdminEmail
 
 API modunda bilinmesi gerekenler:
 - Erişim token'ı süresi dolunca sessizce yenilenir; yenilenemezse giriş ekranına dönülür.
-- Faturalar "Taslak" olarak oluşturulur ve tutar işin fiyatından hesaplanır. "e-Arşiv'e gönder" sağlayıcı yapılandırılana kadar hata verir ve fatura taslak kalır.
+- Faturalar "Taslak" olarak oluşturulur ve tutar işin fiyatından hesaplanır. Fatura formunda KDV tevkifatı (ör. 624 Yük taşımacılığı 2/10) ve IBAN seçilir; önizlemede ödenecek tutar ve "YALNIZ: ..." satırı görünür.
+- "e-Arşiv'e gönder" API'de sağlayıcı yapılandırılmamışsa hata verir ve fatura taslak kalır. API GİB e-Arşiv portalına bağlıysa (`EArchive__Provider=GibPortal`) fatura portalda taslak olur; detay ekranında "SMS ile imzala ve kes" ile portalda kayıtlı telefona gelen kod girilir. Fatura yalnızca GİB imzayı onaylarsa kesilmiş olur. İmzalanmamış taslak "Portal taslağını sil" ile geri alınabilir.
 - Şoför hesapları müşteri ve fatura listelerini görmez (API yetkisi). İş detayında firma adı görünür, müşteri iletişim bilgisi görünmez.
 - Araçları yalnızca yönetici ekler, düzenler ve şoföre atar (Panel > Araçlar). İş atarken önce şoför, sonra o şoförün aracı seçilir.
 

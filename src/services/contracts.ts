@@ -5,6 +5,7 @@ import type {
   Invoice,
   InvoiceFilter,
   InvoiceInput,
+  WithholdingType,
   LocationFix,
   MonthRevenue,
   StopType,
@@ -94,6 +95,8 @@ export interface InvoiceService {
    * null: bu veri kaynağında sunucu PDF'i yoktur, PDF cihazda üretilmelidir.
    */
   downloadPdf(id: string, kind: 'invoice' | 'job-report'): Promise<string | null>;
+  /** KDV tevkifat kodları. */
+  withholdingTypes(): Promise<WithholdingType[]>;
 }
 
 /** e-Arşiv entegratörü sözleşmesi (API aşamasında backend üzerinden çağrılacak). */
@@ -101,6 +104,12 @@ export interface EArchiveGateway {
   issue(invoiceId: string): Promise<{ ettn: string; externalId: string; status: 'earsiv_pending' | 'earsiv_issued' }>;
   getStatus(invoiceId: string): Promise<Invoice['status']>;
   cancel(invoiceId: string, reason: string): Promise<void>;
+  /** GİB portalındaki taslak için imza SMS'ini gönderir. */
+  sendSignSms(invoiceId: string): Promise<{ operationId: string; maskedPhone?: string }>;
+  /** SMS koduyla imzalar. Fatura yalnızca GİB onaylarsa kesilmiş olur. */
+  sign(invoiceId: string, operationId: string, code: string): Promise<Invoice>;
+  /** Portaldaki imzalanmamış taslağı siler; fatura yeniden taslak olur. */
+  discardDraft(invoiceId: string): Promise<Invoice>;
 }
 
 /** Faturanın müşteriye e-posta ile iletilmesi (backend tarafında yapılacak). */

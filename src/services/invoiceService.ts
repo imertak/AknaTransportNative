@@ -5,6 +5,7 @@ import { createId, sequenceNo } from '@/utils/id';
 import { mockDb } from './mockDb';
 import type { Invoice, InvoiceFilter } from '@/types';
 import { composeJobText } from '@/utils/stops';
+import { amountInWords, calculateWithholding, DEFAULT_WITHHOLDING_TYPES, formatIban, isValidIban } from '@/utils/invoiceText';
 
 export function matchesInvoiceFilter(i: Invoice, f: InvoiceFilter): boolean {
   if (f.customerId && i.customerId !== f.customerId) return false;
@@ -57,6 +58,11 @@ export const mockInvoiceService: InvoiceService = {
       if (!(input.subtotal > 0)) throw new ServiceError('validation', 'Ara toplam sıfırdan büyük olmalı.');
       const firstJob = jobList[0]!;
       const customer = db.customers.find((c) => c.id === firstJob.customerId)!;
+      const withholding = input.withholdingCode ? DEFAULT_WITHHOLDING_TYPES.find((w) => w.code === input.withholdingCode) ?? null : null;
+      if (input.withholdingCode && !withholding) throw new ServiceError('validation', 'Geçersiz tevkifat kodu.');
+      if (input.iban && !isValidIban(input.iban)) throw new ServiceError('validation', 'IBAN geçersiz.');
+      const totals = calculateInvoiceTotals(input.subtotal, input.vatRate);
+      const wh = calculateWithholding(totals.vatAmount, totals.total, withholding);
       db.counters.invoice += 1;
       const invoice = {
         id: createId('inv'),
@@ -81,7 +87,13 @@ export const mockInvoiceService: InvoiceService = {
         issueDate: input.issueDate,
         description: input.description.trim(),
         vatRate: input.vatRate,
-        ...calculateInvoiceTotals(input.subtotal, input.vatRate),
+        ...totals,
+        withholdingCode: withholding?.code,
+        withholdingName: withholding?.name,
+        withholdingRate: withholding?.rate ?? 0,
+        ...wh,
+        amountInWords: amountInWords(wh.payableAmount),
+        iban: input.iban ? formatIban(input.iban) : undefined,
         email: { to: customer.email, status: 'not_sent' as const },
         createdAt: new Date().toISOString(),
       };
@@ -111,6 +123,8 @@ export const mockInvoiceService: InvoiceService = {
 
   // Demo modda sunucu PDF'i yoktur; PDF cihazda üretilir.
   downloadPdf: async () => null,
+
+  withholdingTypes: async () => DEFAULT_WITHHOLDING_TYPES,
 };
 
 const notReady = () => {
@@ -122,6 +136,9 @@ export const pendingEArchiveGateway: EArchiveGateway = {
   issue: async () => notReady(),
   getStatus: async () => notReady(),
   cancel: async () => notReady(),
+  sendSignSms: async () => notReady(),
+  sign: async () => notReady(),
+  discardDraft: async () => notReady(),
 };
 
 export const pendingInvoiceMailer: InvoiceMailer = {

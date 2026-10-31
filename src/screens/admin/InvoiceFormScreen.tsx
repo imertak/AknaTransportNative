@@ -8,13 +8,16 @@ import { BottomBar, Button, Card, DateField, EmptyState, Input, NavHeader, Scree
 import { APP_CONFIG } from '@/constants/config';
 import { useCurrentUser } from '@/contexts/AuthContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
-import { useCustomers, useInvoices, useJobs } from '@/hooks/useData';
+import { useCustomers, useInvoices, useJobs, useWithholdingTypes } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
 import { calculateInvoiceTotals } from '@/services';
 import { invoiceActions } from '@/store';
 import { colors, radius, spacing } from '@/theme';
 import { formatAmountInput, formatCurrency, formatDate, parseAmount, todayISO } from '@/utils/format';
 import { composeJobText } from '@/utils/stops';
+import { amountInWords, calculateWithholding, DEFAULT_WITHHOLDING_TYPES, formatIban, isValidIban } from '@/utils/invoiceText';
+
+const NO_WITHHOLDING = 'none';
 
 const apiMode = APP_CONFIG.dataSource === 'api';
 
@@ -58,7 +61,19 @@ export default function InvoiceFormScreen() {
   const amount = !apiMode && subtotalOverride ? (parseAmount(subtotalOverride) ?? 0) : autoSubtotal;
 
   const [vatRate, setVatRate] = useState<number>(APP_CONFIG.defaultVatRate);
-  const [errors, setErrors] = useState<{ jobs?: string; description?: string; subtotal?: string }>({});
+  const [errors, setErrors] = useState<{ jobs?: string; description?: string; subtotal?: string; iban?: string }>({});
+
+  const withholdingTypes = useWithholdingTypes().data ?? DEFAULT_WITHHOLDING_TYPES;
+  const [withholdingCode, setWithholdingCode] = useState<string>(NO_WITHHOLDING);
+  const withholding = withholdingTypes.find((w) => w.code === withholdingCode) ?? null;
+  const withholdingOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: NO_WITHHOLDING, label: 'Tevkifat yok' },
+      ...withholdingTypes.map((w) => ({ value: w.code, label: `${w.code} · ${w.fraction} · ${w.name}` })),
+    ],
+    [withholdingTypes],
+  );
+  const [iban, setIban] = useState('');
 
   const jobOptions = useMemo<SelectOption[]>(
     () => availableJobs.filter(j => !selectedJobIds.includes(j.id)).map((j) => ({
@@ -70,6 +85,7 @@ export default function InvoiceFormScreen() {
   );
 
   const totals = calculateInvoiceTotals(amount, vatRate);
+  const wh = calculateWithholding(totals.vatAmount, totals.total, vatRate > 0 ? withholding : null);
 
   const addJob = (id: string) => {
     setSelectedJobIds(prev => [...prev, id]);
@@ -86,6 +102,7 @@ export default function InvoiceFormScreen() {
     const desc = displayDescription.trim();
     if (!desc) e.description = 'Açıklama girin.';
     if (!(amount > 0)) e.subtotal = 'Ara toplam sıfırdan büyük olmalı.';
+    if (iban.trim() && !isValidIban(iban)) e.iban = 'IBAN geçersiz.';
     setErrors(e);
     if (Object.keys(e).length) return;
     const inv = await run(
@@ -95,6 +112,8 @@ export default function InvoiceFormScreen() {
         description: desc,
         subtotal: amount,
         vatRate,
+        withholdingCode: vatRate > 0 ? withholding?.code ?? null : null,
+        iban: iban.trim() || undefined,
       }, user.id),
       { success: apiMode ? 'Taslak fatura oluşturuldu.' : 'Demo fatura oluşturuldu.' },
     );
@@ -181,6 +200,31 @@ export default function InvoiceFormScreen() {
               <Text variant="label" tone="secondary">KDV oranı</Text>
               <SegmentedControl value={String(vatRate)} onChange={(v) => setVatRate(Number(v))} options={APP_CONFIG.vatRates.map((r) => ({ value: String(r), label: `%${r}` }))} />
             </View>
+            <SelectField
+              label="KDV tevkifatı"
+              options={withholdingOptions}
+              value={vatRate > 0 ? withholdingCode : NO_WITHHOLDING}
+              onChange={setWithholdingCode}
+              searchable
+              hint={
+                vatRate === 0
+                  ? 'KDV oranı %0 olan faturada tevkifat uygulanmaz.'
+                  : withholding
+                    ? `KDV'nin ${withholding.fraction}'u (${formatCurrency(wh.withholdingAmount, { decimals: 2 })}) alıcı tarafından ödenir.`
+                    : 'Alıcı belirlenmiş alıcıysa (kamu kurumu, büyük mükellef vb.) yük taşımacılığı için 624 · 2/10 seçin.'
+              }
+            />
+            <Input
+              label="IBAN"
+              value={iban}
+              onChangeText={(v) => setIban(v.toUpperCase())}
+              onBlur={() => setIban((v) => (v.trim() ? formatIban(v) : ''))}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              placeholder="TR00 0000 0000 0000 0000 0000 00"
+              error={errors.iban}
+              hint={apiMode ? 'Boş bırakılırsa firmanın kayıtlı IBAN\'ı faturaya yazılır.' : 'Faturanın açıklamasında yazılır.'}
+            />
           </Card>
         </Section>
 
@@ -195,6 +239,11 @@ export default function InvoiceFormScreen() {
               vatRate={vatRate}
               {...totals}
               demo
+              withholdingLabel={withholding && vatRate > 0 ? `KDV tevkifatı ${withholding.fraction} (${withholding.code})` : undefined}
+              withholdingAmount={wh.withholdingAmount}
+              payableAmount={wh.payableAmount}
+              amountInWords={amountInWords(wh.payableAmount)}
+              iban={iban.trim() ? formatIban(iban) : apiMode ? 'Firma IBAN\'ı (sunucu ayarı)' : undefined}
             />
             <Text variant="bodySmall" tone="secondary">
               {customer?.email ? `Entegrasyon sonrası fatura ${customer.email} adresine otomatik gönderilecek.` : 'Müşterinin kayıtlı e-posta adresi yok.'}

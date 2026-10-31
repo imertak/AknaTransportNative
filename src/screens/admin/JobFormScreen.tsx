@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Info, Plus } from 'lucide-react-native';
+import { Info, MapPin, Plus, X } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { AddressMapModal } from '@/components/map/AddressMapModal';
 import { BottomBar, Button, Card, DateField, EmptyState, Input, NavHeader, Screen, ScrollContent, Section, SelectField, Text, type SelectOption } from '@/components/ui';
 import { isClosed } from '@/constants/jobStatus';
 import { VEHICLE_TYPE_LABEL, VEHICLE_TYPES } from '@/constants/vehicles';
@@ -21,8 +22,8 @@ interface FormState {
   date: string;
   storeName: string;
   vehicleType: VehicleType | '';
-  pickupAddress: string;
-  deliveryAddress: string;
+  pickupAddresses: string[];
+  deliveryAddresses: string[];
   description: string;
   price: string;
   driverId: string;
@@ -36,13 +37,20 @@ const empty = (customerId = ''): FormState => ({
   date: todayISO(),
   storeName: '',
   vehicleType: '',
-  pickupAddress: '',
-  deliveryAddress: '',
+  pickupAddresses: [''],
+  deliveryAddresses: [''],
   description: '',
   price: '',
   driverId: NO_DRIVER,
   notes: '',
 });
+
+function buildDescription(pickups: string[], deliveries: string[]): string {
+  const p = pickups.filter(a => a.trim());
+  const d = deliveries.filter(a => a.trim());
+  if (!p.length && !d.length) return '';
+  return [...p, ...d].join(' - ');
+}
 
 function validate(f: FormState): Errors<FormState> {
   const e: Errors<FormState> = {};
@@ -50,9 +58,8 @@ function validate(f: FormState): Errors<FormState> {
   if (!f.date) e.date = 'İş tarihini seçin.';
   if (!required(f.storeName)) e.storeName = 'Mağaza / firma adını girin.';
   if (!f.vehicleType) e.vehicleType = 'Araç tipini seçin.';
-  if (!required(f.pickupAddress)) e.pickupAddress = 'Yükleme adresini girin.';
-  if (!required(f.deliveryAddress)) e.deliveryAddress = 'Teslimat adresini girin.';
-  if (!required(f.description)) e.description = 'Yapılan nakliyeyi açıklayın.';
+  if (!f.pickupAddresses.some(a => required(a))) (e as any).pickupAddresses = 'En az bir yükleme adresi girin.';
+  if (!f.deliveryAddresses.some(a => required(a))) (e as any).deliveryAddresses = 'En az bir teslimat adresi girin.';
   const price = parseAmount(f.price);
   if (price === null) e.price = 'Fiyat girin.';
   else if (price <= 0) e.price = 'Fiyat sıfırdan büyük olmalı.';
@@ -77,8 +84,8 @@ export default function JobFormScreen() {
           date: existing.date,
           storeName: existing.storeName,
           vehicleType: existing.vehicleType,
-          pickupAddress: existing.pickupAddress,
-          deliveryAddress: existing.deliveryAddress,
+          pickupAddresses: existing.pickupAddresses?.length ? existing.pickupAddresses : [existing.pickupAddress],
+          deliveryAddresses: existing.deliveryAddresses?.length ? existing.deliveryAddresses : [existing.deliveryAddress],
           description: existing.description,
           price: formatAmountInput(String(existing.price).replace('.', ',')),
           driverId: existing.driverId ?? NO_DRIVER,
@@ -88,7 +95,21 @@ export default function JobFormScreen() {
   );
   const [errors, setErrors] = useState<Errors<FormState>>({});
   const [prefillNote, setPrefillNote] = useState<string | null>(null);
+  const [mapAddress, setMapAddress] = useState<string | null>(null);
   const submitted = useRef(false);
+
+  const customerAddresses = useMemo(() => {
+    if (!form.customerId) return { pickups: [] as string[], deliveries: [] as string[] };
+    const cJobs = jobs.filter(j => j.customerId === form.customerId);
+    const pickups = [...new Set(cJobs.flatMap(j => j.pickupAddresses?.length ? j.pickupAddresses : [j.pickupAddress]).filter(Boolean))];
+    const deliveries = [...new Set(cJobs.flatMap(j => j.deliveryAddresses?.length ? j.deliveryAddresses : [j.deliveryAddress]).filter(Boolean))];
+    return { pickups, deliveries };
+  }, [form.customerId, jobs]);
+
+  useEffect(() => {
+    const desc = buildDescription(form.pickupAddresses, form.deliveryAddresses);
+    if (desc) setForm(f => ({ ...f, description: desc }));
+  }, [form.pickupAddresses, form.deliveryAddresses]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((f) => {
@@ -108,8 +129,8 @@ export default function JobFormScreen() {
         next.storeName = f.storeName || last?.storeName || customer?.companyName || '';
         if (last) {
           next.vehicleType = f.vehicleType || last.vehicleType;
-          next.pickupAddress = f.pickupAddress || last.pickupAddress;
-          next.deliveryAddress = f.deliveryAddress || last.deliveryAddress;
+          next.pickupAddresses = f.pickupAddresses.every(a => !a) ? (last.pickupAddresses?.length ? last.pickupAddresses : [last.pickupAddress]) : f.pickupAddresses;
+          next.deliveryAddresses = f.deliveryAddresses.every(a => !a) ? (last.deliveryAddresses?.length ? last.deliveryAddresses : [last.deliveryAddress]) : f.deliveryAddresses;
           next.price = f.price || formatAmountInput(String(last.price));
         }
       }
@@ -156,8 +177,10 @@ export default function JobFormScreen() {
       date: form.date,
       storeName: form.storeName.trim(),
       vehicleType: form.vehicleType as VehicleType,
-      pickupAddress: form.pickupAddress.trim(),
-      deliveryAddress: form.deliveryAddress.trim(),
+      pickupAddress: form.pickupAddresses.filter(a => a.trim()).join(', '),
+      deliveryAddress: form.deliveryAddresses.filter(a => a.trim()).join(', '),
+      pickupAddresses: form.pickupAddresses.filter(a => a.trim()),
+      deliveryAddresses: form.deliveryAddresses.filter(a => a.trim()),
       description: form.description.trim(),
       price: parseAmount(form.price)!,
       notes: form.notes.trim(),
@@ -206,8 +229,105 @@ export default function JobFormScreen() {
                 <SelectField label="Araç tipi" required options={vehicleOptions} value={form.vehicleType || null} onChange={(v) => set('vehicleType', v)} error={errors.vehicleType} />
               </View>
             </View>
-            <Input label="Yükleme adresi" required value={form.pickupAddress} onChangeText={(v) => set('pickupAddress', v)} error={errors.pickupAddress} placeholder="Örn. Haliç Tersane" />
-            <Input label="Teslimat adresi" required value={form.deliveryAddress} onChangeText={(v) => set('deliveryAddress', v)} error={errors.deliveryAddress} placeholder="Örn. Zorlu AVM" />
+            {/* Yükleme adresleri */}
+            <View style={{ gap: spacing.sm }}>
+              <Text variant="label">Yükleme adresleri <Text variant="label" tone="danger">*</Text></Text>
+              {form.pickupAddresses.map((addr, idx) => (
+                <View key={`pickup-${idx}`} style={styles.addressRow}>
+                  <View style={{ flex: 1 }}>
+                    {customerAddresses.pickups.length > 0 && (
+                      <SelectField
+                        label=""
+                        placeholder="Önceki adreslerden seç..."
+                        options={customerAddresses.pickups.map(a => ({ value: a, label: a }))}
+                        value={addr || null}
+                        onChange={(v) => {
+                          const next = [...form.pickupAddresses];
+                          next[idx] = v;
+                          set('pickupAddresses', next as any);
+                        }}
+                        searchable
+                      />
+                    )}
+                    <Input
+                      label=""
+                      value={addr}
+                      onChangeText={(v) => {
+                        const next = [...form.pickupAddresses];
+                        next[idx] = v;
+                        set('pickupAddresses', next as any);
+                      }}
+                      placeholder="Yükleme adresi girin"
+                    />
+                  </View>
+                  {addr.trim() ? (
+                    <Pressable onPress={() => setMapAddress(addr)} hitSlop={hitSlop} style={styles.mapIcon}>
+                      <MapPin size={18} color={colors.text} />
+                    </Pressable>
+                  ) : null}
+                  {form.pickupAddresses.length > 1 ? (
+                    <Pressable onPress={() => set('pickupAddresses', form.pickupAddresses.filter((_, i) => i !== idx) as any)} hitSlop={hitSlop}>
+                      <X size={18} color={colors.textTertiary} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              ))}
+              <Pressable onPress={() => set('pickupAddresses', [...form.pickupAddresses, ''] as any)} hitSlop={hitSlop} style={styles.inlineLink}>
+                <Plus size={16} color={colors.text} />
+                <Text variant="label">Yükleme adresi ekle</Text>
+              </Pressable>
+              {(errors as any).pickupAddresses ? <Text variant="bodySmall" tone="danger">{(errors as any).pickupAddresses}</Text> : null}
+            </View>
+
+            {/* Teslimat adresleri */}
+            <View style={{ gap: spacing.sm }}>
+              <Text variant="label">Teslimat adresleri <Text variant="label" tone="danger">*</Text></Text>
+              {form.deliveryAddresses.map((addr, idx) => (
+                <View key={`delivery-${idx}`} style={styles.addressRow}>
+                  <View style={{ flex: 1 }}>
+                    {customerAddresses.deliveries.length > 0 && (
+                      <SelectField
+                        label=""
+                        placeholder="Önceki adreslerden seç..."
+                        options={customerAddresses.deliveries.map(a => ({ value: a, label: a }))}
+                        value={addr || null}
+                        onChange={(v) => {
+                          const next = [...form.deliveryAddresses];
+                          next[idx] = v;
+                          set('deliveryAddresses', next as any);
+                        }}
+                        searchable
+                      />
+                    )}
+                    <Input
+                      label=""
+                      value={addr}
+                      onChangeText={(v) => {
+                        const next = [...form.deliveryAddresses];
+                        next[idx] = v;
+                        set('deliveryAddresses', next as any);
+                      }}
+                      placeholder="Teslimat adresi girin"
+                    />
+                  </View>
+                  {addr.trim() ? (
+                    <Pressable onPress={() => setMapAddress(addr)} hitSlop={hitSlop} style={styles.mapIcon}>
+                      <MapPin size={18} color={colors.text} />
+                    </Pressable>
+                  ) : null}
+                  {form.deliveryAddresses.length > 1 ? (
+                    <Pressable onPress={() => set('deliveryAddresses', form.deliveryAddresses.filter((_, i) => i !== idx) as any)} hitSlop={hitSlop}>
+                      <X size={18} color={colors.textTertiary} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              ))}
+              <Pressable onPress={() => set('deliveryAddresses', [...form.deliveryAddresses, ''] as any)} hitSlop={hitSlop} style={styles.inlineLink}>
+                <Plus size={16} color={colors.text} />
+                <Text variant="label">Teslimat adresi ekle</Text>
+              </Pressable>
+              {(errors as any).deliveryAddresses ? <Text variant="bodySmall" tone="danger">{(errors as any).deliveryAddresses}</Text> : null}
+            </View>
             <Input
               label="Yapılan nakliyeler / iş açıklaması"
               required
@@ -252,6 +372,7 @@ export default function JobFormScreen() {
         <Button label="Vazgeç" variant="secondary" onPress={() => router.back()} style={{ flex: 1 }} />
         <Button label={isEdit ? 'Kaydet' : 'İşi oluştur'} onPress={submit} loading={pending} style={{ flex: 2 }} />
       </BottomBar>
+      <AddressMapModal visible={!!mapAddress} address={mapAddress ?? ''} onClose={() => setMapAddress(null)} />
     </Screen>
   );
 }
@@ -261,4 +382,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.sm },
   inlineLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: -spacing.xs },
   note: { flexDirection: 'row', gap: spacing.sm, backgroundColor: colors.surfaceMuted, padding: spacing.md, borderRadius: radius.md, alignItems: 'flex-start' },
+  addressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  mapIcon: { padding: spacing.sm, marginTop: spacing.xs },
 });

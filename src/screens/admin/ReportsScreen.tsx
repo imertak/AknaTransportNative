@@ -57,7 +57,7 @@ export default function ReportsScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.huge }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <PageHeader title="Raporlar" subtitle="Nakliye işleri dökümü ve faturalar" />
+        <PageHeader title="Faturalar" subtitle="Fatura yönetimi ve nakliye dökümü" />
         <View style={styles.body}>
           <Card onPress={() => router.push(routes.invoices)} style={styles.invoiceLink}>
             <View style={styles.iconBox}>

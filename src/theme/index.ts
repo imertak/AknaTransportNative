@@ -6,28 +6,31 @@ import { Platform, type TextStyle, type ViewStyle } from 'react-native';
  * hata/yıkıcı aksiyonlar için kullanılan koyu kırmızıdır.
  */
 export const colors = {
-  ink: '#0B0B0C',
-  inkRaised: '#161618',
-  inkLine: '#2A2A2D',
-  inkMuted: '#8E8E93',
+  ink: '#000000',
+  inkRaised: '#111111',
+  inkLine: '#222222',
+  inkMuted: '#888888',
 
-  background: '#F2F2F0',
+  background: '#F5F5F5',
   surface: '#FFFFFF',
-  surfaceMuted: '#F7F7F6',
-  surfaceSunken: '#EBEBE9',
-  border: '#E3E3E0',
-  borderStrong: '#CFCFCC',
+  surfaceMuted: '#FAFAFA',
+  surfaceSunken: '#EEEEEE',
+  border: '#E0E0E0',
+  borderStrong: '#CCCCCC',
 
-  text: '#0B0B0C',
-  textSecondary: '#55555A',
-  textTertiary: '#8A8A8F',
+  text: '#000000',
+  textSecondary: '#555555',
+  textTertiary: '#888888',
   textInverse: '#FFFFFF',
-  textInverseMuted: '#A1A1A6',
+  textInverseMuted: '#AAAAAA',
 
-  danger: '#A8261B',
-  dangerSoft: '#FBEDEB',
+  danger: '#D32F2F',
+  dangerSoft: '#FFEBEE',
 
-  overlay: 'rgba(11, 11, 12, 0.45)',
+  accent: '#D32F2F',
+  accentSoft: '#FFEBEE',
+
+  overlay: 'rgba(0, 0, 0, 0.5)',
 } as const;
 
 export const spacing = {

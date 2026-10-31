@@ -92,6 +92,10 @@ export interface TransportJob {
   vehicleType: VehicleType;
   pickupAddress: string;
   deliveryAddress: string;
+  /** Birden fazla yükleme adresi varsa virgülle ayrılmış liste. */
+  pickupAddresses?: string[];
+  /** Birden fazla teslimat adresi varsa virgülle ayrılmış liste. */
+  deliveryAddresses?: string[];
   description: string;
   price: number;
   driverId?: string;
@@ -117,7 +121,7 @@ export type JobInput = Pick<
   | 'description'
   | 'price'
   | 'notes'
-> & { driverId?: string };
+> & { driverId?: string; pickupAddresses?: string[]; deliveryAddresses?: string[] };
 
 export interface JobFilter {
   query?: string;
@@ -151,8 +155,12 @@ export interface Invoice {
   status: InvoiceStatus;
   customerId: string;
   customerName: string;
+  /** Geriye uyumluluk: tek iş faturası için dolu. */
   jobId: string;
   jobNo: string;
+  /** Birden fazla iş faturalandığında iş kimlikleri. */
+  jobIds?: string[];
+  jobNos?: string[];
   issueDate: ISODate;
   description: string;
   subtotal: number;
@@ -166,7 +174,10 @@ export interface Invoice {
   createdAt: ISODateTime;
 }
 
-export type InvoiceInput = Pick<Invoice, 'jobId' | 'issueDate' | 'description' | 'subtotal' | 'vatRate'>;
+export type InvoiceInput = Pick<Invoice, 'issueDate' | 'description' | 'subtotal' | 'vatRate'> & {
+  jobId?: string;
+  jobIds?: string[];
+};
 
 export interface LocationFix extends GeoPoint {
   accuracy: number | null;

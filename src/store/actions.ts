@@ -109,17 +109,19 @@ export const invoiceActions = {
   },
   async createDemo(input: InvoiceInput, actorId: string) {
     const inv = await invoiceService.createDemo(input, actorId);
+    const jobIdSet = new Set(inv.jobIds?.length ? inv.jobIds : [inv.jobId]);
     set((s) => ({
       invoices: [inv, ...s.invoices.filter((i) => i.id !== inv.id)],
-      jobs: s.jobs.map((j) => (j.id === inv.jobId ? { ...j, invoiceId: inv.id } : j)),
+      jobs: s.jobs.map((j) => (jobIdSet.has(j.id) ? { ...j, invoiceId: inv.id } : j)),
     }));
     return inv;
   },
   async cancel(id: string) {
     const inv = await invoiceService.cancel(id);
+    const jobIdSet = new Set(inv.jobIds?.length ? inv.jobIds : [inv.jobId]);
     set((s) => ({
       invoices: upsert(s.invoices, inv),
-      jobs: s.jobs.map((j) => (j.invoiceId === id ? { ...j, invoiceId: undefined } : j)),
+      jobs: s.jobs.map((j) => (jobIdSet.has(j.id) ? { ...j, invoiceId: undefined } : j)),
     }));
     return inv;
   },

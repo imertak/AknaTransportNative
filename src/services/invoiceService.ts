@@ -22,13 +22,19 @@ export const mockInvoiceService: InvoiceService = {
 
   createDemo: (input) =>
     mockDb.write((db) => {
-      const job = db.jobs.find((j) => j.id === input.jobId);
-      if (!job) throw new ServiceError('not_found', 'İş kaydı bulunamadı.');
-      if (job.status !== 'completed') throw new ServiceError('conflict', 'Yalnızca tamamlanan işler için fatura oluşturulabilir.');
-      const active = job.invoiceId ? db.invoices.find((i) => i.id === job.invoiceId && i.status !== 'cancelled') : undefined;
-      if (active) throw new ServiceError('conflict', `Bu iş için ${active.invoiceNo} numaralı fatura zaten mevcut.`);
+      const jobIds = input.jobIds?.length ? input.jobIds : input.jobId ? [input.jobId] : [];
+      if (!jobIds.length) throw new ServiceError('validation', 'En az bir iş seçilmelidir.');
+      const jobList = jobIds.map(jid => {
+        const job = db.jobs.find((j) => j.id === jid);
+        if (!job) throw new ServiceError('not_found', `İş kaydı bulunamadı: ${jid}`);
+        if (job.status !== 'completed') throw new ServiceError('conflict', `Yalnızca tamamlanan işler için fatura oluşturulabilir. (${job.jobNo})`);
+        const active = job.invoiceId ? db.invoices.find((i) => i.id === job.invoiceId && i.status !== 'cancelled') : undefined;
+        if (active) throw new ServiceError('conflict', `${job.jobNo} için ${active.invoiceNo} numaralı fatura zaten mevcut.`);
+        return job;
+      });
       if (!(input.subtotal > 0)) throw new ServiceError('validation', 'Ara toplam sıfırdan büyük olmalı.');
-      const customer = db.customers.find((c) => c.id === job.customerId)!;
+      const firstJob = jobList[0]!;
+      const customer = db.customers.find((c) => c.id === firstJob.customerId)!;
       db.counters.invoice += 1;
       const invoice = {
         id: createId('inv'),
@@ -37,18 +43,19 @@ export const mockInvoiceService: InvoiceService = {
         status: 'demo_created' as const,
         customerId: customer.id,
         customerName: customer.companyName,
-        jobId: job.id,
-        jobNo: job.jobNo,
+        jobId: firstJob.id,
+        jobNo: firstJob.jobNo,
+        jobIds: jobIds,
+        jobNos: jobList.map(j => j.jobNo),
         issueDate: input.issueDate,
         description: input.description.trim(),
         vatRate: input.vatRate,
         ...calculateInvoiceTotals(input.subtotal, input.vatRate),
-        // Demo modunda e-posta gönderilmez; API aşamasında InvoiceMailer kuyruğa alacak.
         email: { to: customer.email, status: 'not_sent' as const },
         createdAt: new Date().toISOString(),
       };
       db.invoices.push(invoice);
-      job.invoiceId = invoice.id;
+      jobList.forEach(j => { j.invoiceId = invoice.id; });
       return invoice;
     }),
 
@@ -58,8 +65,8 @@ export const mockInvoiceService: InvoiceService = {
       if (!inv) throw new ServiceError('not_found', 'Fatura bulunamadı.');
       if (inv.status === 'cancelled') throw new ServiceError('conflict', 'Fatura zaten iptal edilmiş.');
       inv.status = 'cancelled';
-      const job = db.jobs.find((j) => j.invoiceId === id);
-      if (job) job.invoiceId = undefined;
+      const relatedJobIds = inv.jobIds?.length ? inv.jobIds : [inv.jobId];
+      db.jobs.forEach(j => { if (relatedJobIds.includes(j.id)) j.invoiceId = undefined; });
       return inv;
     }),
 };

@@ -47,21 +47,29 @@ export interface DashboardStats {
   completed: number;
   cancelled: number;
   revenue: number;
+  monthlyRevenue: number;
+  revenueMonth: string;
   openValue: number;
 }
 
 export function useDashboardStats(): DashboardStats {
   const jobs = useJobs();
   return useMemo(() => {
-    const s: DashboardStats = { total: jobs.length, pending: 0, assigned: 0, inProgress: 0, completed: 0, cancelled: 0, revenue: 0, openValue: 0 };
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const s: DashboardStats = { total: jobs.length, pending: 0, assigned: 0, inProgress: 0, completed: 0, cancelled: 0, revenue: 0, monthlyRevenue: 0, revenueMonth: currentMonth, openValue: 0 };
     for (const j of jobs) {
       if (j.status === 'pending') s.pending++;
       else if (j.status === 'assigned') s.assigned++;
       else if (IN_PROGRESS_STATUSES.includes(j.status)) s.inProgress++;
       else if (j.status === 'completed') s.completed++;
       else if (j.status === 'cancelled') s.cancelled++;
-      if (j.status === 'completed') s.revenue += j.price;
-      else if (j.status !== 'cancelled') s.openValue += j.price;
+      if (j.status === 'completed') {
+        s.revenue += j.price;
+        if (j.date.startsWith(currentMonth)) s.monthlyRevenue += j.price;
+      } else if (j.status !== 'cancelled') {
+        s.openValue += j.price;
+      }
     }
     return s;
   }, [jobs]);

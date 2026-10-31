@@ -19,12 +19,17 @@ export interface User {
   role: UserRole;
   vehicleId?: string;
   isActive: boolean;
+  /** Yönetici tarafından oluşturulan geçici şifreyle ilk girişte true döner. */
+  mustChangePassword?: boolean;
 }
 
 export interface Session {
   token: string;
   userId: string;
   issuedAt: ISODateTime;
+  /** API oturumlarında erişim token'ını yenilemek için kullanılır. */
+  refreshToken?: string;
+  expiresAt?: ISODateTime;
 }
 
 export type VehicleType = 'panelvan' | 'small_panelvan' | 'pickup' | 'truck' | 'other';
@@ -71,6 +76,8 @@ export interface JobStatusEvent {
   status: JobStatus;
   at: ISODateTime;
   byUserId: string;
+  /** API'den gelen kayıtlarda değişikliği yapan kişinin adı. */
+  byUserName?: string;
   note?: string;
 }
 

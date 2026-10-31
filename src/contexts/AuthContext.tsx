@@ -2,12 +2,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { canUseViewMode, defaultViewMode } from '@/constants/permissions';
 import { authService } from '@/services';
-import { setTokenProvider } from '@/services/http';
+import { setTokenProvider, setTokenRefresher } from '@/services/http';
 import { STORAGE_KEYS, secureStorage, storage } from '@/services/storage';
 import { loadAll, resetDataStore } from '@/store';
 import type { Session, User, ViewMode } from '@/types';
 
-type AuthStatus = 'restoring' | 'signedOut' | 'signedIn';
+/**
+ * passwordChange: yönetici tarafından verilen geçici şifreyle giriş yapıldı;
+ * kullanıcı yeni şifresini belirleyene kadar diğer ekranlara erişemez.
+ */
+type AuthStatus = 'restoring' | 'signedOut' | 'passwordChange' | 'signedIn';
 
 interface AuthContextValue {
   status: AuthStatus;
@@ -15,6 +19,7 @@ interface AuthContextValue {
   viewMode: ViewMode;
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
   setViewMode(mode: ViewMode): void;
 }
 
@@ -26,50 +31,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [viewMode, setViewModeState] = useState<ViewMode>('driver');
   const session = useRef<Session | null>(null);
 
-  useEffect(() => {
-    setTokenProvider(() => session.current?.token ?? null);
-    (async () => {
-      try {
-        const raw = await secureStorage.get(STORAGE_KEYS.session);
-        const saved = raw ? (JSON.parse(raw) as Session) : null;
-        const restored = saved ? await authService.restore(saved) : null;
-        if (saved && restored) {
-          session.current = saved;
-          const storedMode = await storage.getJSON<ViewMode>(STORAGE_KEYS.viewMode);
-          await loadAll();
-          setUser(restored);
-          setViewModeState(storedMode && canUseViewMode(restored, storedMode) ? storedMode : defaultViewMode(restored));
-          setStatus('signedIn');
-          return;
-        }
-      } catch {
-        // bozuk oturum kaydı: girişe yönlendir
-      }
-      setStatus('signedOut');
-    })();
+  const saveSession = useCallback(async (next: Session) => {
+    session.current = next;
+    await secureStorage.set(STORAGE_KEYS.session, JSON.stringify(next));
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const result = await authService.login(email, password);
-    session.current = result.session;
-    await secureStorage.set(STORAGE_KEYS.session, JSON.stringify(result.session));
-    await loadAll();
-    const mode = defaultViewMode(result.user);
-    await storage.setJSON(STORAGE_KEYS.viewMode, mode);
-    setUser(result.user);
-    setViewModeState(mode);
-    setStatus('signedIn');
-  }, []);
-
-  const signOut = useCallback(async () => {
-    const current = session.current;
+  const clearLocal = useCallback(async () => {
     session.current = null;
-    await Promise.all([secureStorage.remove(STORAGE_KEYS.session), storage.remove(STORAGE_KEYS.viewMode)]);
-    if (current) authService.logout(current).catch(() => {});
+    await Promise.all([secureStorage.remove(STORAGE_KEYS.session), storage.remove(STORAGE_KEYS.viewMode)]).catch(() => {});
     resetDataStore();
     setUser(null);
     setStatus('signedOut');
   }, []);
+
+  /** Oturum açıldıktan sonra verileri yükler ve doğru ekrana geçer. */
+  const enter = useCallback(async (signedInUser: User, storedMode: ViewMode | null) => {
+    setUser(signedInUser);
+    if (signedInUser.mustChangePassword) {
+      setStatus('passwordChange');
+      return;
+    }
+    await loadAll(true);
+    if (!session.current) return; // yükleme sırasında oturum düştü
+    const mode = storedMode && canUseViewMode(signedInUser, storedMode) ? storedMode : defaultViewMode(signedInUser);
+    await storage.setJSON(STORAGE_KEYS.viewMode, mode);
+    setViewModeState(mode);
+    setStatus('signedIn');
+  }, []);
+
+  useEffect(() => {
+    setTokenProvider(() => session.current?.token ?? null);
+    // Erişim token'ı süresi dolunca yenilenir; yenilenemezse oturum kapatılır.
+    setTokenRefresher(async () => {
+      const current = session.current;
+      if (!current) return null;
+      try {
+        const next = await authService.refresh(current);
+        if (session.current !== current) return session.current?.token ?? null; // bu arada çıkış/giriş yapıldı
+        await saveSession(next);
+        return next.token;
+      } catch {
+        if (session.current === current) await clearLocal();
+        return null;
+      }
+    });
+    (async () => {
+      try {
+        const raw = await secureStorage.get(STORAGE_KEYS.session);
+        const saved = raw ? (JSON.parse(raw) as Session) : null;
+        if (saved) {
+          session.current = saved; // restore isteği bu token ile yapılır
+          const restored = await authService.restore(saved);
+          if (restored && session.current) {
+            await enter(restored, await storage.getJSON<ViewMode>(STORAGE_KEYS.viewMode));
+            return;
+          }
+        }
+      } catch {
+        // bozuk oturum kaydı veya sunucuya ulaşılamadı: girişe yönlendir
+      }
+      session.current = null;
+      setStatus('signedOut');
+    })();
+    return () => setTokenRefresher(null);
+  }, [clearLocal, enter, saveSession]);
+
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      const result = await authService.login(email, password);
+      await saveSession(result.session);
+      await enter(result.user, null);
+    },
+    [enter, saveSession],
+  );
+
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      const result = await authService.changePassword(currentPassword, newPassword);
+      await saveSession(result.session);
+      await enter(result.user, await storage.getJSON<ViewMode>(STORAGE_KEYS.viewMode));
+    },
+    [enter, saveSession],
+  );
+
+  const signOut = useCallback(async () => {
+    const current = session.current;
+    await clearLocal();
+    if (current) authService.logout(current).catch(() => {});
+  }, [clearLocal]);
 
   const setViewMode = useCallback(
     (mode: ViewMode) => {
@@ -80,7 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
-  const value = useMemo(() => ({ status, user, viewMode, signIn, signOut, setViewMode }), [status, user, viewMode, signIn, signOut, setViewMode]);
+  const value = useMemo(
+    () => ({ status, user, viewMode, signIn, signOut, changePassword, setViewMode }),
+    [status, user, viewMode, signIn, signOut, changePassword, setViewMode],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

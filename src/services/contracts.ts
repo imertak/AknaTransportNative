@@ -23,6 +23,12 @@ export interface AuthService {
   restore(session: Session): Promise<User | null>;
   logout(session: Session): Promise<void>;
   requestPasswordReset(email: string): Promise<void>;
+  /** E-postayla gelen sıfırlama koduyla yeni şifre belirler. */
+  resetPassword(email: string, code: string, newPassword: string): Promise<void>;
+  /** Erişim token'ını yeniler. Yenilenemezse hata fırlatır. */
+  refresh(session: Session): Promise<Session>;
+  /** Geçici şifreyle ilk girişten sonra veya profilden şifre değişikliği. */
+  changePassword(currentPassword: string, newPassword: string): Promise<{ session: Session; user: User }>;
 }
 
 export interface UserService {

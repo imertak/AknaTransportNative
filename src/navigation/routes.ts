@@ -9,6 +9,7 @@ import type { ViewMode } from '@/types';
 export const routes = {
   login: '/login' as Href,
   forgotPassword: '/forgot-password' as Href,
+  changePassword: '/change-password' as Href,
   home: (mode: ViewMode): Href => (mode === 'admin' ? '/admin/dashboard' : '/driver/home') as Href,
 
   job: (id: string, mode: ViewMode = 'admin'): Href => ({ pathname: mode === 'admin' ? '/admin/job/[id]' : '/driver/job/[id]', params: { id } }) as Href,

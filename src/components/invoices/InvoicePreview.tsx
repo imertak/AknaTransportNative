@@ -5,6 +5,10 @@ import { Text } from '@/components/ui';
 import { colors, radius, spacing } from '@/theme';
 import type { Customer } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { APP_CONFIG } from '@/constants/config';
+
+/** API modunda resmi olmayan faturalar "taslak", demo modunda "demo" olarak etiketlenir. */
+const DRAFT = APP_CONFIG.dataSource === 'api' ? { word: 'Taslak', stamp: 'TASLAK' } : { word: 'Demo', stamp: 'DEMO' };
 
 interface Props {
   invoiceNo: string;
@@ -26,7 +30,7 @@ export const InvoicePreview = memo(function InvoicePreview(p: Props) {
     <View style={styles.doc}>
       {p.demo ? (
         <View style={styles.demoBar}>
-          <Text variant="caption" tone="inverse">Demo belge · resmi fatura değildir</Text>
+          <Text variant="caption" tone="inverse">{DRAFT.word} belge · resmi fatura değildir</Text>
         </View>
       ) : null}
       <View style={styles.inner}>
@@ -36,7 +40,7 @@ export const InvoicePreview = memo(function InvoicePreview(p: Props) {
             <Text variant="bodySmall" tone="tertiary">Nakliye ve lojistik hizmetleri</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text variant="caption" tone="secondary">{p.demo ? 'Demo fatura' : 'e-Arşiv fatura'}</Text>
+            <Text variant="caption" tone="secondary">{p.demo ? `${DRAFT.word} fatura` : 'e-Arşiv fatura'}</Text>
             <Text variant="label">{p.invoiceNo}</Text>
             <Text variant="bodySmall" tone="secondary">{formatDate(p.issueDate)}</Text>
           </View>
@@ -77,7 +81,7 @@ export const InvoicePreview = memo(function InvoicePreview(p: Props) {
       </View>
       {p.demo ? (
         <View pointerEvents="none" style={styles.stamp}>
-          <Text style={styles.stampText}>{p.cancelled ? 'İPTAL' : 'DEMO'}</Text>
+          <Text style={styles.stampText}>{p.cancelled ? 'İPTAL' : DRAFT.stamp}</Text>
         </View>
       ) : null}
     </View>

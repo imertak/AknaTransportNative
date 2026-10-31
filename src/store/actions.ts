@@ -1,5 +1,7 @@
+import { APP_CONFIG } from '@/constants/config';
 import {
   customerService,
+  eArchiveGateway,
   invoiceService,
   jobService,
   locationRepository,
@@ -61,6 +63,8 @@ function patchJob(job: Awaited<ReturnType<typeof jobService.get>>) {
 }
 
 export const jobActions = {
+  /** Detay ekranı için işi (durum geçmişiyle) sunucudan tazeler. */
+  refresh: async (id: string) => patchJob(await jobService.get(id)),
   create: async (input: JobInput, actorId: string) => patchJob(await jobService.create(input, actorId)),
   update: async (id: string, input: JobInput, actorId: string) => patchJob(await jobService.update(id, input, actorId)),
   assign: async (id: string, driverId: string | null, actorId: string) => patchJob(await jobService.assign(id, driverId, actorId)),
@@ -90,7 +94,19 @@ export const customerActions = {
   },
 };
 
+async function refreshInvoice(id: string) {
+  const inv = await invoiceService.get(id);
+  set((s) => ({ invoices: upsert(s.invoices, inv) }));
+  return inv;
+}
+
 export const invoiceActions = {
+  refresh: refreshInvoice,
+  /** Faturayı e-Arşiv sağlayıcısına gönderir. Sağlayıcı yoksa hata döner ve fatura taslak kalır. */
+  async issue(id: string) {
+    await eArchiveGateway.issue(id);
+    return refreshInvoice(id);
+  },
   async createDemo(input: InvoiceInput, actorId: string) {
     const inv = await invoiceService.createDemo(input, actorId);
     set((s) => ({
@@ -122,6 +138,7 @@ export const locationActions = {
 
 /** Demo verilerini başlangıç durumuna döndürür. */
 export async function resetDemoData() {
+  if (APP_CONFIG.dataSource !== 'mock') return;
   await mockDb.reset();
   resetDataStore();
   await loadAll(true);

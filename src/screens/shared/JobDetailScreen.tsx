@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ban, Building2, CalendarDays, FileText, Hand, Mail, Navigation, Pencil, Phone, ReceiptText, Truck, UserRound, UserRoundCog } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { DriverActionCard } from '@/components/jobs/DriverActionCard';
@@ -34,6 +34,11 @@ export default function JobDetailScreen() {
   const assignable = useAssignableUsers();
   const { run, pending } = useAsyncAction();
   const [assignOpen, setAssignOpen] = useState(false);
+
+  // Liste verisinde durum geçmişi yoktur (API); detay açılınca iş tazelenir.
+  useEffect(() => {
+    if (id) jobActions.refresh(id).catch(() => {});
+  }, [id]);
 
   const assignOptions = useMemo<SelectOption[]>(
     () => [

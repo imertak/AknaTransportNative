@@ -1,11 +1,14 @@
+/** Örn. http://localhost:5080 — tanımlıysa uygulama .NET API'yi kullanır. */
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/+$/, '');
+
 /**
- * Uygulama yapılandırması. API aşamasında `dataSource` 'api' yapılarak
- * servis katmanı gerçek .NET Web API'ye yönlendirilecek.
+ * Uygulama yapılandırması. `EXPO_PUBLIC_API_BASE_URL` tanımlıysa servis katmanı
+ * .NET Web API'ye bağlanır; boşsa cihaz üzerindeki demo verilerle çalışır.
  */
 export const APP_CONFIG = {
   appName: 'AKNA Transport',
-  dataSource: 'mock' as 'mock' | 'api',
-  apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? '',
+  dataSource: (API_BASE_URL ? 'api' : 'mock') as 'mock' | 'api',
+  apiBaseUrl: API_BASE_URL,
   /** Mock servislerde ağ gecikmesini taklit eder (ms). */
   mockLatency: 220,
   defaultVatRate: 20,

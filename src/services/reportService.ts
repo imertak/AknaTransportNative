@@ -8,6 +8,9 @@ import type { Customer, DateRange, Invoice, JobsReport, TransportJob } from '@/t
 import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
 import { jobService } from './registry';
 import { ServiceError } from './errors';
+import { APP_CONFIG } from '@/constants/config';
+
+const DRAFT = APP_CONFIG.dataSource === 'api' ? { word: 'Taslak', stamp: 'TASLAK' } : { word: 'Demo', stamp: 'DEMO' };
 
 const A4_LANDSCAPE = { width: 842, height: 595 };
 const A4_PORTRAIT = { width: 595, height: 842 };
@@ -141,7 +144,7 @@ function jobsReportHtml(report: JobsReport): string {
 }
 
 const INVOICE_STATUS_TEXT: Record<Invoice['status'], string> = {
-  demo_draft: 'Demo taslak',
+  demo_draft: 'Taslak',
   demo_created: 'Demo fatura',
   cancelled: 'İptal edildi',
   earsiv_pending: 'e-Arşiv gönderimi bekleniyor',
@@ -172,11 +175,11 @@ function invoiceHtml(invoice: Invoice, customer: Customer | null): string {
     .totals .grand { border: none; background: #0B0B0C; color: #fff; padding: 9px 10px; font-weight: 700; margin-top: 6px; }
     footer { position: absolute; left: 42px; right: 42px; bottom: 28px; font-size: 8.5px; color: #8A8A8F; border-top: 1px solid #E3E3E0; padding-top: 8px; }
   </style></head><body><div class="page">
-    ${isDemo ? '<div class="watermark">DEMO</div><div class="banner">DEMO BELGE — Bu belge uygulama içinde oluşturulmuş bir önizlemedir. Resmi e-Arşiv faturası değildir ve mali geçerliliği yoktur.</div>' : ''}
+    ${isDemo ? `<div class="watermark">${DRAFT.stamp}</div><div class="banner">${DRAFT.stamp} BELGE — Bu belge uygulama içinde oluşturulmuş bir önizlemedir. Resmi e-Arşiv faturası değildir ve mali geçerliliği yoktur.</div>` : ''}
     <div class="head">
       <div><div class="brand">AKNA TRANSPORT</div><div class="muted" style="font-size:10px;margin-top:4px">Nakliye ve Lojistik Hizmetleri</div></div>
       <div>
-        <div class="title">${isDemo ? 'DEMO FATURA' : 'e-ARŞİV FATURA'}</div>
+        <div class="title">${isDemo ? `${DRAFT.stamp} FATURA` : 'e-ARŞİV FATURA'}</div>
         <div style="font-size:10.5px;text-align:right;margin-top:6px">${esc(invoice.invoiceNo)}<br/>${formatDate(invoice.issueDate)}</div>
       </div>
     </div>
@@ -202,7 +205,7 @@ function invoiceHtml(invoice: Invoice, customer: Customer | null): string {
       <div><span>KDV (%${invoice.vatRate})</span><span class="num">${formatCurrency(invoice.vatAmount, { decimals: 2 })}</span></div>
       <div class="grand"><span>Genel toplam</span><span class="num">${formatCurrency(invoice.total, { decimals: 2 })}</span></div>
     </div>
-    <footer>Oluşturulma: ${formatDateTime(invoice.createdAt)}${isDemo ? ' · Demo belge, resmi geçerliliği yoktur.' : ''}</footer>
+    <footer>Oluşturulma: ${formatDateTime(invoice.createdAt)}${isDemo ? ` · ${DRAFT.word} belge, resmi geçerliliği yoktur.` : ''}</footer>
   </div></body></html>`;
 }
 

@@ -29,4 +29,16 @@ export const mockAuthService: AuthService = {
     // Güvenlik gereği kullanıcının var olup olmadığı açığa çıkarılmaz.
     await mockDb.read(() => null, 500);
   },
+
+  async resetPassword() {
+    throw new ServiceError('not_implemented', 'Demo modunda şifre sıfırlanamaz.');
+  },
+
+  async refresh(session) {
+    return session;
+  },
+
+  async changePassword() {
+    throw new ServiceError('not_implemented', 'Demo modunda şifre değiştirilemez.');
+  },
 };

@@ -19,8 +19,16 @@ const A4_PORTRAIT = { width: 595, height: 842 };
 const esc = (v: string) =>
   v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/**
+ * Yazdırma motorları (iOS WKWebView, Android WebView) CSS pikselini 1/96 inç sayar: 842px genişliğindeki
+ * sayfa 842pt'lik A4'ün yalnızca %75'ini kaplar ve sağda/altta boşluk kalır. Tasarım pt ölçüsünde
+ * yapıldığı için yerelde 96/72 (≈1.333) yakınlaştırılır; küçük pay, fazladan boş sayfa oluşmasını önler.
+ */
+const PRINT_ZOOM = Platform.OS === 'web' ? 1 : 1.333;
+
 const BASE_CSS = `
   @page { margin: 0; }
+  html { zoom: ${PRINT_ZOOM}; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { background: #fff; }
   body { font-family: -apple-system, 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif; color: #000000; -webkit-print-color-adjust: exact; }

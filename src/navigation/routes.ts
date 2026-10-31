@@ -26,6 +26,13 @@ export const routes = {
   newInvoice: (jobId?: string): Href => ({ pathname: '/admin/invoice-form', params: jobId ? { jobId } : {} }) as Href,
 
   adminMap: '/admin/map' as Href,
+  customers: '/admin/customers' as Href,
+  jobReport: '/admin/job-report' as Href,
+  vehicles: '/admin/vehicles' as Href,
+  newVehicle: '/admin/vehicle-form' as Href,
+  editVehicle: (id: string): Href => ({ pathname: '/admin/vehicle-form', params: { id } }) as Href,
+  /** Profil her iki görünümde de sekme değil, geri butonlu yığın ekranıdır. */
+  profile: (mode: ViewMode): Href => (mode === 'admin' ? '/admin/profile' : '/driver/profile') as Href,
   driverJobs: '/driver/jobs' as Href,
   driverMap: '/driver/map' as Href,
 };

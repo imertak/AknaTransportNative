@@ -17,7 +17,6 @@ export interface User {
   email: string;
   phone: string;
   role: UserRole;
-  vehicleId?: string;
   isActive: boolean;
   /** Yönetici tarafından oluşturulan geçici şifreyle ilk girişte true döner. */
   mustChangePassword?: boolean;
@@ -34,12 +33,22 @@ export interface Session {
 
 export type VehicleType = 'panelvan' | 'small_panelvan' | 'pickup' | 'truck' | 'other';
 
+/** Yönetici tarafından kaydedilen araç. Bir araç aynı anda yalnızca bir şoföre aktif olarak atanır. */
 export interface Vehicle {
   id: string;
   plate: string;
   type: VehicleType;
+  brand: string;
   model: string;
+  isActive: boolean;
+  description: string;
+  /** Aracın şu anki aktif şoförü. */
+  driverId?: string;
+  driverName?: string;
+  assignedAt?: ISODateTime;
 }
+
+export type VehicleInput = Pick<Vehicle, 'plate' | 'type' | 'brand' | 'model' | 'description' | 'isActive'>;
 
 export interface Customer {
   id: string;
@@ -81,6 +90,23 @@ export interface JobStatusEvent {
   note?: string;
 }
 
+export type StopType = 'pickup' | 'delivery';
+
+/** İşin yükleme veya teslimat noktası. Sıra numarası tür içinde 1'den başlar. */
+export interface JobStop {
+  id?: string;
+  type: StopType;
+  sequence: number;
+  address: string;
+  point?: GeoPoint;
+  description?: string;
+}
+
+export type JobStopInput = Omit<JobStop, 'id' | 'sequence'>;
+
+/** Faturalandırılmadı / Taslak faturada / Faturalandırıldı. */
+export type JobBillingStatus = 'not_invoiced' | 'in_draft' | 'invoiced';
+
 export interface TransportJob {
   id: string;
   jobNo: string;
@@ -90,12 +116,15 @@ export interface TransportJob {
   date: ISODate;
   storeName: string;
   vehicleType: VehicleType;
+  /** İlk yükleme noktası (özet; listeler ve eski kayıtlar için). */
   pickupAddress: string;
+  /** Son teslimat noktası (özet). */
   deliveryAddress: string;
-  /** Birden fazla yükleme adresi varsa virgülle ayrılmış liste. */
-  pickupAddresses?: string[];
-  /** Birden fazla teslimat adresi varsa virgülle ayrılmış liste. */
-  deliveryAddresses?: string[];
+  /** Önce tüm yükleme, sonra tüm teslimat noktaları; tür içinde sıra numarasına göre. */
+  stops: JobStop[];
+  /** Duraklardan otomatik üretilen güzergah ("A - B - C"). Duraklar değişince yeniden üretilir. */
+  routeDescription: string;
+  /** Elle yazılan ek açıklama. Otomatik güzergahtan ayrı tutulur. */
   description: string;
   price: number;
   driverId?: string;
@@ -105,23 +134,38 @@ export interface TransportJob {
   pickupPoint?: GeoPoint;
   deliveryPoint?: GeoPoint;
   invoiceId?: string;
+  billingStatus: JobBillingStatus;
+  vehicleId?: string;
+  vehiclePlate?: string;
   createdBy: string;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
 }
 
-export type JobInput = Pick<
-  TransportJob,
-  | 'customerId'
-  | 'date'
-  | 'storeName'
-  | 'vehicleType'
-  | 'pickupAddress'
-  | 'deliveryAddress'
-  | 'description'
-  | 'price'
-  | 'notes'
-> & { driverId?: string; pickupAddresses?: string[]; deliveryAddresses?: string[] };
+export type JobInput = Pick<TransportJob, 'customerId' | 'date' | 'storeName' | 'vehicleType' | 'description' | 'price' | 'notes'> & {
+  stops: JobStopInput[];
+  driverId?: string;
+  /** Seçilen şoförün aktif araçlarından biri. */
+  vehicleId?: string;
+};
+
+/** Müşterinin daha önceki işlerinde kullanılan adres. */
+export interface CustomerAddress {
+  type: StopType;
+  address: string;
+  point?: GeoPoint;
+  useCount: number;
+  lastUsedAt: ISODateTime;
+}
+
+/** Seçilen ayın tamamlanmış (iptal edilmemiş) işlerinden elde edilen gelir. */
+export interface MonthRevenue {
+  year: number;
+  month: number;
+  revenue: number;
+  completedJobs: number;
+  currency: string;
+}
 
 export interface JobFilter {
   query?: string;
@@ -130,6 +174,7 @@ export interface JobFilter {
   driverId?: string;
   dateFrom?: ISODate;
   dateTo?: ISODate;
+  billingStatus?: JobBillingStatus;
 }
 
 /**
@@ -161,6 +206,12 @@ export interface Invoice {
   /** Birden fazla iş faturalandığında iş kimlikleri. */
   jobIds?: string[];
   jobNos?: string[];
+  /** Fatura kalemleri (detayda dolar). */
+  items?: InvoiceItem[];
+  /** Listede iş sayısı (kalemler yüklenmeden). */
+  jobCount?: number;
+  /** e-Arşiv sağlayıcısının son hata mesajı. */
+  lastError?: string;
   issueDate: ISODate;
   description: string;
   subtotal: number;
@@ -174,10 +225,26 @@ export interface Invoice {
   createdAt: ISODateTime;
 }
 
+export interface InvoiceItem {
+  jobId: string;
+  jobNo: string;
+  jobDate: ISODate;
+  storeName: string;
+  description: string;
+  amount: number;
+}
+
 export type InvoiceInput = Pick<Invoice, 'issueDate' | 'description' | 'subtotal' | 'vatRate'> & {
   jobId?: string;
   jobIds?: string[];
 };
+
+export interface InvoiceFilter {
+  customerId?: string;
+  dateFrom?: ISODate;
+  dateTo?: ISODate;
+  status?: 'draft' | 'issued' | 'cancelled' | 'failed';
+}
 
 export interface LocationFix extends GeoPoint {
   accuracy: number | null;

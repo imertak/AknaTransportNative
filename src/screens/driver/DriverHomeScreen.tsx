@@ -1,17 +1,17 @@
 import { router } from 'expo-router';
-import { CalendarCheck2 } from 'lucide-react-native';
+import { CalendarCheck2, UserRound } from 'lucide-react-native';
 import { useCallback } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { DriverActionCard } from '@/components/jobs/DriverActionCard';
 import { JobCard } from '@/components/jobs/JobCard';
 import { LocationShareCard } from '@/components/jobs/LocationShareCard';
-import { Button, EmptyState, PageHeader, Screen, Section, Text } from '@/components/ui';
+import { Button, EmptyState, IconButton, PageHeader, Screen, Section, Text } from '@/components/ui';
 import { ViewModeBanner } from '@/components/ViewModeBanner';
 import { isTrackable } from '@/constants/jobStatus';
 import { can } from '@/constants/permissions';
 import { useCurrentUser } from '@/contexts/AuthContext';
-import { useDriverJobs, useVehicles } from '@/hooks/useData';
+import { useDriverJobs, useDriverVehicles } from '@/hooks/useData';
 import { useRefresh } from '@/hooks/useRefresh';
 import { routes } from '@/navigation/routes';
 import { colors, radius, spacing } from '@/theme';
@@ -20,10 +20,11 @@ import { formatDateLong, todayISO } from '@/utils/format';
 
 export default function DriverHomeScreen() {
   const user = useCurrentUser();
-  const vehicles = useVehicles();
+  const vehicles = useDriverVehicles(user.id);
   const { active, today, waiting, completed, open } = useDriverJobs(user.id);
   const { refreshing, onRefresh } = useRefresh();
-  const vehicle = vehicles.find((v) => v.id === user.vehicleId);
+  // Aktif işte seçilen araç öncelikli; yoksa şoföre atanmış ilk aktif araç.
+  const vehicleLabel = active?.vehiclePlate ?? (vehicles[0] ? `${vehicles[0].plate} · ${[vehicles[0].brand, vehicles[0].model].filter(Boolean).join(' ')}` : undefined);
   const showPrice = can(user, 'jobs.viewPrice');
   const openJob = useCallback((job: TransportJob) => router.push(routes.job(job.id, 'driver')), []);
 
@@ -36,7 +37,9 @@ export default function DriverHomeScreen() {
         contentContainerStyle={{ paddingBottom: spacing.huge }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textInverseMuted} />}>
-        <PageHeader overline={formatDateLong(todayISO())} title={`Merhaba, ${user.fullName.split(' ')[0]}`} subtitle={vehicle ? `${vehicle.plate} · ${vehicle.model}` : undefined}>
+        <PageHeader overline={formatDateLong(todayISO())} title={`Merhaba, ${user.fullName.split(' ')[0]}`}
+          subtitle={vehicleLabel}
+          right={<IconButton icon={UserRound} label="Profilim" tone="dark" onPress={() => router.push(routes.profile('driver'))} />}>
           <View style={styles.stats}>
             <Stat label="Bugün" value={today.length} />
             <Stat label="Bekleyen" value={waiting.length} />

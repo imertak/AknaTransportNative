@@ -42,7 +42,7 @@ export default function FleetMapScreen() {
             job,
             location: locations[job.id],
             driverName: driver?.fullName ?? 'Şoför',
-            plate: vehicles.find((v) => v.id === driver?.vehicleId)?.plate,
+            plate: job.vehiclePlate ?? vehicles.find((v) => v.isActive && v.driverId === job.driverId)?.plate,
           };
         }),
     [jobs, locations, userMap, vehicles],

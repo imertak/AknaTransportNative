@@ -1,18 +1,17 @@
-import { router } from 'expo-router';
-import { ChevronRight, Download, FileSpreadsheet, Printer, ReceiptText } from 'lucide-react-native';
+import { Download, FileSpreadsheet, Printer } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { Button, Card, Chip, DateField, EmptyState, PageHeader, Screen, Section, SegmentedControl, SelectField, Text, type SelectOption } from '@/components/ui';
+import { Button, Card, Chip, DateField, EmptyState, NavHeader, Screen, Section, SegmentedControl, SelectField, Text, type SelectOption } from '@/components/ui';
 import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
-import { useCustomers, useInvoices, useJobs } from '@/hooks/useData';
-import { routes } from '@/navigation/routes';
+import { useCustomers, useJobs } from '@/hooks/useData';
 import { reportService } from '@/services';
 import { composeJobsReport } from '@/services/reportService';
 import { colors, radius, spacing } from '@/theme';
 import type { DateRange } from '@/types';
 import { addDays, formatCurrency, formatDate, fromISODate, toISODate, todayISO } from '@/utils/format';
+import { composeJobText } from '@/utils/stops';
 
 const ALL = '__all';
 const PREVIEW_LIMIT = 30;
@@ -35,8 +34,7 @@ function presets(): { key: string; label: string; range: DateRange }[] {
 export default function ReportsScreen() {
   const jobs = useJobs();
   const customers = useCustomers();
-  const invoices = useInvoices();
-  const presetList = useMemo(presets, []);
+  const presetList = useMemo(() => presets(), []);
   const [range, setRange] = useState<DateRange>(presetList[1]!.range);
   const [customerId, setCustomerId] = useState(ALL);
   const [scope, setScope] = useState<'completed' | 'all'>('completed');
@@ -49,7 +47,6 @@ export default function ReportsScreen() {
 
   const customerOptions = useMemo<SelectOption[]>(() => [{ value: ALL, label: 'Tüm müşteriler' }, ...customers.map((c) => ({ value: c.id, label: c.companyName }))], [customers]);
   const activePreset = presetList.find((p) => p.range.from === range.from && p.range.to === range.to)?.key;
-  const activeInvoices = invoices.filter((i) => i.status !== 'cancelled');
 
   // PDF oluşturulmadan önce veri servis katmanından tazelenir
   const fresh = () => reportService.buildJobsReport(range, opts);
@@ -57,21 +54,8 @@ export default function ReportsScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.huge }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <PageHeader title="Faturalar" subtitle="Fatura yönetimi ve nakliye dökümü" />
+        <NavHeader title="İş dökümü" subtitle="Tarih aralığına göre nakliye dökümü ve PDF" />
         <View style={styles.body}>
-          <Card onPress={() => router.push(routes.invoices)} style={styles.invoiceLink}>
-            <View style={styles.iconBox}>
-              <ReceiptText size={20} color={colors.text} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="subheading">Faturalar</Text>
-              <Text variant="bodySmall" tone="secondary">
-                {activeInvoices.length} geçerli fatura · {formatCurrency(activeInvoices.reduce((s, i) => s + i.total, 0), { decimals: 2 })}
-              </Text>
-            </View>
-            <ChevronRight size={18} color={colors.textTertiary} />
-          </Card>
-
           <Section title="İş dökümü">
             <Card style={{ gap: spacing.lg }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
@@ -147,14 +131,14 @@ export default function ReportsScreen() {
                       <Text variant="label" numberOfLines={1}>
                         {j.storeName} · {VEHICLE_TYPE_LABEL[j.vehicleType]}
                       </Text>
-                      <Text variant="bodySmall" tone="secondary" numberOfLines={2}>{j.description}</Text>
+                      <Text variant="bodySmall" tone="secondary" numberOfLines={2}>{composeJobText(j.routeDescription, j.description)}</Text>
                     </View>
                     <Text variant="label" style={styles.cPrice}>{formatCurrency(j.price)}</Text>
                   </View>
                 ))}
                 {report.totalCount > PREVIEW_LIMIT ? (
                   <Text variant="bodySmall" tone="tertiary" align="center" style={{ padding: spacing.md }}>
-                    +{report.totalCount - PREVIEW_LIMIT} iş daha PDF'te yer alacak
+                    +{report.totalCount - PREVIEW_LIMIT} iş daha PDF&apos;te yer alacak
                   </Text>
                 ) : null}
                 <View style={styles.total}>

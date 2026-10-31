@@ -14,6 +14,7 @@ import { calculateInvoiceTotals } from '@/services';
 import { invoiceActions } from '@/store';
 import { colors, radius, spacing } from '@/theme';
 import { formatAmountInput, formatCurrency, formatDate, parseAmount, todayISO } from '@/utils/format';
+import { composeJobText } from '@/utils/stops';
 
 const apiMode = APP_CONFIG.dataSource === 'api';
 
@@ -25,10 +26,10 @@ export default function InvoiceFormScreen() {
   const customers = useCustomers();
   const { run, pending } = useAsyncAction();
 
-  /** Faturası olmayan tamamlanmış işler. */
+  /** Faturalandırılmamış, tamamlanmış (iptal edilmemiş) işler. Bir iş iki faturaya giremez. */
   const billable = useMemo(() => {
-    const invoiced = new Set(invoices.filter((i) => i.status !== 'cancelled').flatMap((i) => i.jobIds?.length ? i.jobIds : [i.jobId]));
-    return jobs.filter((j) => j.status === 'completed' && !invoiced.has(j.id));
+    const invoiced = new Set(invoices.filter((i) => i.status !== 'cancelled').flatMap((i) => (i.jobIds?.length ? i.jobIds : [i.jobId])));
+    return jobs.filter((j) => j.status === 'completed' && j.billingStatus === 'not_invoiced' && !j.invoiceId && !invoiced.has(j.id));
   }, [jobs, invoices]);
 
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>(() => {
@@ -47,13 +48,14 @@ export default function InvoiceFormScreen() {
   }, [billable, selectedCustomerId]);
 
   const [issueDate, setIssueDate] = useState(todayISO());
-  const autoDescription = useMemo(() => selectedJobs.map(j => j.description).join(' + '), [selectedJobs]);
+  const autoDescription = useMemo(() => selectedJobs.map((j) => composeJobText(j.routeDescription, j.description)).join(' + '), [selectedJobs]);
   const [description, setDescription] = useState('');
   const displayDescription = description || autoDescription || '';
 
   const autoSubtotal = useMemo(() => selectedJobs.reduce((s, j) => s + j.price, 0), [selectedJobs]);
   const [subtotalOverride, setSubtotalOverride] = useState('');
-  const amount = subtotalOverride ? (parseAmount(subtotalOverride) ?? 0) : autoSubtotal;
+  // API modunda ara toplam sunucuda işlerin fiyatından hesaplanır; elle değiştirilemez.
+  const amount = !apiMode && subtotalOverride ? (parseAmount(subtotalOverride) ?? 0) : autoSubtotal;
 
   const [vatRate, setVatRate] = useState<number>(APP_CONFIG.defaultVatRate);
   const [errors, setErrors] = useState<{ jobs?: string; description?: string; subtotal?: string }>({});
@@ -62,7 +64,7 @@ export default function InvoiceFormScreen() {
     () => availableJobs.filter(j => !selectedJobIds.includes(j.id)).map((j) => ({
       value: j.id,
       label: `${j.jobNo} · ${j.customerName}`,
-      description: `${formatDate(j.date)} · ${formatCurrency(j.price)} · ${j.description}`,
+      description: `${formatDate(j.date)} · ${formatCurrency(j.price)} · ${composeJobText(j.routeDescription, j.description)}`,
     })),
     [availableJobs, selectedJobIds],
   );
@@ -142,7 +144,7 @@ export default function InvoiceFormScreen() {
                   <View key={j.id} style={styles.jobChip}>
                     <View style={{ flex: 1 }}>
                       <Text variant="subheading">{j.jobNo} · {j.customerName}</Text>
-                      <Text variant="bodySmall" tone="secondary">{formatDate(j.date)} · {formatCurrency(j.price)} · {j.description}</Text>
+                      <Text variant="bodySmall" tone="secondary">{formatDate(j.date)} · {formatCurrency(j.price)} · {composeJobText(j.routeDescription, j.description)}</Text>
                     </View>
                     <Pressable onPress={() => removeJob(j.id)} hitSlop={8}>
                       <X size={18} color={colors.textTertiary} />
@@ -161,12 +163,19 @@ export default function InvoiceFormScreen() {
             <Input
               label="Ara toplam (KDV hariç)"
               required
+              editable={!apiMode}
               keyboardType="decimal-pad"
               suffix="TL"
               value={subtotalOverride || formatAmountInput(String(autoSubtotal))}
               onChangeText={(v) => setSubtotalOverride(formatAmountInput(v))}
               error={errors.subtotal}
-              hint={selectedJobs.length > 1 ? `Seçilen ${selectedJobs.length} işin toplam tutarı: ${formatCurrency(autoSubtotal)}` : undefined}
+              hint={
+                apiMode
+                  ? 'Seçilen işlerin fiyatlarından sunucuda hesaplanır.'
+                  : selectedJobs.length > 1
+                    ? `Seçilen ${selectedJobs.length} işin toplam tutarı: ${formatCurrency(autoSubtotal)}`
+                    : undefined
+              }
             />
             <View style={{ gap: spacing.xs + 2 }}>
               <Text variant="label" tone="secondary">KDV oranı</Text>
@@ -203,6 +212,6 @@ export default function InvoiceFormScreen() {
 
 const styles = StyleSheet.create({
   card: { gap: spacing.lg },
-  notice: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderStyle: 'dashed', borderColor: '#000000', alignItems: 'flex-start' },
-  jobChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: '#FAFAFA', borderRadius: radius.md, borderWidth: 1, borderColor: '#E0E0E0' },
+  notice: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.ink, alignItems: 'flex-start' },
+  jobChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceMuted, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
 });

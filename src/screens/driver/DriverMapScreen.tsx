@@ -20,14 +20,22 @@ import { openDirections } from '@/utils/links';
 export default function DriverMapScreen() {
   const user = useCurrentUser();
   const { active } = useDriverJobs(user.id);
-  const { lastFix, permission } = useLocationTracking();
+  const { lastFix, status } = useLocationTracking();
 
   const markers = useMemo<MapMarkerData[]>(() => {
     const out: MapMarkerData[] = [];
-    if (active?.pickupPoint && (active.status === 'accepted' || active.status === 'on_the_way')) {
-      out.push({ id: 'pickup', kind: 'pickup', coordinate: active.pickupPoint, title: 'Yükleme', subtitle: active.pickupAddress });
+    const showPickups = active?.status === 'accepted' || active?.status === 'on_the_way';
+    // Konumu kayıtlı tüm duraklar sırasıyla gösterilir.
+    for (const stop of active?.stops ?? []) {
+      if (!stop.point || (stop.type === 'pickup' && !showPickups)) continue;
+      out.push({
+        id: `${stop.type}_${stop.sequence}`,
+        kind: stop.type,
+        coordinate: stop.point,
+        title: `${stop.type === 'pickup' ? 'Yükleme' : 'Teslimat'} ${stop.sequence}`,
+        subtitle: stop.address,
+      });
     }
-    if (active?.deliveryPoint) out.push({ id: 'delivery', kind: 'delivery', coordinate: active.deliveryPoint, title: 'Teslimat', subtitle: active.deliveryAddress });
     if (lastFix) out.push({ id: 'me', kind: 'vehicle', coordinate: lastFix, title: 'Aracım' });
     return out;
   }, [active, lastFix]);
@@ -37,7 +45,7 @@ export default function DriverMapScreen() {
 
   return (
     <View style={styles.root}>
-      <MapCanvas markers={markers} showsUserLocation={permission === 'granted'} bottomInset={260} />
+      <MapCanvas markers={markers} showsUserLocation={status === 'active'} bottomInset={260} />
       <MapTitle title="Harita" subtitle={active ? `${active.jobNo} · ${active.customerName}` : 'Aktif iş yok'} />
       <MapPanel>
         {active ? (
@@ -49,7 +57,7 @@ export default function DriverMapScreen() {
                 İş detayı
               </Text>
             </View>
-            <RouteLine pickup={active.pickupAddress} delivery={active.deliveryAddress} compact />
+            <RouteLine pickup={active.pickupAddress} delivery={active.deliveryAddress} compact extraStops={Math.max(0, active.stops.length - 2)} />
             <Button
               label={active.status === 'loading' || active.status === 'delivering' ? 'Teslimata yol tarifi' : 'Yüklemeye yol tarifi'}
               icon={Navigation}

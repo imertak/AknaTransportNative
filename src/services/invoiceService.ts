@@ -3,6 +3,20 @@ import type { EArchiveGateway, InvoiceMailer, InvoiceService } from './contracts
 import { ServiceError } from './errors';
 import { createId, sequenceNo } from '@/utils/id';
 import { mockDb } from './mockDb';
+import type { Invoice, InvoiceFilter } from '@/types';
+import { composeJobText } from '@/utils/stops';
+
+export function matchesInvoiceFilter(i: Invoice, f: InvoiceFilter): boolean {
+  if (f.customerId && i.customerId !== f.customerId) return false;
+  if (f.dateFrom && i.issueDate < f.dateFrom) return false;
+  if (f.dateTo && i.issueDate > f.dateTo) return false;
+  if (f.status) {
+    const group =
+      i.status === 'cancelled' ? 'cancelled' : i.status === 'earsiv_issued' ? 'issued' : i.status === 'earsiv_failed' ? 'failed' : 'draft';
+    if (group !== f.status) return false;
+  }
+  return true;
+}
 
 export const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -12,7 +26,12 @@ export function calculateInvoiceTotals(subtotal: number, vatRate: number) {
 }
 
 export const mockInvoiceService: InvoiceService = {
-  list: () => mockDb.read((db) => [...db.invoices].sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
+  list: (filter = {}) =>
+    mockDb.read((db) =>
+      db.invoices
+        .filter((i) => matchesInvoiceFilter(i, filter))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    ),
 
   async get(id) {
     const inv = await mockDb.read((db) => db.invoices.find((x) => x.id === id) ?? null);
@@ -32,6 +51,9 @@ export const mockInvoiceService: InvoiceService = {
         if (active) throw new ServiceError('conflict', `${job.jobNo} için ${active.invoiceNo} numaralı fatura zaten mevcut.`);
         return job;
       });
+      if (new Set(jobList.map((j) => j.customerId)).size > 1) {
+        throw new ServiceError('validation', 'Tek faturada yalnızca aynı müşteriye ait işler birleştirilebilir.');
+      }
       if (!(input.subtotal > 0)) throw new ServiceError('validation', 'Ara toplam sıfırdan büyük olmalı.');
       const firstJob = jobList[0]!;
       const customer = db.customers.find((c) => c.id === firstJob.customerId)!;
@@ -47,6 +69,15 @@ export const mockInvoiceService: InvoiceService = {
         jobNo: firstJob.jobNo,
         jobIds: jobIds,
         jobNos: jobList.map(j => j.jobNo),
+        jobCount: jobList.length,
+        items: jobList.map((j) => ({
+          jobId: j.id,
+          jobNo: j.jobNo,
+          jobDate: j.date,
+          storeName: j.storeName,
+          description: composeJobText(j.routeDescription, j.description),
+          amount: j.price,
+        })),
         issueDate: input.issueDate,
         description: input.description.trim(),
         vatRate: input.vatRate,
@@ -55,7 +86,10 @@ export const mockInvoiceService: InvoiceService = {
         createdAt: new Date().toISOString(),
       };
       db.invoices.push(invoice);
-      jobList.forEach(j => { j.invoiceId = invoice.id; });
+      jobList.forEach((j) => {
+        j.invoiceId = invoice.id;
+        j.billingStatus = 'in_draft';
+      });
       return invoice;
     }),
 
@@ -66,9 +100,17 @@ export const mockInvoiceService: InvoiceService = {
       if (inv.status === 'cancelled') throw new ServiceError('conflict', 'Fatura zaten iptal edilmiş.');
       inv.status = 'cancelled';
       const relatedJobIds = inv.jobIds?.length ? inv.jobIds : [inv.jobId];
-      db.jobs.forEach(j => { if (relatedJobIds.includes(j.id)) j.invoiceId = undefined; });
+      db.jobs.forEach((j) => {
+        if (relatedJobIds.includes(j.id)) {
+          j.invoiceId = undefined;
+          j.billingStatus = 'not_invoiced';
+        }
+      });
       return inv;
     }),
+
+  // Demo modda sunucu PDF'i yoktur; PDF cihazda üretilir.
+  downloadPdf: async () => null,
 };
 
 const notReady = () => {

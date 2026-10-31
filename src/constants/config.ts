@@ -17,16 +17,12 @@ export const APP_CONFIG = {
   demoInvoicePrefix: 'DEMO',
 } as const;
 
-/** Konum takibi parametreleri: batarya ve ağ tüketimini sınırlamak için. */
+/** Zorunlu iş takibi parametreleri: batarya ve ağ tüketimini sınırlamak için. */
 export const LOCATION_CONFIG = {
   /** Cihazdan konum alınmadan önce gereken minimum hareket (metre). */
-  distanceInterval: 40,
+  distanceInterval: 30,
   /** Android'de iki konum arasındaki minimum süre (ms). */
   timeInterval: 15_000,
-  /** Bu mesafenin altındaki değişimler yayınlanmaz (metre). */
-  minPublishDistance: 30,
-  /** Araç dursa bile bu sürede bir "canlılık" güncellemesi yayınlanır (ms). */
-  heartbeatInterval: 120_000,
-  /** İki yayın arasındaki minimum süre (ms). API aşamasında toplu gönderim aralığı. */
-  minPublishInterval: 20_000,
+  /** Arka planda noktalar en fazla bu aralıkla toplu teslim edilir ve gönderilir (ms). */
+  minPublishInterval: 30_000,
 } as const;

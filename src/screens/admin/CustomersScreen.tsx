@@ -3,7 +3,7 @@ import { Building2, ChevronRight, Plus } from 'lucide-react-native';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
-import { Avatar, Button, Card, EmptyState, IconButton, PageHeader, Screen, SearchBar, Text } from '@/components/ui';
+import { Avatar, Button, Card, EmptyState, IconButton, NavHeader, Screen, SearchBar, Text } from '@/components/ui';
 import { useCustomers, useJobs } from '@/hooks/useData';
 import { useRefresh } from '@/hooks/useRefresh';
 import { routes } from '@/navigation/routes';
@@ -59,9 +59,9 @@ export default function CustomersScreen() {
 
   return (
     <Screen>
-      <PageHeader title="Müşteriler" subtitle={`${customers.length} kayıtlı müşteri`} right={<IconButton icon={Plus} label="Yeni müşteri" tone="dark" onPress={() => router.push(routes.newCustomer)} />}>
+      <NavHeader title="Müşteriler" subtitle={`${customers.length} kayıtlı müşteri`} right={<IconButton icon={Plus} label="Yeni müşteri" tone="dark" onPress={() => router.push(routes.newCustomer)} />}>
         <SearchBar value={query} onChange={setQuery} placeholder="Firma, yetkili, e-posta, vergi no" dark />
-      </PageHeader>
+      </NavHeader>
       <FlatList
         data={data}
         keyExtractor={(i) => i.customer.id}

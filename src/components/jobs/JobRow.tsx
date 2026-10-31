@@ -5,6 +5,7 @@ import { StatusBadge, Text } from '@/components/ui';
 import { colors, spacing } from '@/theme';
 import type { TransportJob } from '@/types';
 import { formatCurrency, formatDateShort } from '@/utils/format';
+import { composeJobText } from '@/utils/stops';
 
 /** Kart içindeki yoğun liste satırı (dashboard, müşteri geçmişi). */
 export const JobRow = memo(function JobRow({ job, onPress, showPrice = true, last }: { job: TransportJob; onPress: (job: TransportJob) => void; showPrice?: boolean; last?: boolean }) {
@@ -19,7 +20,7 @@ export const JobRow = memo(function JobRow({ job, onPress, showPrice = true, las
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <Text variant="subheading" numberOfLines={1}>{job.customerName}</Text>
-        <Text variant="bodySmall" tone="secondary" numberOfLines={1}>{job.description}</Text>
+        <Text variant="bodySmall" tone="secondary" numberOfLines={1}>{composeJobText(job.routeDescription, job.description)}</Text>
       </View>
       <View style={styles.right}>
         {showPrice ? <Text variant="subheading" style={{ fontVariant: ['tabular-nums'] }}>{formatCurrency(job.price)}</Text> : null}

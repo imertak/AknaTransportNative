@@ -7,10 +7,11 @@ import {
   locationRepository,
   mockDb,
   userService,
+  vehicleService,
 } from '@/services';
 import { errorMessage } from '@/services/errors';
 import { sortJobs } from '@/services/jobService';
-import type { CustomerInput, InvoiceInput, JobInput, JobStatus, VehicleLocation } from '@/types';
+import type { CustomerInput, InvoiceInput, JobInput, JobStatus, Vehicle, VehicleInput } from '@/types';
 import { dataStore, resetDataStore, upsert } from './dataStore';
 
 const set = dataStore.setState;
@@ -67,8 +68,9 @@ export const jobActions = {
   refresh: async (id: string) => patchJob(await jobService.get(id)),
   create: async (input: JobInput, actorId: string) => patchJob(await jobService.create(input, actorId)),
   update: async (id: string, input: JobInput, actorId: string) => patchJob(await jobService.update(id, input, actorId)),
-  assign: async (id: string, driverId: string | null, actorId: string) => patchJob(await jobService.assign(id, driverId, actorId)),
-  takeOver: async (id: string, actorId: string) => patchJob(await jobService.takeOver(id, actorId)),
+  assign: async (id: string, driverId: string | null, actorId: string, vehicleId?: string | null) =>
+    patchJob(await jobService.assign(id, driverId, actorId, vehicleId)),
+  takeOver: async (id: string, actorId: string, vehicleId?: string | null) => patchJob(await jobService.takeOver(id, actorId, vehicleId)),
   advance: async (id: string, next: JobStatus, actorId: string) => patchJob(await jobService.advance(id, next, actorId)),
   cancel: async (id: string, actorId: string, reason?: string) => patchJob(await jobService.cancel(id, actorId, reason)),
 };
@@ -94,6 +96,23 @@ export const customerActions = {
   },
 };
 
+const sortVehicles = (list: Vehicle[]) =>
+  list.sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.plate.localeCompare(b.plate, 'tr'));
+
+function patchVehicle(v: Vehicle) {
+  set((s) => ({ vehicles: sortVehicles(upsert(s.vehicles, v)) }));
+  return v;
+}
+
+/** Araç kaydı ve şoföre atama yalnızca yöneticiye açıktır (API de aynı kuralı uygular). */
+export const vehicleActions = {
+  refresh: async () => set({ vehicles: sortVehicles(await userService.listVehicles()) }),
+  create: async (input: VehicleInput) => patchVehicle(await vehicleService.create(input)),
+  update: async (id: string, input: VehicleInput) => patchVehicle(await vehicleService.update(id, input)),
+  assign: async (id: string, driverId: string) => patchVehicle(await vehicleService.assign(id, driverId)),
+  unassign: async (id: string) => patchVehicle(await vehicleService.unassign(id)),
+};
+
 async function refreshInvoice(id: string) {
   const inv = await invoiceService.get(id);
   set((s) => ({ invoices: upsert(s.invoices, inv) }));
@@ -105,14 +124,20 @@ export const invoiceActions = {
   /** Faturayı e-Arşiv sağlayıcısına gönderir. Sağlayıcı yoksa hata döner ve fatura taslak kalır. */
   async issue(id: string) {
     await eArchiveGateway.issue(id);
-    return refreshInvoice(id);
+    const inv = await refreshInvoice(id);
+    // Yalnızca sağlayıcıdan başarılı sonuç geldiyse işler "Faturalandırıldı" olur.
+    if (inv.status === 'earsiv_issued') {
+      const ids = new Set(inv.jobIds?.length ? inv.jobIds : [inv.jobId]);
+      set((s) => ({ jobs: s.jobs.map((j) => (ids.has(j.id) ? { ...j, billingStatus: 'invoiced' as const } : j)) }));
+    }
+    return inv;
   },
   async createDemo(input: InvoiceInput, actorId: string) {
     const inv = await invoiceService.createDemo(input, actorId);
     const jobIdSet = new Set(inv.jobIds?.length ? inv.jobIds : [inv.jobId]);
     set((s) => ({
       invoices: [inv, ...s.invoices.filter((i) => i.id !== inv.id)],
-      jobs: s.jobs.map((j) => (jobIdSet.has(j.id) ? { ...j, invoiceId: inv.id } : j)),
+      jobs: s.jobs.map((j) => (jobIdSet.has(j.id) ? { ...j, invoiceId: inv.id, billingStatus: 'in_draft' as const } : j)),
     }));
     return inv;
   },
@@ -121,17 +146,13 @@ export const invoiceActions = {
     const jobIdSet = new Set(inv.jobIds?.length ? inv.jobIds : [inv.jobId]);
     set((s) => ({
       invoices: upsert(s.invoices, inv),
-      jobs: s.jobs.map((j) => (jobIdSet.has(j.id) ? { ...j, invoiceId: undefined } : j)),
+      jobs: s.jobs.map((j) => (jobIdSet.has(j.id) ? { ...j, invoiceId: undefined, billingStatus: 'not_invoiced' as const } : j)),
     }));
     return inv;
   },
 };
 
 export const locationActions = {
-  async publish(location: VehicleLocation) {
-    set((s) => ({ locations: { ...s.locations, [location.jobId]: location } }));
-    await locationRepository.publish(location);
-  },
   async refresh() {
     const list = await locationRepository.listActive();
     set({ locations: Object.fromEntries(list.map((l) => [l.jobId, l])) });

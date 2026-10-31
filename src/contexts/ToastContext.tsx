@@ -20,7 +20,7 @@ const ToastContext = createContext<ToastApi | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastState | null>(null);
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [opacity] = useState(() => new Animated.Value(0));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const insets = useSafeAreaInsets();
 
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     maxWidth: 520,
   },
-  error: { backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: '#F0CFCB' },
+  error: { backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.dangerBorder },
   text: { ...typography.label, color: colors.textInverse, flexShrink: 1 },
   errorText: { color: colors.danger },
 });

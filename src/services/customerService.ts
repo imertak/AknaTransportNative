@@ -1,4 +1,5 @@
-import type { CustomerInput } from '@/types';
+import type { CustomerAddress, CustomerInput } from '@/types';
+import { searchKey } from '@/utils/format';
 import { createId } from '@/utils/id';
 import { isEmail, isPhone, isTaxNumber, required } from '@/utils/validation';
 import type { CustomerService } from './contracts';
@@ -56,5 +57,26 @@ export const mockCustomerService: CustomerService = {
         throw new ServiceError('conflict', 'İş kaydı bulunan müşteri silinemez.');
       }
       db.customers = db.customers.filter((c) => c.id !== id);
+    }),
+
+  /** API ile aynı: iptal edilmemiş işlerin durakları adres bazında gruplanır, en son konumlu kayıt seçilir. */
+  addresses: (customerId, type) =>
+    mockDb.read((db) => {
+      const map = new Map<string, CustomerAddress>();
+      const jobs = db.jobs.filter((j) => j.customerId === customerId && j.status !== 'cancelled').sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      for (const job of jobs) {
+        for (const stop of job.stops) {
+          if (type && stop.type !== type) continue;
+          const key = `${stop.type}|${searchKey(stop.address.trim())}`;
+          const existing = map.get(key);
+          if (existing) {
+            existing.useCount += 1;
+            if (!existing.point && stop.point) existing.point = stop.point;
+          } else {
+            map.set(key, { type: stop.type, address: stop.address.trim(), point: stop.point, useCount: 1, lastUsedAt: job.createdAt });
+          }
+        }
+      }
+      return [...map.values()].sort((a, b) => b.useCount - a.useCount || b.lastUsedAt.localeCompare(a.lastUsedAt)).slice(0, 50);
     }),
 };

@@ -23,11 +23,11 @@ export interface ButtonProps {
 }
 
 const V: Record<Variant, { bg: string; fg: string; border: string; pressed: string }> = {
-  primary: { bg: colors.ink, fg: colors.textInverse, border: colors.ink, pressed: '#2A2A2D' },
+  primary: { bg: colors.ink, fg: colors.textInverse, border: colors.ink, pressed: colors.inkPressed },
   secondary: { bg: colors.surface, fg: colors.text, border: colors.borderStrong, pressed: colors.surfaceSunken },
   ghost: { bg: 'transparent', fg: colors.text, border: 'transparent', pressed: colors.surfaceSunken },
-  danger: { bg: colors.surface, fg: colors.danger, border: '#E8C4BF', pressed: colors.dangerSoft },
-  inverse: { bg: colors.surface, fg: colors.text, border: colors.surface, pressed: '#E6E6E4' },
+  danger: { bg: colors.surface, fg: colors.danger, border: colors.dangerBorder, pressed: colors.dangerSoft },
+  inverse: { bg: colors.surface, fg: colors.text, border: colors.surface, pressed: colors.surfaceSunken },
 };
 
 const S: Record<Size, { h: number; px: number; icon: number }> = {

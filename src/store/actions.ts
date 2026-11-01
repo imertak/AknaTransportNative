@@ -1,18 +1,17 @@
-import { APP_CONFIG } from '@/constants/config';
 import {
   customerService,
   eArchiveGateway,
   invoiceService,
   jobService,
   locationRepository,
-  mockDb,
   userService,
   vehicleService,
 } from '@/services';
 import { errorMessage } from '@/services/errors';
-import { sortJobs } from '@/services/jobService';
-import type { CustomerInput, InvoiceInput, JobInput, JobStatus, Vehicle, VehicleInput } from '@/types';
-import { dataStore, resetDataStore, upsert } from './dataStore';
+import { sortJobs } from '@/services/jobUtils';
+import type { UserInput } from '@/services/contracts';
+import type { CustomerInput, InvoiceInput, JobInput, JobStatus, User, Vehicle, VehicleInput } from '@/types';
+import { dataStore, upsert } from './dataStore';
 
 const set = dataStore.setState;
 
@@ -104,6 +103,34 @@ function patchVehicle(v: Vehicle) {
   return v;
 }
 
+const sortUsers = (list: User[]) =>
+  list.sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.fullName.localeCompare(b.fullName, 'tr'));
+
+function patchUser(u: User) {
+  set((s) => ({ users: sortUsers(upsert(s.users, u)) }));
+  return u;
+}
+
+/** Şoför (kullanıcı) ekleme, düzenleme ve şifre sıfırlama yalnızca yöneticide. */
+export const userActions = {
+  refresh: async () => set({ users: sortUsers(await userService.list()) }),
+  async create(input: UserInput) {
+    const result = await userService.create(input);
+    patchUser(result.user);
+    return result;
+  },
+  async update(id: string, input: UserInput & { isActive: boolean }) {
+    const user = patchUser(await userService.update(id, input));
+    if (!input.isActive) await vehicleActions.refresh().catch(() => {});
+    return user;
+  },
+  async resetPassword(id: string) {
+    const result = await userService.resetPassword(id);
+    patchUser(result.user);
+    return result;
+  },
+};
+
 /** Araç kaydı ve şoföre atama yalnızca yöneticiye açıktır (API de aynı kuralı uygular). */
 export const vehicleActions = {
   refresh: async () => set({ vehicles: sortVehicles(await userService.listVehicles()) }),
@@ -174,11 +201,3 @@ export const locationActions = {
     set({ locations: Object.fromEntries(list.map((l) => [l.jobId, l])) });
   },
 };
-
-/** Demo verilerini başlangıç durumuna döndürür. */
-export async function resetDemoData() {
-  if (APP_CONFIG.dataSource !== 'mock') return;
-  await mockDb.reset();
-  resetDataStore();
-  await loadAll(true);
-}

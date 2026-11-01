@@ -1,9 +1,6 @@
 # AKNA Transport
 
-Nakliye operasyonlarını yönetmek için React Native (Expo) mobil uygulaması. Uygulama iki modda çalışır:
-
-- **API modu:** `EXPO_PUBLIC_API_BASE_URL` tanımlıysa tüm veriler [AknaTransportApi](https://github.com/imertak/AknaTransportApi) (.NET 9) üzerinden gelir.
-- **Demo modu:** Değişken boşsa veriler cihazda saklanan demo verilerdir; API gerekmez.
+Nakliye operasyonlarını yönetmek için React Native (Expo) mobil uygulaması. Tüm veriler [AknaTransportApi](https://github.com/imertak/AknaTransportApi) (.NET 9) üzerinden gelir; uygulamada demo veya örnek veri yoktur. `EXPO_PUBLIC_API_BASE_URL` tanımlı değilse giriş ekranı bunu açıkça söyler.
 
 ## Çalıştırma
 
@@ -18,7 +15,7 @@ npm run lint          # ESLint (eslint-config-expo)
 
 | Değişken | Ne için | Zorunlu mu |
 |---|---|---|
-| `EXPO_PUBLIC_API_BASE_URL` | API adresi. Boşsa uygulama demo modunda çalışır. | API modu için evet |
+| `EXPO_PUBLIC_API_BASE_URL` | API adresi, örn. `http://192.168.1.34:5080`. Telefonda `localhost` telefonun kendisidir; bilgisayarın veya sunucunun IP'sini yazın. | Evet |
 | `GOOGLE_MAPS_ANDROID_API_KEY` | Android'de harita (react-native-maps, Google sağlayıcı). `app.config.ts` derleme sırasında okur; koda yazılmaz. | Android haritası için evet |
 
 Anahtarı `.env.local` dosyasına veya EAS Secrets'a koyun. Anahtar yoksa Android'de "Haritada kontrol et" penceresi harita yerine "Harita sağlayıcısı yapılandırılmamış" uyarısı gösterir; sahte harita veya koordinat gösterilmez. iOS Apple Haritalar'ı kullanır ve anahtar istemez. Web önizlemede harita ve adres arama yoktur.
@@ -43,21 +40,17 @@ Anahtarı `.env.local` dosyasına veya EAS Secrets'a koyun. Anahtar yoksa Androi
 
 Giriş bilgileri API'nin hesaplarıdır: ilk yönetici API'deki `Seed:AdminEmail` / `Seed:AdminPassword` ile oluşur. Yöneticinin eklediği kullanıcılar geçici şifreyle ilk girişte yeni şifre belirleme ekranına yönlendirilir.
 
-API modunda bilinmesi gerekenler:
+bilinmesi gerekenler:
 - Erişim token'ı süresi dolunca sessizce yenilenir; yenilenemezse giriş ekranına dönülür.
 - Faturalar "Taslak" olarak oluşturulur ve tutar işin fiyatından hesaplanır. Fatura formunda KDV tevkifatı (ör. 624 Yük taşımacılığı 2/10) ve IBAN seçilir; önizlemede ödenecek tutar ve "YALNIZ: ..." satırı görünür.
 - "e-Arşiv'e gönder" API'de sağlayıcı yapılandırılmamışsa hata verir ve fatura taslak kalır. API GİB e-Arşiv portalına bağlıysa (`EArchive__Provider=GibPortal`) fatura portalda taslak olur; detay ekranında "SMS ile imzala ve kes" ile portalda kayıtlı telefona gelen kod girilir. Fatura yalnızca GİB imzayı onaylarsa kesilmiş olur. İmzalanmamış taslak "Portal taslağını sil" ile geri alınabilir.
 - Şoför hesapları müşteri ve fatura listelerini görmez (API yetkisi). İş detayında firma adı görünür, müşteri iletişim bilgisi görünmez.
 - Araçları yalnızca yönetici ekler, düzenler ve şoföre atar (Panel > Araçlar). İş atarken önce şoför, sonra o şoförün aracı seçilir.
+- Şoförleri yönetici ekler (Panel > Şoförler). Şoför eklerken boştaki araçlar seçilebilir veya yeni araç açılabilir; kaydedince şoföre atanır. Geçici şifre SMS ile gider; SMS sağlayıcısı yoksa yalnızca bir kez ekranda gösterilir. Şoför düzenleme ekranında pasife alma ve şifre sıfırlama vardır.
 
-### Demo hesaplar (demo modu)
+### İlk giriş
 
-| Rol | E-posta | Şifre |
-|---|---|---|
-| Yönetici | admin@akna.com | 123456 |
-| Şoför | driver@akna.com | 123456 |
-
-Ek demo şoförler: `murat@akna.com`, `emre@akna.com` (şifre aynı). Demo veriler Profil > "Demo verilerini sıfırla" ile başlangıç durumuna döndürülebilir.
+Hazır hesap yoktur. İlk yönetici, API ilk açıldığında `Seed:AdminEmail` ve `Seed:AdminPassword` ile oluşturulur (AknaTransportApi README). Şoförleri yönetici uygulamadan ekler.
 
 ## Teknoloji
 
@@ -75,20 +68,19 @@ src/
   screens/        auth/, admin/, driver/, shared/ ekranları
   components/     ui/ (tasarım sistemi), jobs/, invoices/, map/
   contexts/       AuthContext, LocationContext, ToastContext
-  services/       Servis sözleşmeleri (contracts.ts), mock implementasyonlar, registry.ts
+  services/       Servis sözleşmeleri (contracts.ts), API implementasyonları (api/), registry.ts
   store/          İstemci önbelleği (useSyncExternalStore) ve aksiyonlar
   hooks/          Veri seçicileri ve yardımcı hook'lar
   constants/      İş durumları, araç tipleri, yetkiler, yapılandırma
   navigation/     Rota yardımcıları, sekme ayarları
   types/          Merkezi veri modelleri (User, Customer, TransportJob, Invoice, Vehicle, Location...)
   theme/          Renk, tipografi, boşluk ve köşe değerleri
-  data/           Demo başlangıç verisi (Excel iş dökümündeki kayıtlar dahil)
   utils/          TL / tarih biçimlendirme, doğrulama, geo hesapları
 ```
 
 ## Mimari notlar
 
-**Servis katmanı.** Ekranlar mock veriye doğrudan erişmez. `services/contracts.ts` içindeki arayüzler (`AuthService`, `JobService`, `CustomerService`, `InvoiceService`, `LocationRepository`, `EArchiveGateway`, `InvoiceMailer`) hem mock hem gelecekteki API implementasyonlarının sözleşmesidir. API implementasyonları `services/api/` altındadır ve `services/registry.ts` moda göre hangisinin kullanılacağını seçer; `services/http.ts` Bearer token ve hata eşlemesi olan hazır bir istemci sunar (`EXPO_PUBLIC_API_BASE_URL`).
+**Servis katmanı.** Ekranlar yalnızca `services/contracts.ts` içindeki arayüzleri (`AuthService`, `UserService`, `JobService`, `CustomerService`, `InvoiceService`, `LocationRepository`, `EArchiveGateway`, `InvoiceMailer`) bilir. Implementasyonlar `services/api/` altındadır ve `services/registry.ts` üzerinden verilir; `services/http.ts` Bearer token ve hata eşlemesi olan hazır bir istemci sunar (`EXPO_PUBLIC_API_BASE_URL`).
 
 **Rol yönetimi.** Yetkiler `constants/permissions.ts` içinde merkezi tanımlıdır; ekranlar rol yerine yetki sorgular (`can(user, 'jobs.assign')`). Hangi rota grubunun erişilebilir olduğu `app/_layout.tsx` içinde oturum durumu ve görünüm moduna göre belirlenir. Yönetici, Profil'den şoför görünümüne geçebilir; işi kendine atayabilir veya "İşi üstlen" ile doğrudan alabilir.
 
@@ -102,9 +94,9 @@ src/
 - 30 m / 15 sn eşikleri ve toplu teslim ile pil ve veri kullanımı azaltılır.
 - Web önizlemede yalnızca sayfa açıkken çalışır ve kartta bu açıkça yazar.
 
-**Gerçek cihazda test.** Arka plan konumu Expo Go'da çalışmaz; development build gerekir (`npx expo run:android` / `npx expo run:ios` veya EAS development build). Android'de konum iznini "Her zaman izin ver", iOS'ta "Her Zaman" olarak verin. Android'de takip sırasında "AKNA Transport · iş takibi açık" bildirimi görünür.
+**Gerçek cihazda test.** Arka plan konumu Expo Go'da çalışmaz; Expo Go'da iş kabul edilmeye çalışılınca uygulama bunu açıkça söyler. Development build gerekir (`npx expo run:android` / `npx expo run:ios` veya EAS development build). Android'de konum iznini "Her zaman izin ver", iOS'ta "Her Zaman" olarak verin. Android'de takip sırasında "AKNA Transport · iş takibi açık" bildirimi görünür.
 
-**Fatura.** Demo modunda yalnızca demo fatura oluşturulur. Demo faturalar `DEMO-` önekiyle numaralanır, her yerde "resmi fatura değildir" olarak işaretlenir ve e-posta gönderilmez. e-Arşiv ve e-posta için sözleşmeler hazırdır; çağrıldıklarında açıkça "API aşamasında etkinleşecek" hatası verirler.
+**Fatura.** Fatura önce taslak oluşturulur ve her yerde "resmi fatura değildir" olarak işaretlenir. e-Arşiv sağlayıcısından başarılı sonuç gelmeden kesilmiş sayılmaz.
 
 **PDF iş dökümü.** `services/reportService.ts` A4 yatay, siyah-beyaz, sayfa numaralı ve oluşturulma tarihli HTML üretir; `expo-print` ile PDF'e çevrilip `expo-sharing` ile paylaşılır veya doğrudan yazdırılır. Örnek: 19.10.2026–22.10.2026 aralığı 7 iş ve 36.500 TL toplam verir.
 
@@ -112,5 +104,5 @@ src/
 
 - Android haritası için `GOOGLE_MAPS_ANDROID_API_KEY` gerekir (yukarıdaki tablo).
 - Web önizlemesinde harita yerine konum listesi gösterilir; uygulamanın hedefi iOS ve Android'dir.
-- Adres geçmişi API modunda müşterinin önceki işlerinden gelir; "Geçmiş adresler" ile seçilir.
-- Fatura ve iş dökümü PDF'leri API modunda sunucudan indirilir; demo modunda cihazda üretilir.
+- Adres geçmişi müşterinin önceki işlerinden gelir; "Geçmiş adresler" ile seçilir.
+- Fatura ve iş dökümü PDF'leri sunucudan indirilir; tarih aralığı dökümü cihazda üretilir.

@@ -9,9 +9,8 @@ import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
 import { composeJobText } from '@/utils/stops';
 import { jobService } from './registry';
 import { ServiceError } from './errors';
-import { APP_CONFIG } from '@/constants/config';
 
-const DRAFT = APP_CONFIG.dataSource === 'api' ? { word: 'Taslak', stamp: 'TASLAK' } : { word: 'Demo', stamp: 'DEMO' };
+const DRAFT = { word: 'Taslak', stamp: 'TASLAK' };
 
 const A4_LANDSCAPE = { width: 842, height: 595 };
 const A4_PORTRAIT = { width: 595, height: 842 };
@@ -306,7 +305,7 @@ export const reportService = {
     await share(uri, invoice.invoiceNo);
   },
 
-  /** Faturadaki işlerin dökümü (demo mod; API modunda sunucu PDF'i kullanılır). */
+  /** Faturadaki işlerin dökümü (sunucu PDF'i indirilemeyen ortamlarda cihazda üretilir). */
   async shareInvoiceJobReport(invoice: Invoice, jobs: TransportJob[]) {
     const sorted = [...jobs].sort((a, b) => a.date.localeCompare(b.date) || a.jobNo.localeCompare(b.jobNo));
     const report: JobsReport = {

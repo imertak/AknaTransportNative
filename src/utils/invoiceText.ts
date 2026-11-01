@@ -1,6 +1,6 @@
 /**
  * Fatura yardımcıları: KDV tevkifatı, yazıyla tutar ve IBAN. API'deki hesaplarla birebir aynıdır
- * (Domain/Common/Withholding.cs, AmountInWords.cs, Iban.cs); demo modunda ve önizlemede kullanılır.
+ * (Domain/Common/Withholding.cs, AmountInWords.cs, Iban.cs); fatura önizlemesinde kullanılır.
  */
 
 export interface WithholdingType {

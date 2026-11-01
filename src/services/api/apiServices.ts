@@ -27,7 +27,9 @@ import {
   locationFromApi,
   monthRevenueFromApi,
   stopTypeToApi,
+  credentialFromApi,
   userFromApi,
+  userToApi,
   vehicleFromApi,
   vehicleToApi,
   type ApiActiveJobLocation,
@@ -40,6 +42,7 @@ import {
   type ApiJobDetail,
   type ApiMonthRevenue,
   type ApiUser,
+  type ApiUserCredential,
   type ApiVehicle,
 } from './mappers';
 
@@ -132,6 +135,9 @@ export const apiUserService: UserService = {
     if (!isAdmin()) return currentUser ? [currentUser] : [];
     return (await httpAll<ApiUser>('/api/users')).map(userFromApi);
   },
+  create: async (input) => credentialFromApi(await http<ApiUserCredential>('/api/users', { method: 'POST', json: userToApi(input) })),
+  update: async (id, input) => userFromApi(await http<ApiUser>(`/api/users/${id}`, { method: 'PUT', json: { ...userToApi(input), isActive: input.isActive } })),
+  resetPassword: async (id) => credentialFromApi(await http<ApiUserCredential>(`/api/users/${id}/reset-password`, { method: 'POST', json: {} })),
   listVehicles: () => (isAdmin() ? apiVehicleService.list() : apiVehicleService.listMine()),
 };
 

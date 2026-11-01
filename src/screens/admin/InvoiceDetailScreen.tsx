@@ -1,11 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ban, ChevronRight, FileSpreadsheet, Mail, MessageSquareLock, Printer, Send, Share2, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
+import { Ban, ChevronRight, FileSpreadsheet, Mail, MessageSquareLock, Send, Share2, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { InvoicePreview } from '@/components/invoices/InvoicePreview';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
-import { APP_CONFIG } from '@/constants/config';
 import { Button, Card, EmptyState, InfoRow, Input, NavHeader, Screen, ScrollContent, Section, Sheet, Text } from '@/components/ui';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useCustomer, useInvoice, useJobs } from '@/hooks/useData';
@@ -33,7 +32,6 @@ export default function InvoiceDetailScreen() {
   const jobs = useJobs();
   const share = useAsyncAction();
   const jobReport = useAsyncAction();
-  const print = useAsyncAction();
   const action = useAsyncAction();
   const signing = useAsyncAction();
   /** GİB portalı imza SMS'i: kod istendiğinde dolar. */
@@ -62,9 +60,7 @@ export default function InvoiceDetailScreen() {
     invoice.status === 'earsiv_failed'
       ? 'Gönderim başarısız · tekrar deneyebilirsiniz'
       : isDemo
-        ? APP_CONFIG.dataSource === 'api'
-          ? 'Kesilmedi · taslak belge'
-          : 'Bağlı değil · demo belge'
+        ? 'Kesilmedi · taslak belge'
         : invoice.requiresSmsSignature
           ? 'GİB portalında taslak · SMS ile imza bekliyor'
           : invoice.ettn
@@ -78,7 +74,7 @@ export default function InvoiceDetailScreen() {
       .filter((j) => (invoice.jobIds?.length ? invoice.jobIds : [invoice.jobId]).includes(j.id))
       .map((j) => ({ jobId: j.id, jobNo: j.jobNo, jobDate: j.date, storeName: j.storeName, description: composeJobText(j.routeDescription, j.description), amount: j.price }));
 
-  /** API modunda sunucunun ürettiği PDF indirilir; demo modunda PDF cihazda üretilir. */
+  /** Sunucunun ürettiği PDF indirilir; web gibi dosya kaydedilemeyen ortamlarda cihazda üretilir. */
   const shareInvoicePdf = async () => {
     const uri = await invoiceService.downloadPdf(invoice.id, 'invoice');
     if (uri) await sharePdf(uri, invoice.invoiceNo);
@@ -158,9 +154,6 @@ export default function InvoiceDetailScreen() {
           <Button label="Fatura PDF" icon={Share2} variant="secondary" style={{ flex: 1 }} loading={share.pending} onPress={() => share.run(shareInvoicePdf, { error: 'Fatura PDF indirilemedi.' })} />
           <Button label="İş dökümü PDF" icon={FileSpreadsheet} variant="secondary" style={{ flex: 1 }} loading={jobReport.pending} onPress={() => jobReport.run(shareJobReportPdf, { error: 'İş dökümü PDF indirilemedi.' })} />
         </View>
-        {!apiMode ? (
-          <Button label="Yazdır" icon={Printer} variant="ghost" loading={print.pending} onPress={() => print.run(() => reportService.printInvoice(invoice, customer ?? null))} />
-        ) : null}
 
         <Section title={`Faturadaki işler · ${items.length}`}>
           <Card padded={false}>
@@ -256,8 +249,6 @@ export default function InvoiceDetailScreen() {
     </Screen>
   );
 }
-
-const apiMode = APP_CONFIG.dataSource === 'api';
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.sm },

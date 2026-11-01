@@ -36,7 +36,7 @@ export const DriverActionCard = memo(function DriverActionCard({ job }: { job: T
       // Konum takibi zorunlu: izin/servis yoksa iş kabul edilmez.
       const ready = await ensureReady();
       if (!ready.ok) {
-        setBlocked({ message: ready.message, settings: !ready.canAskAgain || ready.code === 'background_denied' });
+        setBlocked({ message: ready.message, settings: ready.code !== 'unsupported_build' && (!ready.canAskAgain || ready.code === 'background_denied') });
         return;
       }
       setBlocked(null);

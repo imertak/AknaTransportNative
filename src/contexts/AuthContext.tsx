@@ -76,6 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
     (async () => {
+      // Eski sürümlerin cihazda bıraktığı demo verileri temizle.
+      storage.remove(STORAGE_KEYS.legacyMockDb).catch(() => {});
       try {
         const raw = await secureStorage.get(STORAGE_KEYS.session);
         const saved = raw ? (JSON.parse(raw) as Session) : null;

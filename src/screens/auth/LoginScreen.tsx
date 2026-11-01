@@ -12,11 +12,6 @@ import { errorMessage } from '@/services/errors';
 import { colors, hitSlop, radius, spacing } from '@/theme';
 import { isEmail } from '@/utils/validation';
 
-const DEMO_ACCOUNTS = [
-  { label: 'Yönetici', email: 'admin@akna.com' },
-  { label: 'Şoför', email: 'driver@akna.com' },
-];
-
 export default function LoginScreen() {
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
@@ -112,26 +107,12 @@ export default function LoginScreen() {
           <Button label="Giriş yap" size="lg" onPress={submit} loading={loading} fullWidth />
         </View>
 
-        {APP_CONFIG.dataSource === 'mock' ? (
-          <View style={styles.demo}>
-            <Text variant="caption" tone="inverseMuted" align="center">Demo hesaplar · şifre 123456</Text>
-            <View style={styles.demoRow}>
-              {DEMO_ACCOUNTS.map((a) => (
-                <Pressable
-                  key={a.email}
-                  onPress={() => {
-                    setEmail(a.email);
-                    setPassword('123456');
-                    setErrors({});
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${a.label} demo hesabını doldur`}
-                  style={({ pressed }) => [styles.demoChip, pressed && { opacity: 0.7 }]}>
-                  <Text variant="label" tone="inverse">{a.label}</Text>
-                  <Text variant="bodySmall" tone="inverseMuted">{a.email}</Text>
-                </Pressable>
-              ))}
-            </View>
+        {!APP_CONFIG.apiBaseUrl ? (
+          <View style={styles.config} accessibilityRole="alert">
+            <Text variant="label" tone="inverse">API adresi yapılandırılmadı</Text>
+            <Text variant="bodySmall" tone="inverseMuted">
+              Proje kökündeki .env.local dosyasına EXPO_PUBLIC_API_BASE_URL=http://&lt;sunucu-IP&gt;:5080 yazıp uygulamayı yeniden başlatın.
+            </Text>
           </View>
         ) : null}
       </ScrollView>
@@ -146,7 +127,5 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xxl, gap: spacing.lg },
   formError: { backgroundColor: colors.dangerSoft, borderRadius: radius.sm, padding: spacing.md },
   forgot: { alignSelf: 'flex-end', marginTop: -spacing.xs },
-  demo: { gap: spacing.md },
-  demoRow: { flexDirection: 'row', gap: spacing.sm },
-  demoChip: { flex: 1, borderWidth: 1, borderColor: colors.inkLine, backgroundColor: colors.inkRaised, borderRadius: radius.md, padding: spacing.md, gap: 2 },
+  config: { gap: spacing.xs, borderWidth: 1, borderColor: colors.inkLine, backgroundColor: colors.inkRaised, borderRadius: radius.md, padding: spacing.md },
 });

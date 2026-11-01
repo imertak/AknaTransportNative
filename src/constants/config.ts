@@ -1,20 +1,15 @@
-/** Örn. http://localhost:5080 — tanımlıysa uygulama .NET API'yi kullanır. */
+/** Örn. http://192.168.1.34:5080 — uygulamanın bağlandığı AKNA .NET API adresi (zorunlu). */
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/+$/, '');
 
 /**
- * Uygulama yapılandırması. `EXPO_PUBLIC_API_BASE_URL` tanımlıysa servis katmanı
- * .NET Web API'ye bağlanır; boşsa cihaz üzerindeki demo verilerle çalışır.
+ * Uygulama yapılandırması. Tüm veriler `EXPO_PUBLIC_API_BASE_URL` ile verilen .NET Web API'den gelir;
+ * tanımlı değilse giriş ekranı yapılandırma hatası gösterir. Cihazda demo veri yoktur.
  */
 export const APP_CONFIG = {
   appName: 'AKNA Transport',
-  dataSource: (API_BASE_URL ? 'api' : 'mock') as 'mock' | 'api',
   apiBaseUrl: API_BASE_URL,
-  /** Mock servislerde ağ gecikmesini taklit eder (ms). */
-  mockLatency: 220,
   defaultVatRate: 20,
   vatRates: [0, 1, 10, 20],
-  jobNoPrefix: 'AKN',
-  demoInvoicePrefix: 'DEMO',
 } as const;
 
 /** Zorunlu iş takibi parametreleri: batarya ve ağ tüketimini sınırlamak için. */

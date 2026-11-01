@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-/** Uygulama verisi için (cache, mock veritabanı, tercihler). */
+/** Uygulama verisi için (cache, tercihler). */
 export const storage = {
   async getJSON<T>(key: string): Promise<T | null> {
     try {
@@ -39,5 +39,6 @@ export const secureStorage = {
 export const STORAGE_KEYS = {
   session: 'akna.session',
   viewMode: 'akna.viewMode',
-  mockDb: 'akna.mockdb',
+  /** Eski sürümlerdeki demo veritabanı. Açılışta silinir. */
+  legacyMockDb: 'akna.mockdb',
 } as const;

@@ -19,6 +19,7 @@ import type {
   VehicleLocation,
   VehicleType,
 } from '@/types';
+import type { UserCredentialResult, UserInput } from '../contracts';
 import { buildRouteDescription, orderStops, toStops } from '@/utils/stops';
 
 /**
@@ -212,6 +213,24 @@ export const billingStatusFromApi = (v: ApiJob['billingStatus'] | undefined): Jo
   v === 'Invoiced' ? 'invoiced' : v === 'InDraft' ? 'in_draft' : 'not_invoiced';
 
 // ---- Varlık dönüşümleri ----
+
+export interface ApiUserCredential {
+  user: ApiUser;
+  smsQueued: boolean;
+  temporaryPassword: string | null;
+  message: string;
+}
+
+export const userToApi = (u: UserInput) => ({
+  fullName: u.fullName.trim(),
+  email: u.email.trim(),
+  phoneNumber: u.phone.trim(),
+  role: u.role === 'admin' ? 'Admin' : 'User',
+});
+
+export function credentialFromApi(r: ApiUserCredential): UserCredentialResult {
+  return { user: userFromApi(r.user), smsQueued: r.smsQueued, temporaryPassword: r.temporaryPassword ?? null, message: r.message };
+}
 
 export function userFromApi(u: ApiUser): User {
   return {

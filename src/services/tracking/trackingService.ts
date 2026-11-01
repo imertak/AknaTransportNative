@@ -1,8 +1,9 @@
+import { LOCATION_CONFIG } from '@/constants/config';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
 
-import { APP_CONFIG, LOCATION_CONFIG } from '@/constants/config';
 import { colors } from '@/theme';
 import type { LocationFix, Session } from '@/types';
 import { ServiceError } from '../errors';
@@ -25,7 +26,7 @@ const BATCH = 100;
 
 export type PrepareResult =
   | { ok: true }
-  | { ok: false; code: 'services_off' | 'foreground_denied' | 'background_denied' | 'error'; message: string; canAskAgain: boolean };
+  | { ok: false; code: 'services_off' | 'foreground_denied' | 'background_denied' | 'unsupported_build' | 'error'; message: string; canAskAgain: boolean };
 
 const toFix = (l: Location.LocationObject): LocationFix => ({
   latitude: l.coords.latitude,
@@ -38,7 +39,7 @@ const toFix = (l: Location.LocationObject): LocationFix => ({
 
 /** Uygulama kapalıyken başlayan arka plan görevinde oturum belleği boştur; kayıtlı oturumdan alınır. */
 async function ensureAuth() {
-  if (APP_CONFIG.dataSource !== 'api' || hasToken()) return;
+  if (hasToken()) return;
   const raw = await secureStorage.get(STORAGE_KEYS.session).catch(() => null);
   const saved = raw ? (JSON.parse(raw) as Session) : null;
   if (saved?.token) setTokenProvider(() => saved.token);
@@ -143,8 +144,21 @@ export async function prepareTracking(interactive = true): Promise<PrepareResult
     }
     return { ok: true };
   } catch (e) {
-    return { ok: false, code: 'error', message: e instanceof Error ? e.message : 'Konum izni kontrol edilemedi.', canAskAgain: true };
+    const raw = e instanceof Error ? e.message : '';
+    // İzin metinleri (Info.plist) veya arka plan modu derlemede yoksa iOS izin penceresi hiç açılamaz.
+    if (/UsageDescription|Info\.plist|UIBackgroundModes|Background location/i.test(raw)) {
+      return { ok: false, code: 'unsupported_build', message: unsupportedBuildMessage(), canAskAgain: false };
+    }
+    return { ok: false, code: 'error', message: raw || 'Konum izni kontrol edilemedi.', canAskAgain: true };
   }
+}
+
+/** Expo Go arka plan konumunu desteklemez; eski bir development build'de ise izin ayarları eksik kalmış olabilir. */
+function unsupportedBuildMessage(): string {
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+    return 'Expo Go arka planda konum takibini desteklemiyor, bu yüzden iş kabul edilemiyor. Uygulamanın kendi derlemesini kullanın: npx expo run:ios (veya run:android) ya da EAS Build.';
+  }
+  return 'Bu uygulama derlemesinde konum izin ayarları eksik. Uygulamayı yeniden derleyin: npx expo prebuild --clean ve ardından npx expo run:ios (veya EAS Build).';
 }
 
 export async function isTrackingRunning(): Promise<boolean> {

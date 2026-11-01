@@ -21,7 +21,7 @@ import type {
 } from '@/types';
 
 /**
- * Servis sözleşmeleri. Mock ve ileride yazılacak .NET Web API
+ * Servis sözleşmeleri. .NET Web API
  * implementasyonları bu arayüzleri uygular; ekranlar yalnızca bunları bilir.
  */
 
@@ -38,8 +38,25 @@ export interface AuthService {
   changePassword(currentPassword: string, newPassword: string): Promise<{ session: Session; user: User }>;
 }
 
+/** Şoför (veya yönetici) eklerken ya da şifre sıfırlarken dönen sonuç. */
+export interface UserCredentialResult {
+  user: User;
+  /** Geçici şifre SMS ile gönderildiyse true. */
+  smsQueued: boolean;
+  /** SMS sağlayıcısı yoksa geçici şifre yalnızca bu yanıtta bir kez döner; saklanmaz. */
+  temporaryPassword: string | null;
+  message: string;
+}
+
+export type UserInput = Pick<User, 'fullName' | 'email' | 'phone' | 'role'> & { isActive?: boolean };
+
 export interface UserService {
   list(): Promise<User[]>;
+  /** Yalnızca yönetici: kullanıcı ekler; şifre sistem tarafından üretilir. */
+  create(input: UserInput): Promise<UserCredentialResult>;
+  update(id: string, input: UserInput & { isActive: boolean }): Promise<User>;
+  /** Yeni geçici şifre üretir ve kullanıcının açık oturumlarını kapatır. */
+  resetPassword(id: string): Promise<UserCredentialResult>;
   /** Yönetici tüm araçları, şoför yalnızca kendisine atanmış araçları görür. */
   listVehicles(): Promise<Vehicle[]>;
 }
@@ -87,7 +104,7 @@ export interface CustomerService {
 export interface InvoiceService {
   list(filter?: InvoiceFilter): Promise<Invoice[]>;
   get(id: string): Promise<Invoice>;
-  /** Uygulama içi demo fatura. Resmi geçerliliği yoktur. */
+  /** Taslak fatura oluşturur. Resmi geçerliliği yoktur. */
   createDemo(input: InvoiceInput, actorId: string): Promise<Invoice>;
   cancel(id: string): Promise<Invoice>;
   /**

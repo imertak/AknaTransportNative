@@ -1,6 +1,5 @@
 export * from './registry';
 export { reportService } from './reportService';
-export { calculateInvoiceTotals } from './invoiceService';
-export { matchesJobFilter, sortJobs } from './jobService';
+export { calculateInvoiceTotals } from './invoiceUtils';
+export { matchesJobFilter, sortJobs } from './jobUtils';
 export { ServiceError, errorMessage } from './errors';
-export { mockDb } from './mockDb';

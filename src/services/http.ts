@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { APP_CONFIG } from '@/constants/config';
 import { ServiceError, type ServiceErrorCode } from './errors';
 
@@ -110,13 +112,22 @@ async function send(path: string, init: HttpOptions, token: string | null): Prom
       body: json !== undefined ? JSON.stringify(json) : rest.body,
     });
   } catch {
-    throw new ServiceError('network', 'Sunucuya ulaşılamadı. İnternet bağlantınızı ve API adresini kontrol edin.');
+    throw new ServiceError('network', networkErrorMessage());
   }
+}
+
+/** Telefonda "localhost" telefonun kendisidir; bu yaygın kurulum hatasını açıkça söyle. */
+function networkErrorMessage(): string {
+  const base = APP_CONFIG.apiBaseUrl;
+  const local = /\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(base) && Platform.OS !== 'web';
+  return local
+    ? `Sunucuya ulaşılamadı (${base}). Telefonda "localhost" telefonun kendisidir; EXPO_PUBLIC_API_BASE_URL'ye bilgisayarın veya sunucunun IP adresini yazın.`
+    : `Sunucuya ulaşılamadı (${base}). İnternet bağlantınızı ve API adresini kontrol edin.`;
 }
 
 export async function http<T>(path: string, init: HttpOptions = {}): Promise<T> {
   if (!APP_CONFIG.apiBaseUrl) {
-    throw new ServiceError('not_implemented', 'API adresi henüz yapılandırılmadı.');
+    throw new ServiceError('not_implemented', 'API adresi yapılandırılmadı. EXPO_PUBLIC_API_BASE_URL tanımlayıp uygulamayı yeniden başlatın.');
   }
   const anonymous = init.anonymous === true;
   const token = anonymous ? null : getToken();
@@ -158,7 +169,7 @@ export async function httpAll<T>(path: string, query: HttpOptions['query'] = {})
 /** Kimlik doğrulamalı ikili indirme (PDF). 401'de token bir kez yenilenir. */
 export async function httpBinary(path: string, init: HttpOptions = {}): Promise<ArrayBuffer> {
   if (!APP_CONFIG.apiBaseUrl) {
-    throw new ServiceError('not_implemented', 'API adresi henüz yapılandırılmadı.');
+    throw new ServiceError('not_implemented', 'API adresi yapılandırılmadı. EXPO_PUBLIC_API_BASE_URL tanımlayıp uygulamayı yeniden başlatın.');
   }
   const token = getToken();
   const withAccept = { ...init, headers: { Accept: 'application/pdf, application/octet-stream', ...(init.headers as Record<string, string> | undefined) } };

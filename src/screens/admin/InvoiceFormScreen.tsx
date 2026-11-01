@@ -13,13 +13,12 @@ import { routes } from '@/navigation/routes';
 import { calculateInvoiceTotals } from '@/services';
 import { invoiceActions } from '@/store';
 import { colors, radius, spacing } from '@/theme';
-import { formatAmountInput, formatCurrency, formatDate, parseAmount, todayISO } from '@/utils/format';
+import { formatAmountInput, formatCurrency, formatDate, todayISO } from '@/utils/format';
 import { composeJobText } from '@/utils/stops';
 import { amountInWords, calculateWithholding, DEFAULT_WITHHOLDING_TYPES, formatIban, isValidIban } from '@/utils/invoiceText';
 
 const NO_WITHHOLDING = 'none';
 
-const apiMode = APP_CONFIG.dataSource === 'api';
 
 export default function InvoiceFormScreen() {
   const { jobId: presetJob } = useLocalSearchParams<{ jobId?: string }>();
@@ -56,9 +55,8 @@ export default function InvoiceFormScreen() {
   const displayDescription = description || autoDescription || '';
 
   const autoSubtotal = useMemo(() => selectedJobs.reduce((s, j) => s + j.price, 0), [selectedJobs]);
-  const [subtotalOverride, setSubtotalOverride] = useState('');
-  // API modunda ara toplam sunucuda işlerin fiyatından hesaplanır; elle değiştirilemez.
-  const amount = !apiMode && subtotalOverride ? (parseAmount(subtotalOverride) ?? 0) : autoSubtotal;
+  // Ara toplam sunucuda işlerin fiyatından hesaplanır; elle değiştirilemez.
+  const amount = autoSubtotal;
 
   const [vatRate, setVatRate] = useState<number>(APP_CONFIG.defaultVatRate);
   const [errors, setErrors] = useState<{ jobs?: string; description?: string; subtotal?: string; iban?: string }>({});
@@ -115,7 +113,7 @@ export default function InvoiceFormScreen() {
         withholdingCode: vatRate > 0 ? withholding?.code ?? null : null,
         iban: iban.trim() || undefined,
       }, user.id),
-      { success: apiMode ? 'Taslak fatura oluşturuldu.' : 'Demo fatura oluşturuldu.' },
+      { success: 'Taslak fatura oluşturuldu.' },
     );
     if (inv) router.replace(routes.invoice(inv.id));
   };
@@ -133,14 +131,12 @@ export default function InvoiceFormScreen() {
 
   return (
     <Screen>
-      <NavHeader title="Fatura oluştur" subtitle={apiMode ? 'Taslak fatura' : 'Demo fatura'} />
+      <NavHeader title="Fatura oluştur" subtitle="Taslak fatura" />
       <ScrollContent keyboard>
         <View style={styles.notice}>
           <Info size={18} color={colors.text} />
           <Text variant="bodySmall" style={{ flex: 1 }}>
-            {apiMode
-              ? 'Fatura taslak olarak oluşturulur ve resmi değildir. Aynı müşteriye ait birden fazla işi tek faturada birleştirebilirsiniz.'
-              : 'Aynı müşteriye ait birden fazla tamamlanmış işi seçerek tek fatura oluşturabilirsiniz. Demo faturalar resmi değildir.'}
+            Fatura taslak olarak oluşturulur ve resmi değildir. Aynı müşteriye ait birden fazla işi tek faturada birleştirebilirsiniz.
           </Text>
         </View>
 
@@ -182,19 +178,12 @@ export default function InvoiceFormScreen() {
             <Input
               label="Ara toplam (KDV hariç)"
               required
-              editable={!apiMode}
+              editable={false}
               keyboardType="decimal-pad"
               suffix="TL"
-              value={subtotalOverride || formatAmountInput(String(autoSubtotal))}
-              onChangeText={(v) => setSubtotalOverride(formatAmountInput(v))}
+              value={formatAmountInput(String(autoSubtotal))}
               error={errors.subtotal}
-              hint={
-                apiMode
-                  ? 'Seçilen işlerin fiyatlarından sunucuda hesaplanır.'
-                  : selectedJobs.length > 1
-                    ? `Seçilen ${selectedJobs.length} işin toplam tutarı: ${formatCurrency(autoSubtotal)}`
-                    : undefined
-              }
+              hint="Seçilen işlerin fiyatlarından sunucuda hesaplanır."
             />
             <View style={{ gap: spacing.xs + 2 }}>
               <Text variant="label" tone="secondary">KDV oranı</Text>
@@ -223,7 +212,7 @@ export default function InvoiceFormScreen() {
               autoCorrect={false}
               placeholder="TR00 0000 0000 0000 0000 0000 00"
               error={errors.iban}
-              hint={apiMode ? 'Boş bırakılırsa firmanın kayıtlı IBAN\'ı faturaya yazılır.' : 'Faturanın açıklamasında yazılır.'}
+              hint="Boş bırakılırsa firmanın kayıtlı IBAN'ı faturaya yazılır."
             />
           </Card>
         </Section>
@@ -231,7 +220,7 @@ export default function InvoiceFormScreen() {
         {selectedJobs.length > 0 ? (
           <Section title="Önizleme">
             <InvoicePreview
-              invoiceNo={apiMode ? 'TASLAK' : 'DEMO-…'}
+              invoiceNo="TASLAK"
               issueDate={issueDate}
               jobNo={selectedJobs.map(j => j.jobNo).join(', ')}
               customer={customer}
@@ -243,7 +232,7 @@ export default function InvoiceFormScreen() {
               withholdingAmount={wh.withholdingAmount}
               payableAmount={wh.payableAmount}
               amountInWords={amountInWords(wh.payableAmount)}
-              iban={iban.trim() ? formatIban(iban) : apiMode ? 'Firma IBAN\'ı (sunucu ayarı)' : undefined}
+              iban={iban.trim() ? formatIban(iban) : "Firma IBAN'ı (sunucu ayarı)"}
             />
             <Text variant="bodySmall" tone="secondary">
               {customer?.email ? `Entegrasyon sonrası fatura ${customer.email} adresine otomatik gönderilecek.` : 'Müşterinin kayıtlı e-posta adresi yok.'}
@@ -253,7 +242,7 @@ export default function InvoiceFormScreen() {
       </ScrollContent>
       <BottomBar>
         <Button label="Vazgeç" variant="secondary" onPress={() => router.back()} style={{ flex: 1 }} />
-        <Button label={apiMode ? 'Taslak fatura oluştur' : 'Demo fatura oluştur'} onPress={submit} loading={pending} style={{ flex: 2 }} />
+        <Button label="Taslak fatura oluştur" onPress={submit} loading={pending} style={{ flex: 2 }} />
       </BottomBar>
     </Screen>
   );

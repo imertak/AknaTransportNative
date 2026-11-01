@@ -6,7 +6,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { MapCanvas } from '@/components/map/MapCanvas';
 import { MapPanel, MapTitle } from '@/components/map/MapOverlay';
 import type { MapMarkerData } from '@/components/map/types';
-import { Badge, IconButton, StatusBadge, Text } from '@/components/ui';
+import { IconButton, StatusBadge, Text } from '@/components/ui';
 import { isInProgress } from '@/constants/jobStatus';
 import { useJobs, useLocations, useUserMap, useVehicles } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
@@ -115,7 +115,6 @@ export default function FleetMapScreen() {
                     <Text variant="bodySmall" tone="tertiary">
                       {item.location ? `Konum ${formatRelative(item.location.fix.timestamp)}` : 'Konum paylaşılmıyor'}
                     </Text>
-                    {item.location?.simulated ? <Badge label="Demo konum" tone="muted" /> : null}
                   </View>
                   <Text variant="label" onPress={() => router.push(routes.job(item.job.id))} accessibilityRole="link">
                     İş detayı

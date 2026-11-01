@@ -5,10 +5,9 @@ import { Text } from '@/components/ui';
 import { colors, radius, spacing } from '@/theme';
 import type { Customer } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { APP_CONFIG } from '@/constants/config';
 
-/** API modunda resmi olmayan faturalar "taslak", demo modunda "demo" olarak etiketlenir. */
-const DRAFT = APP_CONFIG.dataSource === 'api' ? { word: 'Taslak', stamp: 'TASLAK' } : { word: 'Demo', stamp: 'DEMO' };
+/** Resmi olmayan (henüz kesilmemiş) faturalar "taslak" olarak etiketlenir. */
+const DRAFT = { word: 'Taslak', stamp: 'TASLAK' };
 
 interface Props {
   invoiceNo: string;
@@ -32,7 +31,7 @@ interface Props {
   bankName?: string;
 }
 
-/** Fatura belge önizlemesi. Demo faturalar açıkça işaretlenir. */
+/** Fatura belge önizlemesi. Taslak faturalar açıkça işaretlenir. */
 export const InvoicePreview = memo(function InvoicePreview(p: Props) {
   return (
     <View style={styles.doc}>

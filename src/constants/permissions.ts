@@ -16,6 +16,8 @@ export type Permission =
   | 'map.fleet'
   /** Araç ekleme, düzenleme ve şoföre atama yalnızca yöneticide. */
   | 'vehicles.manage'
+  /** Şoför ekleme, düzenleme, pasife alma ve şifre sıfırlama yalnızca yöneticide. */
+  | 'drivers.manage'
   | 'viewMode.switch';
 
 const ADMIN_PERMISSIONS: Permission[] = [
@@ -32,6 +34,7 @@ const ADMIN_PERMISSIONS: Permission[] = [
   'reports.export',
   'map.fleet',
   'vehicles.manage',
+  'drivers.manage',
   'viewMode.switch',
 ];
 

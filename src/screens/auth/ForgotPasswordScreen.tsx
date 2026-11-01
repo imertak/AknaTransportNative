@@ -1,17 +1,14 @@
 import { router } from 'expo-router';
-import { ChevronLeft, KeyRound, Lock, MailCheck, Mail } from 'lucide-react-native';
+import { ChevronLeft, KeyRound, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, IconButton, Input, Text } from '@/components/ui';
-import { APP_CONFIG } from '@/constants/config';
 import { authService } from '@/services';
 import { errorMessage } from '@/services/errors';
 import { colors, radius, spacing } from '@/theme';
 import { isEmail, passwordProblem } from '@/utils/validation';
-
-const apiMode = APP_CONFIG.dataSource === 'api';
 
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
@@ -68,14 +65,12 @@ export default function ForgotPasswordScreen() {
         <View style={{ gap: spacing.sm, marginTop: spacing.xxl }}>
           <Text variant="display" tone="inverse">Şifremi unuttum</Text>
           <Text tone="inverseMuted">
-            {apiMode
-              ? 'Hesabınıza kayıtlı e-posta adresini girin. Şifre sıfırlama kodu e-postanıza gönderilecek.'
-              : 'Hesabınıza kayıtlı e-posta adresini girin. Şifre sıfırlama talebiniz yöneticinize iletilecektir.'}
+            Hesabınıza kayıtlı e-posta adresini girin. Şifre sıfırlama kodu e-postanıza gönderilecek.
           </Text>
         </View>
 
         <View style={styles.card}>
-          {sent && apiMode && done ? (
+          {sent && done ? (
             <View style={{ gap: spacing.md, alignItems: 'flex-start' }}>
               <View style={styles.icon}>
                 <Lock size={22} color={colors.text} />
@@ -84,7 +79,7 @@ export default function ForgotPasswordScreen() {
               <Text variant="bodySmall" tone="secondary">Yeni şifrenizle giriş yapabilirsiniz. Diğer cihazlardaki oturumlarınız kapatıldı.</Text>
               <Button label="Girişe dön" onPress={back} fullWidth />
             </View>
-          ) : sent && apiMode ? (
+          ) : sent ? (
             <View style={{ gap: spacing.lg }}>
               <Text variant="bodySmall" tone="secondary">
                 {email} adresi kayıtlıysa sıfırlama kodu gönderildi. Kodu ve yeni şifrenizi girin.
@@ -107,17 +102,6 @@ export default function ForgotPasswordScreen() {
                 hint="En az 8 karakter, en az bir harf ve bir rakam."
               />
               <Button label="Şifreyi güncelle" onPress={reset} loading={resetting} size="lg" fullWidth />
-            </View>
-          ) : sent ? (
-            <View style={{ gap: spacing.md, alignItems: 'flex-start' }}>
-              <View style={styles.icon}>
-                <MailCheck size={22} color={colors.text} />
-              </View>
-              <Text variant="heading">Talebiniz alındı</Text>
-              <Text variant="bodySmall" tone="secondary">
-                {email} için sıfırlama talebi kaydedildi. Demo sürümünde e-posta gönderilmez; şifre sıfırlama bağlantıları API entegrasyonuyla birlikte etkinleşecektir.
-              </Text>
-              <Button label="Girişe dön" onPress={back} fullWidth />
             </View>
           ) : (
             <>

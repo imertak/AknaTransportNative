@@ -8,7 +8,7 @@ import { Button, Chip, DateField, EmptyState, IconButton, PageHeader, Screen, Se
 import { useCustomers, useInvoices } from '@/hooks/useData';
 import { useRefresh } from '@/hooks/useRefresh';
 import { routes } from '@/navigation/routes';
-import { matchesInvoiceFilter } from '@/services/invoiceService';
+import { matchesInvoiceFilter } from '@/services/invoiceUtils';
 import { colors, radius, spacing } from '@/theme';
 import type { Invoice, InvoiceFilter } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';

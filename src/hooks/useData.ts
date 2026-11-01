@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { IN_PROGRESS_STATUSES, isInProgress } from '@/constants/jobStatus';
 import { customerService, dashboardService, invoiceService } from '@/services';
 import { errorMessage } from '@/services/errors';
-import { matchesJobFilter } from '@/services/jobService';
+import { matchesJobFilter } from '@/services/jobUtils';
 import { useData } from '@/store';
 import type { CustomerAddress, JobFilter, MonthRevenue, StopType, TransportJob, User, Vehicle, WithholdingType } from '@/types';
 import { todayISO } from '@/utils/format';

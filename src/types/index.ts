@@ -178,7 +178,7 @@ export interface JobFilter {
 }
 
 /**
- * Demo faturalar uygulama içinde üretilir ve resmi geçerliliği yoktur.
+ * Taslak (mode 'demo') faturalar henüz e-Arşiv'e kesilmemiştir ve resmi geçerliliği yoktur.
  * e-Arşiv durumları API entegrasyonu için ayrılmıştır.
  */
 export type InvoiceMode = 'demo' | 'earsiv';
@@ -276,8 +276,6 @@ export interface VehicleLocation {
   jobId: string;
   driverId: string;
   fix: LocationFix;
-  /** Demo kayıtlar için gerçek GPS'ten gelmediğini belirtir. */
-  simulated?: boolean;
 }
 
 export interface DateRange {

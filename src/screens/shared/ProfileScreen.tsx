@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { ArrowLeftRight, BadgeCheck, CarFront, Database, KeyRound, Lock, LogOut, Mail, Phone, RotateCcw, ShieldUser, Truck, UserRound } from 'lucide-react-native';
+import { ArrowLeftRight, BadgeCheck, CarFront, Database, KeyRound, Lock, LogOut, Mail, Phone, ShieldUser, Truck, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -11,11 +11,9 @@ import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
 import { useAuth, useCurrentUser } from '@/contexts/AuthContext';
 import { useLocationTracking } from '@/contexts/LocationContext';
 import { useToast } from '@/contexts/ToastContext';
-import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useDriverVehicles } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
 import { errorMessage } from '@/services/errors';
-import { resetDemoData } from '@/store';
 import { colors, radius, spacing } from '@/theme';
 import { confirm } from '@/utils/confirm';
 import { formatPhone } from '@/utils/format';
@@ -27,23 +25,12 @@ export default function ProfileScreen() {
   const { viewMode, setViewMode, signOut } = useAuth();
   const { stopSharing } = useLocationTracking();
   const vehicles = useDriverVehicles(user.id);
-  const { run } = useAsyncAction();
   const [passwordOpen, setPasswordOpen] = useState(false);
 
   const logout = async () => {
     if (!(await confirm({ title: 'Çıkış yap', message: 'Oturumunuz kapatılacak.', confirmLabel: 'Çıkış yap', destructive: true }))) return;
     await stopSharing();
     await signOut();
-  };
-
-  const reset = async () => {
-    const ok = await confirm({
-      title: 'Demo verilerini sıfırla',
-      message: 'Cihazdaki tüm demo işler, müşteriler ve faturalar başlangıç durumuna döner.',
-      confirmLabel: 'Sıfırla',
-      destructive: true,
-    });
-    if (ok) await run(resetDemoData, { success: 'Demo verileri sıfırlandı.' });
   };
 
   const switchView = () => {
@@ -120,16 +107,9 @@ export default function ProfileScreen() {
           <Card padded={false}>
             <ListItem
               icon={Database}
-              title="Veri kaynağı"
-              subtitle={APP_CONFIG.dataSource === 'mock' ? 'Demo veriler · cihazda saklanır' : 'AKNA API'}
-              right={<Badge label={APP_CONFIG.dataSource === 'mock' ? 'Demo' : 'Canlı'} />}
+              title="Sunucu"
+              subtitle={APP_CONFIG.apiBaseUrl || 'API adresi yapılandırılmadı'}
             />
-            {APP_CONFIG.dataSource === 'mock' ? (
-              <>
-                <View style={styles.sep} />
-                <ListItem icon={RotateCcw} title="Demo verilerini sıfırla" onPress={reset} />
-              </>
-            ) : null}
             <View style={styles.sep} />
             <ListItem icon={LogOut} title="Çıkış yap" destructive onPress={logout} />
           </Card>

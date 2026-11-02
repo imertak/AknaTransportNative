@@ -9,12 +9,22 @@ import { formatCurrency, formatDate } from '@/utils/format';
 /** Resmi olmayan (henüz kesilmemiş) faturalar "taslak" olarak etiketlenir. */
 const DRAFT = { word: 'Taslak', stamp: 'TASLAK' };
 
+/** Faturadaki her iş ayrı bir satırdır (1 adet). */
+export interface InvoicePreviewLine {
+  key: string;
+  title: string;
+  detail: string;
+  amount: number;
+}
+
 interface Props {
   invoiceNo: string;
   issueDate: string;
   jobNo: string;
   customer: Pick<Customer, 'companyName' | 'taxOffice' | 'taxNumber' | 'billingAddress'> | null;
   description: string;
+  /** Verilirse her iş ayrı satır olarak gösterilir; iş numaraları satırlarda yer aldığından üstteki "İş no" sütunu gizlenir. */
+  lines?: InvoicePreviewLine[];
   subtotal: number;
   vatRate: number;
   vatAmount: number;
@@ -25,6 +35,8 @@ interface Props {
   withholdingLabel?: string;
   withholdingAmount?: number;
   payableAmount?: number;
+  /** İsteğe bağlı fatura notu; açıklama bölümünde gösterilir. */
+  note?: string;
   /** "YALNIZ: ... TÜRK LİRASI" */
   amountInWords?: string;
   iban?: string;
@@ -64,16 +76,35 @@ export const InvoicePreview = memo(function InvoicePreview(p: Props) {
               </Text>
             ) : null}
           </View>
-          <View style={{ gap: 2, alignItems: 'flex-end' }}>
-            <Text variant="caption" tone="tertiary">İş no</Text>
-            <Text variant="label">{p.jobNo}</Text>
-          </View>
+          {p.lines?.length ? null : (
+            <View style={styles.jobNo}>
+              <Text variant="caption" tone="tertiary">İş no</Text>
+              <Text variant="label" numberOfLines={2} style={{ textAlign: 'right' }}>{p.jobNo}</Text>
+            </View>
+          )}
         </View>
 
-        <View style={styles.line}>
-          <Text variant="bodySmall" style={{ flex: 1 }}>{p.description || '—'}</Text>
-          <Text variant="label" style={styles.num}>{formatCurrency(p.subtotal, { decimals: 2 })}</Text>
-        </View>
+        {p.lines?.length ? (
+          <View style={styles.lines}>
+            {p.lines.map((l, i) => (
+              <View key={l.key} style={[styles.lineItem, i > 0 && styles.lineBorder]}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Text variant="label" numberOfLines={1}>{l.title}</Text>
+                  <Text variant="bodySmall" tone="secondary" numberOfLines={2}>{l.detail || '—'}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                  <Text variant="label" style={styles.num}>{formatCurrency(l.amount, { decimals: 2 })}</Text>
+                  <Text variant="caption" tone="tertiary">1 adet</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.line}>
+            <Text variant="bodySmall" style={{ flex: 1 }}>{p.description || '—'}</Text>
+            <Text variant="label" style={styles.num}>{formatCurrency(p.subtotal, { decimals: 2 })}</Text>
+          </View>
+        )}
 
         <View style={styles.totals}>
           <Row label="Ara toplam" value={formatCurrency(p.subtotal, { decimals: 2 })} />
@@ -92,7 +123,7 @@ export const InvoicePreview = memo(function InvoicePreview(p: Props) {
           </View>
         </View>
 
-        {p.amountInWords || p.iban ? (
+        {p.amountInWords || p.iban || p.note ? (
           <View style={styles.note}>
             <Text variant="caption" tone="tertiary">Açıklama</Text>
             {p.amountInWords ? <Text variant="label">{p.amountInWords}</Text> : null}
@@ -102,6 +133,7 @@ export const InvoicePreview = memo(function InvoicePreview(p: Props) {
                 {p.bankName ? ` (${p.bankName})` : ''}
               </Text>
             ) : null}
+            {p.note ? <Text variant="bodySmall" tone="secondary">{p.note}</Text> : null}
           </View>
         ) : null}
       </View>
@@ -129,8 +161,12 @@ const styles = StyleSheet.create({
   inner: { padding: spacing.lg, gap: spacing.lg },
   head: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: spacing.md, borderBottomWidth: 2, borderBottomColor: colors.ink, gap: spacing.md },
   parties: { flexDirection: 'row', gap: spacing.md },
+  jobNo: { gap: 2, alignItems: 'flex-end', maxWidth: '40%' },
+  lines: { borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong },
+  lineItem: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.sm + 2 },
+  lineBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   line: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong },
-  totals: { gap: spacing.xs, marginLeft: '30%' },
+  totals: { gap: spacing.xs },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   grand: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.ink, padding: spacing.md, borderRadius: radius.sm, marginTop: spacing.xs },
   num: { fontVariant: ['tabular-nums'] },

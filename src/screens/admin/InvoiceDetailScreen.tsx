@@ -141,6 +141,12 @@ export default function InvoiceDetailScreen() {
           jobNo={items.length > 1 ? `${items.length} iş` : invoice.jobNo}
           customer={customer ?? { companyName: invoice.customerName, taxOffice: '', taxNumber: '', billingAddress: '' }}
           description={invoice.description}
+          lines={items.map((it) => ({
+            key: it.jobId,
+            title: `${it.jobNo} · ${formatDate(it.jobDate)}`,
+            detail: it.description,
+            amount: it.amount,
+          }))}
           subtotal={invoice.subtotal}
           vatRate={invoice.vatRate}
           vatAmount={invoice.vatAmount}

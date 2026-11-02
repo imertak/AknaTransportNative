@@ -50,9 +50,9 @@ export default function InvoiceFormScreen() {
   }, [billable, selectedCustomerId]);
 
   const [issueDate, setIssueDate] = useState(todayISO());
-  const autoDescription = useMemo(() => selectedJobs.map((j) => composeJobText(j.routeDescription, j.description)).join(' + '), [selectedJobs]);
+  // İşler faturada zaten ayrı satır (mal/hizmet) olarak yazılır; bu alan yalnızca isteğe bağlı fatura notudur.
   const [description, setDescription] = useState('');
-  const displayDescription = description || autoDescription || '';
+  const displayDescription = description;
 
   const autoSubtotal = useMemo(() => selectedJobs.reduce((s, j) => s + j.price, 0), [selectedJobs]);
   // Ara toplam sunucuda işlerin fiyatından hesaplanır; elle değiştirilemez.
@@ -98,7 +98,6 @@ export default function InvoiceFormScreen() {
     const e: typeof errors = {};
     if (!selectedJobIds.length) e.jobs = 'En az bir iş seçin.';
     const desc = displayDescription.trim();
-    if (!desc) e.description = 'Açıklama girin.';
     if (!(amount > 0)) e.subtotal = 'Ara toplam sıfırdan büyük olmalı.';
     if (iban.trim() && !isValidIban(iban)) e.iban = 'IBAN geçersiz.';
     setErrors(e);
@@ -174,7 +173,14 @@ export default function InvoiceFormScreen() {
         <Section title="Fatura bilgileri">
           <Card style={styles.card}>
             <DateField label="Fatura tarihi" required value={issueDate} onChange={setIssueDate} />
-            <Input label="Açıklama" required multiline value={displayDescription} onChangeText={(v) => setDescription(v)} error={errors.description} />
+            <Input
+              label="Fatura notu (isteğe bağlı)"
+              multiline
+              value={displayDescription}
+              onChangeText={(v) => setDescription(v)}
+              error={errors.description}
+              hint="İşler faturaya ayrı satırlar olarak yazılır; burayı yalnızca ek not için kullanın."
+            />
             <Input
               label="Ara toplam (KDV hariç)"
               required
@@ -225,6 +231,14 @@ export default function InvoiceFormScreen() {
               jobNo={selectedJobs.map(j => j.jobNo).join(', ')}
               customer={customer}
               description={displayDescription}
+              note={description.trim() || undefined}
+              lines={selectedJobs.map((j) => ({
+                key: j.id,
+                title: `${j.jobNo} · ${formatDate(j.date)}`,
+                // İşin ek açıklaması faturaya yazılmaz, yalnızca dökümde yer alır.
+                detail: [j.storeName, j.routeDescription || j.description].filter(Boolean).join(' · '),
+                amount: j.price,
+              }))}
               vatRate={vatRate}
               {...totals}
               demo

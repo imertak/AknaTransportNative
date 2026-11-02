@@ -325,10 +325,7 @@ export const apiEArchiveGateway: EArchiveGateway = {
 };
 
 export const apiInvoiceMailer: InvoiceMailer = {
-  async send(invoiceId) {
-    const inv = invoiceFromApiDetail(await http<ApiInvoiceDetail>(`/api/invoices/${invoiceId}/resend-email`, { method: 'POST' }));
-    return { status: inv.email.status === 'sent' ? 'sent' : 'queued' };
-  },
+  send: async (invoiceId) => invoiceFromApiDetail(await http<ApiInvoiceDetail>(`/api/invoices/${invoiceId}/send-email`, { method: 'POST' })),
 };
 
 const nonNegative = (v: number | null) => (v != null && Number.isFinite(v) && v >= 0 ? v : null);

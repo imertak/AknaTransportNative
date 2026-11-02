@@ -189,6 +189,8 @@ export interface ApiInvoiceDetail extends Omit<ApiInvoiceListItem, 'firstJobId' 
   lastError: string | null;
   items: { jobId: string; jobNumber: string; jobDate: string; storeName: string; description: string; lineTotal: number }[];
   email: { recipientEmail: string; status: 'Pending' | 'Sent' | 'Failed'; sentAt: string | null } | null;
+  /** Elle ("E-posta gönder") yapılan son gönderim; taslak faturalar dahil. */
+  manualEmail?: { recipientEmail: string; status: 'Pending' | 'Sent' | 'Failed'; sentAt: string | null; lastError: string | null; createdAt: string } | null;
   withholdingName: string | null;
   withholdingRate: number;
   amountInWords: string;
@@ -510,6 +512,15 @@ export function invoiceFromApiDetail(i: ApiInvoiceDetail): Invoice {
     email: i.email
       ? { to: i.email.recipientEmail, status: EMAIL_STATUS[i.email.status], sentAt: i.email.sentAt ?? undefined }
       : { to: i.customerEmail ?? '', status: 'not_sent' },
+    manualEmail: i.manualEmail
+      ? {
+          to: i.manualEmail.recipientEmail,
+          status: EMAIL_STATUS[i.manualEmail.status],
+          sentAt: i.manualEmail.sentAt ?? undefined,
+          requestedAt: i.manualEmail.createdAt,
+          error: i.manualEmail.lastError ?? undefined,
+        }
+      : undefined,
     externalId: i.eArchiveInvoiceNumber ?? undefined,
     ettn: i.eArchiveReference ?? undefined,
     withholdingCode: i.withholdingCode ?? undefined,

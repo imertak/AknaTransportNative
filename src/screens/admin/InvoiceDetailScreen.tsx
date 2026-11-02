@@ -35,6 +35,7 @@ export default function InvoiceDetailScreen() {
   const jobReport = useAsyncAction();
   const action = useAsyncAction();
   const signing = useAsyncAction();
+  const mail = useAsyncAction();
   /** GİB portalı imza SMS'i: kod istendiğinde dolar. */
   const [challenge, setChallenge] = useState<{ operationId: string; maskedPhone?: string } | null>(null);
   const [smsCode, setSmsCode] = useState('');
@@ -126,6 +127,29 @@ export default function InvoiceDetailScreen() {
     if (ok) await action.run(() => invoiceActions.discardDraft(invoice.id), { success: 'Portal taslağı silindi.' });
   };
 
+  const sendEmail = async () => {
+    const to = customer?.email || invoice.email.to;
+    const cc = customer?.extraEmails ?? [];
+    // Adres yoksa sunucu açıklayıcı hata döner (müşteri kaydına e-posta eklenmeli).
+    const ok = await confirm({
+      title: isDemo ? 'Taslağı e-postayla gönder' : 'Faturayı e-postayla gönder',
+      message: [
+        to ? `Alıcı: ${to}` : null,
+        cc.length ? `Bilgi (CC): ${cc.join(', ')}` : null,
+        isDemo
+          ? 'Taslak fatura PDF\'i ve iş dökümü gönderilecek. E-postada resmi fatura olmadığı belirtilir; fatura taslak olarak kalır.'
+          : 'Fatura PDF\'i ve iş dökümü gönderilecek.',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
+      confirmLabel: 'Gönder',
+    });
+    if (!ok) return;
+    const inv = await mail.run(() => invoiceActions.sendEmail(invoice.id), { success: 'E-posta gönderim kuyruğuna alındı.' });
+    // Gönderim arka planda yapılır; birkaç saniye sonra durum tazelenir.
+    if (inv) setTimeout(() => invoiceActions.refresh(invoice.id).catch(() => {}), 6000);
+  };
+
   const cancel = async () => {
     const ok = await confirm({ title: 'Faturayı iptal et', message: `${invoice.invoiceNo} iptal edilecek ve iş yeniden faturalanabilir hale gelecek.`, confirmLabel: 'İptal et', destructive: true });
     if (ok) await action.run(() => invoiceActions.cancel(invoice.id), { success: 'Fatura iptal edildi.' });
@@ -166,6 +190,17 @@ export default function InvoiceDetailScreen() {
           <Button label="İş dökümü PDF" icon={FileSpreadsheet} variant="secondary" style={{ flex: 1 }} loading={jobReport.pending} onPress={() => jobReport.run(shareJobReportPdf, { error: 'İş dökümü PDF indirilemedi.' })} />
         </View>
 
+        {!cancelled ? (
+          <Button
+            label={isDemo ? 'Taslağı e-postayla gönder' : 'E-postayla gönder'}
+            icon={Mail}
+            loading={mail.pending}
+            disabled={invoice.manualEmail?.status === 'queued'}
+            onPress={sendEmail}
+            accessibilityHint="Fatura PDF'i ve iş dökümünü müşterinin e-posta adreslerine gönderir"
+          />
+        ) : null}
+
         <Section title={`Faturadaki işler · ${items.length}`}>
           <Card padded={false}>
             {items.map((it, i) => (
@@ -194,7 +229,16 @@ export default function InvoiceDetailScreen() {
             {invoice.withholdingCode ? (
               <InfoRow label="Tevkifat" value={`${invoice.withholdingCode} · ${invoice.withholdingName ?? ''}`} />
             ) : null}
-            <InfoRow icon={Mail} label="E-posta" value={`${EMAIL_LABEL[invoice.email.status]}${invoice.email.to ? ` · ${invoice.email.to}` : ''}`} />
+            <InfoRow icon={Mail} label={isDemo ? 'E-posta (kesilince)' : 'E-posta'} value={`${EMAIL_LABEL[invoice.email.status]}${invoice.email.to ? ` · ${invoice.email.to}` : ''}`} />
+            {invoice.manualEmail ? (
+              <InfoRow
+                icon={Send}
+                label="Son gönderim"
+                value={`${EMAIL_LABEL[invoice.manualEmail.status]} · ${formatDateTime(invoice.manualEmail.sentAt ?? invoice.manualEmail.requestedAt)}${
+                  invoice.manualEmail.status === 'failed' && invoice.manualEmail.error ? ` · ${invoice.manualEmail.error}` : ''
+                }`}
+              />
+            ) : null}
             <InfoRow label="Oluşturulma" value={formatDateTime(invoice.createdAt)} last />
           </Card>
         </Section>

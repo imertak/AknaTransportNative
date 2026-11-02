@@ -20,7 +20,7 @@ import { routes } from '@/navigation/routes';
 import { jobActions } from '@/store';
 import { colors, spacing } from '@/theme';
 import { confirm } from '@/utils/confirm';
-import { formatCurrency, formatDateLong, formatPhone } from '@/utils/format';
+import { formatCurrency, formatDateLong, formatPhone, partyLabel } from '@/utils/format';
 import { callPhone, sendEmail } from '@/utils/links';
 
 const UNASSIGN = '__unassign';
@@ -140,7 +140,7 @@ export default function JobDetailScreen() {
             <StatusBadge status={job.status} />
             {showPrice ? <Text variant="title" style={{ fontVariant: ['tabular-nums'] }}>{formatCurrency(job.price)}</Text> : null}
           </View>
-          <Text variant="heading">{job.storeName}</Text>
+          <Text variant="heading">{partyLabel(job.customerName, job.storeName)}</Text>
           <View style={styles.metaRow}>
             <View style={styles.meta}>
               <CalendarDays size={15} color={colors.textTertiary} />

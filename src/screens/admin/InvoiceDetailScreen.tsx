@@ -79,11 +79,11 @@ export default function InvoiceDetailScreen() {
 
   /** Sunucunun ürettiği PDF indirilir; web gibi dosya kaydedilemeyen ortamlarda cihazda üretilir. */
   const shareInvoicePdf = async () => {
-    const uri = await invoiceService.downloadPdf(invoice.id, 'invoice');
+    const uri = await invoiceService.downloadPdf(invoice.id, 'invoice', invoice.invoiceNo);
     setPdf(uri ? { uri, title: invoice.invoiceNo } : await reportService.invoicePdf(invoice, customer ?? null));
   };
   const shareJobReportPdf = async () => {
-    const uri = await invoiceService.downloadPdf(invoice.id, 'job-report');
+    const uri = await invoiceService.downloadPdf(invoice.id, 'job-report', invoice.invoiceNo);
     setPdf(
       uri
         ? { uri, title: `${invoice.invoiceNo} iş dökümü` }
@@ -170,7 +170,7 @@ export default function InvoiceDetailScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`${it.jobNo} iş detayı`}>
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text variant="label">{it.jobNo} · {formatDate(it.jobDate)}</Text>
+                  <Text variant="label">{it.jobNo} · {formatDate(it.jobDate)} · 1 adet</Text>
                   <Text variant="bodySmall" tone="secondary" numberOfLines={2}>{it.description}</Text>
                 </View>
                 <Text variant="label" style={{ fontVariant: ['tabular-nums'] }}>{formatCurrency(it.amount, { decimals: 2 })}</Text>

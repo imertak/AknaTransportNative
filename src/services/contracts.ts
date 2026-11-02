@@ -111,7 +111,8 @@ export interface InvoiceService {
    * Sunucunun ürettiği PDF'i indirir ve yerel dosya yolunu döndürür.
    * null: bu veri kaynağında sunucu PDF'i yoktur, PDF cihazda üretilmelidir.
    */
-  downloadPdf(id: string, kind: 'invoice' | 'job-report'): Promise<string | null>;
+  /** `number`: dosya adında kullanılan fatura numarası (ör. Is_Dokumu_AKF-2026-000005.pdf). */
+  downloadPdf(id: string, kind: 'invoice' | 'job-report', number: string): Promise<string | null>;
   /** KDV tevkifat kodları. */
   withholdingTypes(): Promise<WithholdingType[]>;
 }

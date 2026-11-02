@@ -12,7 +12,7 @@ import { type PdfFile } from '@/services/files';
 import { composeJobsReport } from '@/services/reportService';
 import { colors, radius, spacing } from '@/theme';
 import type { DateRange } from '@/types';
-import { addDays, formatCurrency, formatDate, fromISODate, toISODate, todayISO } from '@/utils/format';
+import { addDays, formatCurrency, partyLabel, formatDate, fromISODate, toISODate, todayISO } from '@/utils/format';
 import { composeJobText } from '@/utils/stops';
 
 const ALL = '__all';
@@ -92,7 +92,7 @@ export default function ReportsScreen() {
               <Text variant="bodySmall" tone="inverseMuted">
                 {formatDate(range.from)} – {formatDate(range.to)}
               </Text>
-              <Text variant="title" tone="inverse" style={{ fontVariant: ['tabular-nums'] }}>{formatCurrency(report.totalAmount)}</Text>
+              <Text variant="title" tone="inverse" style={{ fontVariant: ['tabular-nums'] }}>{formatCurrency(report.totalAmount)} + KDV</Text>
               <Text variant="bodySmall" tone="inverseMuted">{report.totalCount} iş</Text>
             </View>
             <FileSpreadsheet size={28} color={colors.textInverseMuted} strokeWidth={1.5} />
@@ -133,11 +133,11 @@ export default function ReportsScreen() {
                     <Text variant="bodySmall" style={styles.cDate}>{formatDate(j.date).slice(0, 5)}</Text>
                     <View style={styles.cMain}>
                       <Text variant="label" numberOfLines={1}>
-                        {j.storeName} · {VEHICLE_TYPE_LABEL[j.vehicleType]}
+                        {partyLabel(j.customerName, j.storeName)} · {VEHICLE_TYPE_LABEL[j.vehicleType]}
                       </Text>
                       <Text variant="bodySmall" tone="secondary" numberOfLines={2}>{composeJobText(j.routeDescription, j.description)}</Text>
                     </View>
-                    <Text variant="label" style={styles.cPrice}>{formatCurrency(j.price)}</Text>
+                    <Text variant="label" style={styles.cPrice}>{formatCurrency(j.price)} + KDV</Text>
                   </View>
                 ))}
                 {report.totalCount > PREVIEW_LIMIT ? (
@@ -147,7 +147,7 @@ export default function ReportsScreen() {
                 ) : null}
                 <View style={styles.total}>
                   <Text variant="subheading">Toplam · {report.totalCount} iş</Text>
-                  <Text variant="subheading" style={{ fontVariant: ['tabular-nums'] }}>{formatCurrency(report.totalAmount)}</Text>
+                  <Text variant="subheading" style={{ fontVariant: ['tabular-nums'] }}>{formatCurrency(report.totalAmount)} + KDV</Text>
                 </View>
               </Card>
             )}
@@ -170,6 +170,6 @@ const styles = StyleSheet.create({
   zebra: { backgroundColor: colors.surfaceMuted },
   cDate: { width: 44 },
   cMain: { flex: 1, gap: 2 },
-  cPrice: { width: 84, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  cPrice: { width: 110, textAlign: 'right', fontVariant: ['tabular-nums'] },
   total: { flexDirection: 'row', justifyContent: 'space-between', padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.ink },
 });

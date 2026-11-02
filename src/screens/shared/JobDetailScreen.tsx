@@ -187,6 +187,23 @@ export default function JobDetailScreen() {
           </Card>
         </Section>
 
+        {job.contacts.length ? (
+          <Section title="Yetkili kişiler">
+            <Card padded={false} style={styles.listCard}>
+              {job.contacts.map((c, i) => (
+                <InfoRow
+                  key={`${i}-${c.phone}`}
+                  icon={Phone}
+                  label={[c.role, c.name].filter(Boolean).join(' · ') || 'Yetkili'}
+                  value={formatPhone(c.phone)}
+                  onPress={() => callPhone(c.phone)}
+                  last={i === job.contacts.length - 1}
+                />
+              ))}
+            </Card>
+          </Section>
+        ) : null}
+
         <Section title="Müşteri">
           <Card padded={false} style={styles.listCard}>
             <InfoRow icon={Building2} label="Firma" value={job.customerName} onPress={isAdminView && customer ? () => router.push(routes.customer(customer.id)) : undefined} />

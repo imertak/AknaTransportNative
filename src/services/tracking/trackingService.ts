@@ -170,6 +170,23 @@ export async function isTrackingRunning(): Promise<boolean> {
   }
 }
 
+/**
+ * Yalnızca uygulama açıkken cihaz konumunu izler; sunucuya hiçbir şey göndermez. Şoförün aktif işi
+ * yokken haritada kendi konumunu görmesi içindir. İzin verilmemişse null döner (pencere açmaz).
+ */
+export async function watchForegroundPosition(onFix: (fix: LocationFix) => void): Promise<{ remove(): void } | null> {
+  try {
+    if (!(await Location.getForegroundPermissionsAsync()).granted) return null;
+    const sub = await Location.watchPositionAsync({ accuracy: Location.Accuracy.Balanced, distanceInterval: 25, timeInterval: 10_000 }, (l) => onFix(toFix(l)));
+    Location.getLastKnownPositionAsync()
+      .then((l) => l && onFix(toFix(l)))
+      .catch(() => {});
+    return sub;
+  } catch {
+    return null;
+  }
+}
+
 /** Takibi başlatır (zaten çalışıyorsa yalnızca durumu günceller). İzinler önceden verilmiş olmalıdır. */
 export async function startTracking(driverId: string): Promise<void> {
   await locationQueue.setState({ driverId, startedAt: Date.now() });

@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useBottomInset } from '@/hooks/useBottomInset';
+
 import { Button, Input, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { errorMessage } from '@/services/errors';
@@ -16,6 +18,7 @@ import { passwordProblem } from '@/utils/validation';
 export default function ChangePasswordScreen() {
   const { user, changePassword, signOut } = useAuth();
   const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInset();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -42,7 +45,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.huge, paddingBottom: insets.bottom + spacing.xl }]} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.huge, paddingBottom: bottomInset + spacing.xl }]} keyboardShouldPersistTaps="handled">
         <View style={{ gap: spacing.sm }}>
           <Text variant="display" tone="inverse">Yeni şifre belirleyin</Text>
           <Text tone="inverseMuted">

@@ -104,6 +104,14 @@ export interface JobStop {
 
 export type JobStopInput = Omit<JobStop, 'id' | 'sequence'>;
 
+/** İşin yetkili kişisi (yük sahibi, teslim alan vb.). */
+export interface JobContact {
+  /** Serbest metin görev, ör. "Yük sahibi". */
+  role?: string;
+  name?: string;
+  phone: string;
+}
+
 /** Faturalandırılmadı / Taslak faturada / Faturalandırıldı. */
 export type JobBillingStatus = 'not_invoiced' | 'in_draft' | 'invoiced';
 
@@ -122,6 +130,8 @@ export interface TransportJob {
   deliveryAddress: string;
   /** Önce tüm yükleme, sonra tüm teslimat noktaları; tür içinde sıra numarasına göre. */
   stops: JobStop[];
+  /** Yetkili kişiler; şoför iş detayından arayabilir. */
+  contacts: JobContact[];
   /** Duraklardan otomatik üretilen güzergah ("A - B - C"). Duraklar değişince yeniden üretilir. */
   routeDescription: string;
   /** Elle yazılan ek açıklama. Otomatik güzergahtan ayrı tutulur. */
@@ -144,6 +154,7 @@ export interface TransportJob {
 
 export type JobInput = Pick<TransportJob, 'customerId' | 'date' | 'storeName' | 'vehicleType' | 'description' | 'price' | 'notes'> & {
   stops: JobStopInput[];
+  contacts: JobContact[];
   driverId?: string;
   /** Seçilen şoförün aktif araçlarından biri. */
   vehicleId?: string;

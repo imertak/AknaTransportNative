@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useBottomInset } from '@/hooks/useBottomInset';
+
 import { Button, IconButton, Input, Text } from '@/components/ui';
 import { authService } from '@/services';
 import { errorMessage } from '@/services/errors';
@@ -12,6 +14,7 @@ import { isEmail, passwordProblem } from '@/utils/validation';
 
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInset();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
@@ -60,7 +63,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.xl }]} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: bottomInset + spacing.xl }]} keyboardShouldPersistTaps="handled">
         <IconButton icon={ChevronLeft} label="Geri" onPress={back} tone="dark" />
         <View style={{ gap: spacing.sm, marginTop: spacing.xxl }}>
           <Text variant="display" tone="inverse">Şifremi unuttum</Text>

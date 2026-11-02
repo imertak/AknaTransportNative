@@ -3,6 +3,8 @@ import { Eye, EyeOff, Lock, Mail, type LucideIcon } from 'lucide-react-native';
 import { useRef, useState, type ComponentRef, type ReactNode, type Ref } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useBottomInset } from '@/hooks/useBottomInset';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { BrandMark } from '@/components/BrandMark';
@@ -19,6 +21,7 @@ const ERROR_ON_DARK = '#FF8A80';
 export default function LoginScreen() {
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInset();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,7 +49,7 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Glow />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.huge, paddingBottom: insets.bottom + spacing.xl }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.huge, paddingBottom: bottomInset + spacing.xl }]}
         keyboardShouldPersistTaps="handled">
         <View style={styles.brand}>
           <BrandMark size="md" />

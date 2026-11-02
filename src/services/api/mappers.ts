@@ -88,9 +88,19 @@ export interface ApiJob {
   updatedAt: string | null;
   routeDescription: string;
   stops: ApiJobStop[];
+  /** Eski API sürümlerinde yoktur. */
+  contacts?: ApiJobContact[];
   assignedVehicleId: string | null;
   assignedVehiclePlate: string | null;
   billingStatus: 'NotInvoiced' | 'InDraft' | 'Invoiced';
+}
+
+export interface ApiJobContact {
+  id: string;
+  sequence: number;
+  role: string | null;
+  name: string | null;
+  phoneNumber: string;
 }
 
 export interface ApiJobStop {
@@ -321,6 +331,10 @@ export function jobFromApi(j: ApiJob, history: ApiJobHistory[] = []): TransportJ
     pickupAddress: j.pickupAddress,
     deliveryAddress: j.deliveryAddress,
     stops,
+    contacts: (j.contacts ?? [])
+      .slice()
+      .sort((a, b) => a.sequence - b.sequence)
+      .map((c) => ({ role: c.role ?? undefined, name: c.name ?? undefined, phone: c.phoneNumber })),
     // Eski kayıtlarda güzergah alanı boş olabilir; duraklardan üretilir.
     routeDescription: j.routeDescription?.trim() || buildRouteDescription(stops),
     description: j.description ?? '',
@@ -357,6 +371,9 @@ export function jobToApi(input: JobInput) {
       longitude: x.point?.longitude ?? null,
       description: x.description ?? null,
     })),
+    contacts: input.contacts
+      .filter((c) => c.phone.trim())
+      .map((c) => ({ role: orNull(c.role ?? ''), name: orNull(c.name ?? ''), phoneNumber: c.phone.trim() })),
     description: input.description.trim() || null,
     price: input.price,
     notes: orNull(input.notes ?? ''),

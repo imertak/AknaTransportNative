@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowUp, History, Info, MapPin, MapPinCheck, Plus, Route, X } from 'lucide-react-native';
+import { ArrowUp, History, Info, MapPin, MapPinCheck, Phone, Plus, Route, X } from 'lucide-react-native';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -28,7 +28,7 @@ import { useAssignableUsers, useCustomerAddresses, useCustomers, useDriverVehicl
 import { routes } from '@/navigation/routes';
 import { jobActions } from '@/store';
 import { colors, hitSlop, radius, spacing } from '@/theme';
-import type { Customer, GeoPoint, JobInput, JobStop, StopType, TransportJob, Vehicle, VehicleType } from '@/types';
+import type { Customer, GeoPoint, JobContact, JobInput, JobStop, StopType, TransportJob, Vehicle, VehicleType } from '@/types';
 import { formatAmountInput, formatCurrency, parseAmount, todayISO } from '@/utils/format';
 import { buildRouteDescription, STOP_TYPE_LABEL, toStops } from '@/utils/stops';
 import { hasErrors, required, type Errors } from '@/utils/validation';
@@ -40,12 +40,20 @@ interface StopDraft {
   point?: GeoPoint;
 }
 
+interface ContactDraft {
+  key: string;
+  role: string;
+  name: string;
+  phone: string;
+}
+
 interface FormState {
   customerId: string;
   date: string;
   storeName: string;
   vehicleType: VehicleType | '';
   stops: StopDraft[];
+  contacts: ContactDraft[];
   description: string;
   price: string;
   driverId: string;
@@ -53,15 +61,22 @@ interface FormState {
   notes: string;
 }
 
-type FormErrors = Errors<FormState> & { pickups?: string; deliveries?: string };
+type FormErrors = Errors<FormState> & { pickups?: string; deliveries?: string; contactErrors?: Record<string, string> };
 
 const NO_DRIVER = '__none';
 const NO_VEHICLE = '__none';
 const MAX_STOPS = 30;
+const MAX_CONTACTS = 10;
+const PHONE_RE = /^\+?[0-9 ()-]{7,20}$/;
 
 let keySeq = 0;
 const draft = (type: StopType, address = '', point?: GeoPoint): StopDraft => ({ key: `s${++keySeq}`, type, address, point });
 const fromStops = (stops: JobStop[]): StopDraft[] => stops.map((s) => draft(s.type, s.address, s.point));
+const contactDraft = (c?: JobContact): ContactDraft => ({ key: `c${++keySeq}`, role: c?.role ?? '', name: c?.name ?? '', phone: c?.phone ?? '' });
+const fromContacts = (contacts: JobContact[]): ContactDraft[] => contacts.map(contactDraft);
+const isBlankContact = (c: ContactDraft) => !c.role.trim() && !c.name.trim() && !c.phone.trim();
+/** Yetkili kişi rolleri için hızlı seçenekler; serbest metin de yazılabilir. */
+const CONTACT_ROLES = ['Yük sahibi', 'Teslim alan', 'Depo sorumlusu'];
 
 const empty = (customerId = ''): FormState => ({
   customerId,
@@ -69,6 +84,7 @@ const empty = (customerId = ''): FormState => ({
   storeName: '',
   vehicleType: '',
   stops: [draft('pickup'), draft('delivery')],
+  contacts: [],
   description: '',
   price: '',
   driverId: NO_DRIVER,
@@ -85,6 +101,13 @@ function validate(f: FormState): FormErrors {
   if (!f.stops.some((s) => s.type === 'pickup' && required(s.address))) e.pickups = 'En az bir yükleme noktası girin.';
   if (!f.stops.some((s) => s.type === 'delivery' && required(s.address))) e.deliveries = 'En az bir teslimat noktası girin.';
   if (f.stops.filter((s) => s.address.trim()).length > MAX_STOPS) e.pickups = `Bir işte en fazla ${MAX_STOPS} durak olabilir.`;
+  const contactErrors: Record<string, string> = {};
+  for (const c of f.contacts) {
+    if (isBlankContact(c)) continue;
+    if (!c.phone.trim()) contactErrors[c.key] = 'Telefon girin.';
+    else if (!PHONE_RE.test(c.phone.trim())) contactErrors[c.key] = 'Geçerli bir telefon numarası girin.';
+  }
+  if (Object.keys(contactErrors).length) e.contactErrors = contactErrors;
   const price = parseAmount(f.price);
   if (price === null) e.price = 'Fiyat girin.';
   else if (price <= 0) e.price = 'Fiyat sıfırdan büyük olmalı.';
@@ -102,6 +125,7 @@ function prefill(f: FormState, customerId: string, customers: Customer[], jobs: 
     if (last) {
       next.vehicleType = f.vehicleType || last.vehicleType;
       if (f.stops.every((s) => !s.address.trim())) next.stops = fromStops(last.stops);
+      if (f.contacts.every(isBlankContact)) next.contacts = fromContacts(last.contacts);
       next.price = f.price || formatAmountInput(String(last.price));
     }
   }
@@ -146,6 +170,7 @@ export default function JobFormScreen() {
           storeName: existing.storeName,
           vehicleType: existing.vehicleType,
           stops: fromStops(existing.stops),
+          contacts: fromContacts(existing.contacts),
           description: existing.description,
           price: formatAmountInput(String(existing.price).replace('.', ',')),
           driverId: existing.driverId ?? NO_DRIVER,
@@ -174,6 +199,10 @@ export default function JobFormScreen() {
 
   const setStop = (key: string, patch: Partial<StopDraft>) => update((f) => ({ ...f, stops: f.stops.map((s) => (s.key === key ? { ...s, ...patch } : s)) }));
   const addStop = (type: StopType) => update((f) => ({ ...f, stops: [...f.stops, draft(type)] }));
+  const setContact = (key: string, patch: Partial<ContactDraft>) =>
+    update((f) => ({ ...f, contacts: f.contacts.map((c) => (c.key === key ? { ...c, ...patch } : c)) }));
+  const addContact = () => update((f) => ({ ...f, contacts: [...f.contacts, contactDraft()] }));
+  const removeContact = (key: string) => update((f) => ({ ...f, contacts: f.contacts.filter((c) => c.key !== key) }));
   const removeStop = (key: string) => update((f) => ({ ...f, stops: f.stops.filter((s) => s.key !== key) }));
   /** Aynı türdeki bir önceki durakla yer değiştirir (sıra numarası buna göre oluşur). */
   const moveUp = (key: string) =>
@@ -244,13 +273,17 @@ export default function JobFormScreen() {
     submitted.current = true;
     const e = validate(form);
     setErrors(e);
-    if (hasErrors(e)) return;
+    const { contactErrors, ...fieldErrors } = e;
+    if (hasErrors(fieldErrors) || contactErrors) return;
     const input: JobInput = {
       customerId: form.customerId,
       date: form.date,
       storeName: form.storeName.trim(),
       vehicleType: form.vehicleType as VehicleType,
       stops: stopInputs(form.stops).filter((s) => s.address.trim()),
+      contacts: form.contacts
+        .filter((c) => !isBlankContact(c))
+        .map((c) => ({ role: c.role.trim() || undefined, name: c.name.trim() || undefined, phone: c.phone.trim() })),
       description: form.description.trim(),
       price: parseAmount(form.price)!,
       notes: form.notes.trim(),
@@ -396,6 +429,53 @@ export default function JobFormScreen() {
           </Card>
         </Section>
 
+        <Section title="Yetkili kişiler">
+          <Card style={styles.card}>
+            {form.contacts.length === 0 ? (
+              <Text variant="bodySmall" tone="secondary">Yük sahibi, teslim alan gibi kişilerin telefonlarını ekleyin; şoför iş detayından arayabilir.</Text>
+            ) : null}
+            {form.contacts.map((c, idx) => (
+              <View key={c.key} style={[styles.contact, idx > 0 && styles.contactBorder]}>
+                <View style={styles.contactHead}>
+                  <Text variant="label">{idx + 1}. kişi</Text>
+                  <Pressable onPress={() => removeContact(c.key)} hitSlop={hitSlop} accessibilityRole="button" accessibilityLabel="Kişiyi kaldır">
+                    <X size={18} color={colors.textTertiary} />
+                  </Pressable>
+                </View>
+                <Input value={c.role} onChangeText={(v) => setContact(c.key, { role: v })} placeholder="Görev (ör. Yük sahibi)" accessibilityLabel={`${idx + 1}. kişi görevi`} />
+                <View style={styles.roles}>
+                  {CONTACT_ROLES.map((r) => (
+                    <Pressable
+                      key={r}
+                      onPress={() => setContact(c.key, { role: r })}
+                      style={[styles.roleChip, c.role === r && styles.roleChipOn]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: c.role === r }}>
+                      <Text variant="bodySmall" tone={c.role === r ? 'inverse' : 'default'}>{r}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Input value={c.name} onChangeText={(v) => setContact(c.key, { name: v })} placeholder="Ad soyad (isteğe bağlı)" accessibilityLabel={`${idx + 1}. kişi adı`} />
+                <Input
+                  icon={Phone}
+                  value={c.phone}
+                  onChangeText={(v) => setContact(c.key, { phone: v })}
+                  placeholder="Telefon"
+                  keyboardType="phone-pad"
+                  accessibilityLabel={`${idx + 1}. kişi telefonu`}
+                  error={errors.contactErrors?.[c.key]}
+                />
+              </View>
+            ))}
+            {form.contacts.length < MAX_CONTACTS ? (
+              <Pressable onPress={addContact} hitSlop={hitSlop} style={styles.inlineLink} accessibilityRole="button">
+                <Plus size={16} color={colors.text} />
+                <Text variant="label">Yetkili kişi ekle</Text>
+              </Pressable>
+            ) : null}
+          </Card>
+        </Section>
+
         <Section title="Atama">
           <Card style={styles.card}>
             {driverLocked ? (
@@ -477,6 +557,12 @@ const styles = StyleSheet.create({
   seqDelivery: { backgroundColor: colors.ink },
   iconBtn: { padding: spacing.xs, marginTop: 12 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  contact: { gap: spacing.sm },
+  contactBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: spacing.lg },
+  contactHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  roles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  roleChip: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surface },
+  roleChipOn: { backgroundColor: colors.ink, borderColor: colors.ink },
   route: { gap: spacing.xs, backgroundColor: colors.surfaceMuted, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
   routeHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

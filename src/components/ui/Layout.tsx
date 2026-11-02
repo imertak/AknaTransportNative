@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomInset } from '@/hooks/useBottomInset';
 
 import { colors, spacing } from '@/theme';
 import { Text } from './Text';
@@ -31,8 +31,8 @@ export function ScrollContent({ children, keyboard, contentStyle }: { children: 
 
 /** Ekranın altında sabit aksiyon alanı. */
 export function BottomBar({ children }: { children: ReactNode }) {
-  const insets = useSafeAreaInsets();
-  return <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>{children}</View>;
+  const bottom = useBottomInset();
+  return <View style={[styles.bottomBar, { paddingBottom: Math.max(bottom, spacing.md) }]}>{children}</View>;
 }
 
 interface SectionProps {

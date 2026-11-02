@@ -7,5 +7,6 @@ export {
   prepareTracking,
   startTracking,
   stopTracking,
+  watchForegroundPosition,
   type PrepareResult,
 } from './trackingService';

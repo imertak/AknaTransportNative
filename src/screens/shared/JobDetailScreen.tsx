@@ -132,7 +132,7 @@ export default function JobDetailScreen() {
       <NavHeader
         title={job.jobNo}
         subtitle={job.customerName}
-        right={isAdminView && job.status !== 'cancelled' ? <IconButton icon={Pencil} label="Düzenle" tone="dark" onPress={() => router.push(routes.editJob(job.id))} /> : undefined}
+        right={isAdminView && job.status !== 'cancelled' && !job.invoiceId ? <IconButton icon={Pencil} label="Düzenle" tone="dark" onPress={() => router.push(routes.editJob(job.id))} /> : undefined}
       />
       <ScrollContent>
         <Card style={styles.summary}>
@@ -157,7 +157,7 @@ export default function JobDetailScreen() {
               </View>
             ) : null}
           </View>
-          {isAdminView && job.status === 'completed' ? <BillingStatusBadge status={job.billingStatus} /> : null}
+          {isAdminView && job.status !== 'cancelled' ? <BillingStatusBadge status={job.billingStatus} /> : null}
         </Card>
 
         {isMine ? <DriverActionCard job={job} /> : null}
@@ -209,14 +209,14 @@ export default function JobDetailScreen() {
           </Card>
         </Section>
 
-        {isAdminView && job.status === 'completed' ? (
+        {isAdminView && job.status !== 'cancelled' ? (
           <Section title="Fatura">
             {invoice ? (
               <Card onPress={() => router.push(routes.invoice(invoice.id))} style={styles.invoice}>
                 <ReceiptText size={20} color={colors.text} />
                 <View style={{ flex: 1 }}>
                   <Text variant="subheading">{invoice.invoiceNo}</Text>
-                  <Text variant="bodySmall" tone="secondary">{invoice.mode === 'demo' ? 'Demo fatura · resmi değildir' : 'e-Arşiv faturası'} · {formatCurrency(invoice.total, { decimals: 2 })}</Text>
+                  <Text variant="bodySmall" tone="secondary">{invoice.mode === 'demo' ? 'Taslak fatura · resmi değildir' : 'e-Arşiv faturası'} · {formatCurrency(invoice.total, { decimals: 2 })}</Text>
                 </View>
               </Card>
             ) : (
@@ -234,7 +234,7 @@ export default function JobDetailScreen() {
           </Card>
         </Section>
 
-        {isAdminView && !closed ? <Button label="İşi iptal et" variant="danger" icon={Ban} onPress={cancel} loading={pending} /> : null}
+        {isAdminView && !closed && !job.invoiceId ? <Button label="İşi iptal et" variant="danger" icon={Ban} onPress={cancel} loading={pending} /> : null}
       </ScrollContent>
 
       <OptionSheet visible={step?.kind === 'driver'} onClose={() => setStep(null)} title="Şoför seç" options={assignOptions} value={job.driverId} onSelect={pickDriver} searchable />

@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { ArrowLeftRight, BadgeCheck, CarFront, Database, KeyRound, Lock, LogOut, Mail, Phone, ShieldUser, Truck, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Avatar, Badge, Button, Card, InfoRow, Input, ListItem, NavHeader, Screen, ScrollContent, Section, Sheet, Text } from '@/components/ui';
 import { APP_CONFIG } from '@/constants/config';
@@ -170,7 +170,8 @@ function ChangePasswordSheet({ visible, onClose }: { visible: boolean; onClose: 
       title="Şifre değiştir"
       subtitle="Diğer cihazlardaki oturumlarınız kapatılabilir."
       footer={<Button label="Şifreyi kaydet" onPress={submit} loading={loading} fullWidth />}>
-      <View style={{ gap: spacing.lg }}>
+      {/* Alanlar ekrana sığmazsa buton üstlerine binmesin diye kaydırılabilir. */}
+      <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">
         {errors.form ? (
           <View style={styles.formError} accessibilityRole="alert">
             <Text variant="bodySmall" tone="danger">{errors.form}</Text>
@@ -179,7 +180,7 @@ function ChangePasswordSheet({ visible, onClose }: { visible: boolean; onClose: 
         <Input label="Mevcut şifre" icon={KeyRound} value={current} onChangeText={setCurrent} secureTextEntry autoComplete="current-password" textContentType="password" error={errors.current} />
         <Input label="Yeni şifre" icon={Lock} value={next} onChangeText={setNext} secureTextEntry autoComplete="new-password" textContentType="newPassword" error={errors.next} hint="En az 8 karakter, en az bir harf ve bir rakam." />
         <Input label="Yeni şifre (tekrar)" icon={Lock} value={again} onChangeText={setAgain} secureTextEntry autoComplete="new-password" textContentType="newPassword" returnKeyType="go" onSubmitEditing={submit} error={errors.again} />
-      </View>
+      </ScrollView>
     </Sheet>
   );
 }
@@ -189,5 +190,6 @@ const styles = StyleSheet.create({
   badges: { flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' },
   listCard: { paddingHorizontal: spacing.lg },
   sep: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderStrong, marginLeft: 64 },
+  sheetBody: { paddingHorizontal: spacing.xl, paddingBottom: spacing.sm, gap: spacing.lg },
   formError: { backgroundColor: colors.dangerSoft, borderRadius: radius.sm, padding: spacing.md },
 });

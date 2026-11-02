@@ -23,7 +23,7 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer }: P
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <View style={styles.root}>
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Kapat" />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.frame} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
             <View style={styles.grabber} />
             <View style={styles.header}>
@@ -49,9 +49,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    maxHeight: '86%',
+    flexShrink: 1,
     paddingTop: spacing.sm,
   },
+  // Yükseklik sınırı yüksekliği belli olan dış kapta tutulur; yüzde, içeriğe göre boyutlanan kapta güvenilir çözülmez.
+  frame: { maxHeight: '90%' },
   grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong, marginBottom: spacing.sm },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.md, gap: spacing.md },
   body: { flexShrink: 1 },

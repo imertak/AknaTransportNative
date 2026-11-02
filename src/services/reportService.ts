@@ -25,7 +25,16 @@ const esc = (v: string) =>
  */
 const PRINT_ZOOM = Platform.OS === 'web' ? 1 : 1.333;
 
-const BASE_CSS = `
+/** AKNA logosu (sunucu PDF'leriyle aynı vektör): siyah zemin üzerinde geometrik beyaz harfler. */
+const LOGO_HTML =
+  '<div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 436 102" width="96" height="22.5" fill="#fff">' +
+  '<polygon points="60,0 120.5,102 0,102"/><polygon points="121,6 213.5,6 179,55 213.5,102 121,102"/>' +
+  '<polygon points="219,4.5 267,40 267,6 314.5,6 314.5,102 219,102"/><polygon points="376,0 436,102 316,102"/></svg></div>';
+const LOGO_CSS = `
+  .logo { display: inline-block; background: #000; border-radius: 5px; padding: 12px 14px; line-height: 0; }
+`;
+
+const BASE_CSS = `${LOGO_CSS}
   @page { margin: 0; }
   html { zoom: ${PRINT_ZOOM}; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -75,7 +84,7 @@ function jobsReportHtml(report: JobsReport, title = 'NAKLİYE İŞLERİ DÖKÜM�
   const header = `
     <header class="head">
       <div>
-        <div class="brand">AKNA TRANSPORT</div>
+        ${LOGO_HTML}
         <div class="doc">${esc(title)}</div>
       </div>
       <div class="meta">
@@ -185,7 +194,7 @@ function invoiceHtml(invoice: Invoice, customer: Customer | null): string {
   </style></head><body><div class="page">
     ${isDemo ? `<div class="watermark">${DRAFT.stamp}</div><div class="banner">${DRAFT.stamp} BELGE — Bu belge uygulama içinde oluşturulmuş bir önizlemedir. Resmi e-Arşiv faturası değildir ve mali geçerliliği yoktur.</div>` : ''}
     <div class="head">
-      <div><div class="brand">AKNA TRANSPORT</div><div class="muted" style="font-size:10px;margin-top:4px">Nakliye ve Lojistik Hizmetleri</div></div>
+      <div>${LOGO_HTML}<div class="muted" style="font-size:10px;margin-top:6px">Nakliye ve Lojistik Hizmetleri</div></div>
       <div>
         <div class="title">${isDemo ? `${DRAFT.stamp} FATURA` : 'e-ARŞİV FATURA'}</div>
         <div style="font-size:10.5px;text-align:right;margin-top:6px">${esc(invoice.invoiceNo)}<br/>${formatDate(invoice.issueDate)}</div>

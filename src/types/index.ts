@@ -65,7 +65,10 @@ export interface Customer {
   companyName: string;
   contactName: string;
   phone: string;
+  /** Ana e-posta (faturanın gönderildiği adres). */
   email: string;
+  /** Ek e-posta adresleri; fatura e-postası bunlara bilgi (CC) olarak gider. */
+  extraEmails: string[];
   taxOffice: string;
   taxNumber: string;
   billingAddress: string;

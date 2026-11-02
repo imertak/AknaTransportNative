@@ -54,6 +54,8 @@ export interface ApiCustomer {
   contactPerson: string | null;
   phoneNumber: string | null;
   email: string | null;
+  /** Tüm adresler, ilki ana adres. Eski sunucularda gelmez. */
+  emails?: string[];
   taxOffice: string | null;
   taxNumber: string | null;
   address: string | null;
@@ -273,6 +275,7 @@ export function customerFromApi(c: ApiCustomer): Customer {
     contactName: c.contactPerson ?? '',
     phone: c.phoneNumber ?? '',
     email: c.email ?? '',
+    extraEmails: (c.emails ?? []).filter((e) => e.toLowerCase() !== (c.email ?? '').toLowerCase()),
     taxOffice: c.taxOffice ?? '',
     taxNumber: c.taxNumber ?? '',
     billingAddress: c.address ?? '',
@@ -290,6 +293,8 @@ export function customerToApi(c: CustomerInput, isActive = true) {
     contactPerson: orNull(c.contactName),
     phoneNumber: orNull(c.phone),
     email: orNull(c.email),
+    // Ana adres önce; sunucu boşları ve tekrarları ayıklar.
+    emails: [c.email, ...c.extraEmails].map((e) => e.trim()).filter(Boolean),
     taxOffice: orNull(c.taxOffice),
     taxNumber: orNull(c.taxNumber),
     address: orNull(c.billingAddress),

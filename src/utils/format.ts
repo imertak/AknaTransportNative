@@ -123,3 +123,19 @@ export function searchKey(value: string): string {
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '');
 }
+
+/**
+ * Her kelimenin ilk harfini büyütür (Türkçe kurallarıyla: i → İ). Kelimenin geri kalanına dokunmaz;
+ * böylece "ABC" gibi kısaltmalar ve yazılan büyük harfler korunur. Yazarken her değişiklikte çağrılır.
+ */
+export function capitalizeWords(value: string): string {
+  return value.replace(/(^|\s)(\S)/gu, (_, sep: string, ch: string) => sep + ch.toLocaleUpperCase('tr-TR'));
+}
+
+/** Dökümdeki "Firma / Mağaza" etiketi. Mağaza boşsa veya firma adıyla aynıysa yalnızca firma yazılır. */
+export function partyLabel(company: string | undefined, store: string | undefined): string {
+  const c = (company ?? '').trim();
+  const s = (store ?? '').trim();
+  if (!s || s.toLocaleLowerCase('tr-TR') === c.toLocaleLowerCase('tr-TR')) return c || s;
+  return c ? `${c} / ${s}` : s;
+}

@@ -29,7 +29,7 @@ import { routes } from '@/navigation/routes';
 import { jobActions } from '@/store';
 import { colors, hitSlop, radius, spacing } from '@/theme';
 import type { Customer, GeoPoint, JobContact, JobInput, JobStop, StopType, TransportJob, Vehicle, VehicleType } from '@/types';
-import { formatAmountInput, formatCurrency, parseAmount, todayISO } from '@/utils/format';
+import { capitalizeWords, formatAmountInput, formatCurrency, parseAmount, todayISO } from '@/utils/format';
 import { buildRouteDescription, STOP_TYPE_LABEL, toStops } from '@/utils/stops';
 import { hasErrors, required, type Errors } from '@/utils/validation';
 
@@ -96,7 +96,6 @@ function validate(f: FormState): FormErrors {
   const e: FormErrors = {};
   if (!f.customerId) e.customerId = 'Müşteri seçin.';
   if (!f.date) e.date = 'İş tarihini seçin.';
-  if (!required(f.storeName)) e.storeName = 'Mağaza / firma adını girin.';
   if (!f.vehicleType) e.vehicleType = 'Araç tipini seçin.';
   if (!f.stops.some((s) => s.type === 'pickup' && required(s.address))) e.pickups = 'En az bir yükleme noktası girin.';
   if (!f.stops.some((s) => s.type === 'delivery' && required(s.address))) e.deliveries = 'En az bir teslimat noktası girin.';
@@ -121,7 +120,8 @@ function prefill(f: FormState, customerId: string, customers: Customer[], jobs: 
   const last = jobs.filter((j) => j.customerId === customerId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   const next: FormState = { ...f, customerId };
   if (!isEdit) {
-    next.storeName = f.storeName || last?.storeName || customer?.companyName || '';
+    // Firma adı müşteriden gelir; mağaza adı isteğe bağlıdır, yalnızca son işten önerilir.
+    next.storeName = f.storeName || last?.storeName || '';
     if (last) {
       next.vehicleType = f.vehicleType || last.vehicleType;
       if (f.stops.every((s) => !s.address.trim())) next.stops = fromStops(last.stops);
@@ -308,9 +308,20 @@ export default function JobFormScreen() {
     const hasHistory = (history.data ?? []).some((a) => a.type === type);
     return (
       <View style={{ gap: spacing.sm }}>
-        <Text variant="label">
-          {type === 'pickup' ? 'Yükleme noktaları' : 'Teslimat noktaları'} <Text variant="label" tone="danger">*</Text>
-        </Text>
+        <View style={styles.groupHead}>
+          <Text variant="label" style={{ flex: 1 }}>
+            {type === 'pickup' ? 'Yükleme noktaları' : 'Teslimat noktaları'} <Text variant="label" tone="danger">*</Text>
+          </Text>
+          <Pressable
+            onPress={() => addStop(type)}
+            hitSlop={hitSlop}
+            style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.8 }]}
+            accessibilityRole="button"
+            accessibilityLabel={type === 'pickup' ? 'Yükleme noktası ekle' : 'Teslimat noktası ekle'}>
+            <Plus size={18} color={colors.textInverse} strokeWidth={2.5} />
+            <Text variant="label" tone="inverse">Ekle</Text>
+          </Pressable>
+        </View>
         {list.map((stop, idx) => (
           <View key={stop.key} style={styles.stopRow}>
             <View style={[styles.seq, type === 'delivery' && styles.seqDelivery]}>
@@ -319,8 +330,12 @@ export default function JobFormScreen() {
             <View style={{ flex: 1, gap: spacing.xs }}>
               <Input
                 value={stop.address}
+                autoCapitalize="words"
                 // Adres elle değişince eski koordinat geçersiz olur; harita kontrolüyle yeniden kaydedilir.
-                onChangeText={(v) => setStop(stop.key, { address: v, point: v.trim() === stop.address.trim() ? stop.point : undefined })}
+                onChangeText={(raw) => {
+                  const v = capitalizeWords(raw);
+                  setStop(stop.key, { address: v, point: v.trim() === stop.address.trim() ? stop.point : undefined });
+                }}
                 placeholder={`${STOP_TYPE_LABEL[type]} adresi`}
                 accessibilityLabel={`${STOP_TYPE_LABEL[type]} ${idx + 1}`}
               />
@@ -351,10 +366,6 @@ export default function JobFormScreen() {
             ) : null}
           </View>
         ))}
-        <Pressable onPress={() => addStop(type)} hitSlop={hitSlop} style={styles.inlineLink} accessibilityRole="button">
-          <Plus size={16} color={colors.text} />
-          <Text variant="label">{type === 'pickup' ? 'Yükleme noktası ekle' : 'Teslimat noktası ekle'}</Text>
-        </Pressable>
         {error ? <Text variant="bodySmall" tone="danger">{error}</Text> : null}
       </View>
     );
@@ -377,7 +388,15 @@ export default function JobFormScreen() {
                 <Text variant="bodySmall" tone="secondary" style={{ flex: 1 }}>{prefillNote}</Text>
               </View>
             ) : null}
-            <Input label="Mağaza / firma adı" required value={form.storeName} onChangeText={(v) => set('storeName', v)} error={errors.storeName} placeholder="Örn. Starbucks" />
+            <Input
+              label="Mağaza adı (isteğe bağlı)"
+              autoCapitalize="words"
+              value={form.storeName}
+              onChangeText={(v) => set('storeName', capitalizeWords(v))}
+              error={errors.storeName}
+              placeholder="Örn. Kadıköy Şubesi"
+              hint="Firma adı müşteriden alınır. Dökümde Firma / Mağaza olarak yazılır."
+            />
           </Card>
         </Section>
 
@@ -422,7 +441,8 @@ export default function JobFormScreen() {
               label="Ek açıklama"
               multiline
               value={form.description}
-              onChangeText={(v) => set('description', v)}
+              autoCapitalize="words"
+              onChangeText={(v) => set('description', capitalizeWords(v))}
               placeholder="Örn. +1 eleman yevmiyesi, gece yükleme"
               hint="Elle yazılır; otomatik güzergahtan ayrı saklanır ve PDF'te güzergahın yanında görünür."
             />
@@ -442,7 +462,7 @@ export default function JobFormScreen() {
                     <X size={18} color={colors.textTertiary} />
                   </Pressable>
                 </View>
-                <Input value={c.role} onChangeText={(v) => setContact(c.key, { role: v })} placeholder="Görev (ör. Yük sahibi)" accessibilityLabel={`${idx + 1}. kişi görevi`} />
+                <Input value={c.role} autoCapitalize="words" onChangeText={(v) => setContact(c.key, { role: capitalizeWords(v) })} placeholder="Görev (ör. Yük sahibi)" accessibilityLabel={`${idx + 1}. kişi görevi`} />
                 <View style={styles.roles}>
                   {CONTACT_ROLES.map((r) => (
                     <Pressable
@@ -455,7 +475,7 @@ export default function JobFormScreen() {
                     </Pressable>
                   ))}
                 </View>
-                <Input value={c.name} onChangeText={(v) => setContact(c.key, { name: v })} placeholder="Ad soyad (isteğe bağlı)" accessibilityLabel={`${idx + 1}. kişi adı`} />
+                <Input value={c.name} autoCapitalize="words" onChangeText={(v) => setContact(c.key, { name: capitalizeWords(v) })} placeholder="Ad soyad (isteğe bağlı)" accessibilityLabel={`${idx + 1}. kişi adı`} />
                 <Input
                   icon={Phone}
                   value={c.phone}
@@ -509,7 +529,7 @@ export default function JobFormScreen() {
                 ) : null}
               </>
             )}
-            <Input label="Şoföre / operasyona not" multiline value={form.notes} onChangeText={(v) => set('notes', v)} placeholder="Örn. mağaza 09:00'da açılıyor" />
+            <Input label="Şoföre / operasyona not" multiline autoCapitalize="words" value={form.notes} onChangeText={(v) => set('notes', capitalizeWords(v))} placeholder="Örn. mağaza 09:00'da açılıyor" />
           </Card>
         </Section>
       </ScrollContent>
@@ -550,6 +570,8 @@ const styles = StyleSheet.create({
   card: { gap: spacing.lg },
   row: { flexDirection: 'row', gap: spacing.sm },
   inlineLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  groupHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.ink, borderRadius: radius.pill, paddingVertical: spacing.sm, paddingLeft: spacing.md, paddingRight: spacing.lg, minHeight: 40 },
   note: { flexDirection: 'row', gap: spacing.sm, backgroundColor: colors.surfaceMuted, padding: spacing.md, borderRadius: radius.md, alignItems: 'flex-start' },
   stopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   stopActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },

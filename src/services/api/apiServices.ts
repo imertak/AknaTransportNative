@@ -285,10 +285,10 @@ export const apiInvoiceService: InvoiceService = {
 
   cancel: async (id) => invoiceFromApiDetail(await http<ApiInvoiceDetail>(`/api/invoices/${id}/cancel`, { method: 'POST', json: {} })),
 
-  async downloadPdf(id, kind) {
+  async downloadPdf(id, kind, number) {
     const path = kind === 'invoice' ? `/api/invoices/${id}/pdf` : `/api/invoices/${id}/job-report/pdf`;
     const bytes = await httpBinary(path);
-    return savePdf(bytes, kind === 'invoice' ? `Fatura_${id}.pdf` : `Is_Dokumu_${id}.pdf`);
+    return savePdf(bytes, kind === 'invoice' ? `Fatura_${number}.pdf` : `Is_Dokumu_${number}.pdf`);
   },
 
   withholdingTypes: () => http<WithholdingType[]>('/api/invoices/withholding-types'),

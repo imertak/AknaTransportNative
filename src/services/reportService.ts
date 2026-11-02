@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
 import type { Customer, DateRange, Invoice, JobsReport, TransportJob } from '@/types';
-import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
+import { formatCurrency, formatDate, formatDateTime, partyLabel } from '@/utils/format';
 import { composeJobText } from '@/utils/stops';
 import { jobService } from './registry';
 import { ServiceError } from './errors';
@@ -87,10 +87,10 @@ function jobsReportHtml(report: JobsReport, title = 'NAKLİYE İŞLERİ DÖKÜM�
   const tableHead = `
     <thead><tr>
       <th style="width:84px">Tarih</th>
-      <th style="width:150px">Mağaza / Firma</th>
+      <th style="width:170px">Firma / Mağaza</th>
       <th style="width:112px">Araç</th>
       <th>Yapılan Nakliyeler</th>
-      <th class="num" style="width:104px">Fiyat</th>
+      <th class="num" style="width:130px">Fiyat</th>
     </tr></thead>`;
 
   const body = pages
@@ -101,10 +101,10 @@ function jobsReportHtml(report: JobsReport, title = 'NAKLİYE İŞLERİ DÖKÜM�
         .map(
           (j) => `<tr>
             <td>${formatDate(j.date)}</td>
-            <td class="strong">${esc(j.storeName)}</td>
+            <td class="strong">${esc(partyLabel(j.customerName, j.storeName))}</td>
             <td>${VEHICLE_TYPE_LABEL[j.vehicleType]}</td>
             <td>${esc(composeJobText(j.routeDescription, j.description))}</td>
-            <td class="num strong">${formatCurrency(j.price)}</td>
+            <td class="num strong">${formatCurrency(j.price)} + KDV</td>
           </tr>`,
         )
         .join('');
@@ -112,7 +112,7 @@ function jobsReportHtml(report: JobsReport, title = 'NAKLİYE İŞLERİ DÖKÜM�
       const totals = isLast
         ? `<section class="totals">
             <div class="row"><span>Toplam iş sayısı</span><strong>${report.totalCount}</strong></div>
-            <div class="row grand"><span>Toplam nakliye tutarı</span><strong>${formatCurrency(report.totalAmount, { decimals: 2 })}</strong></div>
+            <div class="row grand"><span>Toplam nakliye tutarı</span><strong>${formatCurrency(report.totalAmount, { decimals: 2 })} + KDV</strong></div>
           </section>`
         : '';
       return `<div class="page">
@@ -205,13 +205,13 @@ function invoiceHtml(invoice: Invoice, customer: Customer | null): string {
       </div>
     </div>
     <table>
-      <thead><tr><th>Açıklama</th><th class="num" style="width:110px">Tutar</th></tr></thead>
+      <thead><tr><th>Açıklama</th><th class="num" style="width:70px">Miktar</th><th class="num" style="width:110px">Tutar</th></tr></thead>
       <tbody>${
         invoice.items?.length
           ? invoice.items
-              .map((it) => `<tr><td>${esc(it.jobNo)} · ${formatDate(it.jobDate)} · ${esc(it.description)}</td><td class="num">${formatCurrency(it.amount, { decimals: 2 })}</td></tr>`)
+              .map((it) => `<tr><td>${esc(it.jobNo)} · ${formatDate(it.jobDate)} · ${esc(it.description)}</td><td class="num">1 Adet</td><td class="num">${formatCurrency(it.amount, { decimals: 2 })}</td></tr>`)
               .join('')
-          : `<tr><td>${esc(invoice.description)}</td><td class="num">${formatCurrency(invoice.subtotal, { decimals: 2 })}</td></tr>`
+          : `<tr><td>${esc(invoice.description)}</td><td class="num"></td><td class="num">${formatCurrency(invoice.subtotal, { decimals: 2 })}</td></tr>`
       }</tbody>
     </table>
     <div class="totals">
@@ -324,7 +324,7 @@ export const reportService = {
       totalAmount: sorted.reduce((sum, j) => sum + j.price, 0),
       generatedAt: new Date().toISOString(),
     };
-    const uri = await htmlToPdf(jobsReportHtml(report, `${invoice.invoiceNo} · İŞ DÖKÜMÜ`), A4_LANDSCAPE, fileSafe(`${invoice.invoiceNo}_Is_Dokumu.pdf`));
+    const uri = await htmlToPdf(jobsReportHtml(report, `${invoice.invoiceNo} · İŞ DÖKÜMÜ`), A4_LANDSCAPE, fileSafe(`Is_Dokumu_${invoice.invoiceNo}.pdf`));
     return { uri, title: `${invoice.invoiceNo} iş dökümü` };
   },
 

@@ -235,16 +235,18 @@ export default function InvoiceDetailScreen() {
             <Button label="İmzala" style={{ flex: 2 }} loading={signing.pending} disabled={smsCode.trim().length < 4} onPress={sign} />
           </View>
         }>
-        <Input
-          label="SMS kodu"
-          value={smsCode}
-          onChangeText={setSmsCode}
-          keyboardType="number-pad"
-          autoComplete="sms-otp"
-          textContentType="oneTimeCode"
-          maxLength={10}
-          hint="İmza mali işlem oluşturur: fatura kesilir ve müşteriye e-postası gönderilir."
-        />
+        <View style={{ paddingHorizontal: spacing.xl }}>
+          <Input
+            label="SMS kodu"
+            value={smsCode}
+            onChangeText={setSmsCode}
+            keyboardType="number-pad"
+            autoComplete="sms-otp"
+            textContentType="oneTimeCode"
+            maxLength={10}
+            hint="İmza mali işlem oluşturur: fatura kesilir ve müşteriye e-postası gönderilir."
+          />
+        </View>
       </Sheet>
     </Screen>
   );

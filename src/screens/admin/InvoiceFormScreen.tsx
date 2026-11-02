@@ -28,10 +28,10 @@ export default function InvoiceFormScreen() {
   const customers = useCustomers();
   const { run, pending } = useAsyncAction();
 
-  /** Faturalandırılmamış, tamamlanmış (iptal edilmemiş) işler. Bir iş iki faturaya giremez. */
+  /** Faturalandırılmamış ve iptal edilmemiş işler (bitmemiş işler de faturalanabilir). Bir iş iki faturaya giremez. */
   const billable = useMemo(() => {
     const invoiced = new Set(invoices.filter((i) => i.status !== 'cancelled').flatMap((i) => (i.jobIds?.length ? i.jobIds : [i.jobId])));
-    return jobs.filter((j) => j.status === 'completed' && j.billingStatus === 'not_invoiced' && !j.invoiceId && !invoiced.has(j.id));
+    return jobs.filter((j) => j.status !== 'cancelled' && j.billingStatus === 'not_invoiced' && !j.invoiceId && !invoiced.has(j.id));
   }, [jobs, invoices]);
 
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>(() => {
@@ -123,7 +123,7 @@ export default function InvoiceFormScreen() {
       <Screen>
         <NavHeader title="Fatura oluştur" />
         <View style={{ padding: spacing.lg }}>
-          <EmptyState icon={ReceiptText} title="Faturalanacak iş yok" description="Fatura yalnızca tamamlanmış ve henüz faturalanmamış işler için oluşturulabilir." />
+          <EmptyState icon={ReceiptText} title="Faturalanacak iş yok" description="Fatura, iptal edilmemiş ve henüz faturalanmamış işler için oluşturulabilir." />
         </View>
       </Screen>
     );
@@ -150,7 +150,7 @@ export default function InvoiceFormScreen() {
               value={null}
               onChange={addJob}
               error={errors.jobs}
-              placeholder={selectedCustomerId ? 'Aynı müşterinin diğer işlerini ekleyin' : 'Tamamlanan iş seçin'}
+              placeholder={selectedCustomerId ? 'Aynı müşterinin diğer işlerini ekleyin' : 'Faturalanacak işi seçin'}
             />
             {selectedJobs.length > 0 && (
               <View style={{ gap: spacing.sm }}>

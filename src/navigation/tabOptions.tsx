@@ -1,3 +1,5 @@
+import type { ComponentProps } from 'react';
+import { PlatformPressable } from 'expo-router/react-navigation';
 import type { LucideIcon } from 'lucide-react-native';
 import { Platform, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +26,10 @@ export function useTabScreenOptions() {
     },
     tabBarLabelStyle: { fontSize: 11, fontWeight: '600' as const },
     sceneStyle: { backgroundColor: colors.background },
+    // Android'de sekmeye basınca çıkan gri yuvarlak dalga (ripple) efektini kapatır.
+    tabBarButton: (props: ComponentProps<typeof PlatformPressable>) => (
+      <PlatformPressable {...props} pressColor="transparent" android_ripple={{ color: 'transparent', borderless: true }} />
+    ),
   };
 }
 

@@ -97,7 +97,7 @@ export default function InvoicesScreen() {
           <EmptyState
             icon={ReceiptText}
             title={activeFilters || status !== 'all' ? 'Filtreye uygun fatura yok' : 'Fatura yok'}
-            description="Tamamlanan ve faturalandırılmamış işler için fatura oluşturabilirsiniz."
+            description="İptal edilmemiş ve faturalandırılmamış işler için fatura oluşturabilirsiniz."
             action={<Button label="Fatura oluştur" size="sm" icon={Plus} onPress={() => router.push(routes.newInvoice())} />}
           />
         }
@@ -122,7 +122,7 @@ export default function InvoicesScreen() {
             <Button label="Uygula" style={{ flex: 2 }} disabled={!!rangeError} onPress={() => setFiltersOpen(false)} />
           </View>
         }>
-        <View style={{ gap: spacing.lg }}>
+        <View style={{ paddingHorizontal: spacing.xl, gap: spacing.lg }}>
           <SelectField label="Müşteri" options={customerOptions} value={customerId} onChange={setCustomerId} searchable />
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <View style={{ flex: 1 }}>

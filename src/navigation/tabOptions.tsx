@@ -2,8 +2,8 @@ import type { ComponentProps } from 'react';
 import { PlatformPressable } from 'expo-router/react-navigation';
 import type { LucideIcon } from 'lucide-react-native';
 import { Platform, type ColorValue } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useBottomInset } from '@/hooks/useBottomInset';
 import { colors } from '@/theme';
 
 /**
@@ -11,8 +11,7 @@ import { colors } from '@/theme';
  * çubuğunun yüksekliği (insets.bottom) eklenmezse menü telefonun geri/ana ekran butonlarının altında kalır.
  */
 export function useTabScreenOptions() {
-  const insets = useSafeAreaInsets();
-  const bottom = Platform.OS === 'web' ? 0 : insets.bottom;
+  const bottom = useBottomInset();
   return {
     headerShown: false,
     tabBarActiveTintColor: colors.text,

@@ -12,27 +12,31 @@ const COPY: Record<TrackingStatus, { title: string; body: string }> = {
   starting: { title: 'Konum takibi başlatılıyor', body: 'GPS sinyali bekleniyor.' },
   denied: { title: 'Konum izni gerekli', body: 'Aktif işiniz için konum takibi zorunludur. Cihaz ayarlarından izni açın.' },
   error: { title: 'Konum takibi başlatılamadı', body: 'Konum servislerini kontrol edip tekrar deneyin.' },
-  no_job: { title: 'Takip kapalı', body: 'Konum takibi yalnızca kabul ettiğiniz ve devam eden işler sırasında çalışır.' },
+  no_job: { title: 'Konum açık', body: 'Konumunuz yalnızca kabul ettiğiniz ve devam eden işler sırasında yöneticinizle paylaşılır.' },
 };
+
+const LOCATION_OFF = { title: 'Konum kapalı', body: 'Haritada konumunuzu görmek ve iş kabul edebilmek için konum iznini açın.' };
 
 /** Zorunlu iş takibinin durumu. Kullanıcı takibi kapatamaz; iş bitince otomatik durur. */
 export const LocationShareCard = memo(function LocationShareCard({ compact }: { compact?: boolean }) {
-  const { status, lastPublishedAt, pending, error, foregroundOnly, trackingJobs, retry } = useLocationTracking();
-  const copy = COPY[status];
+  const { status, lastPublishedAt, pending, error, foregroundOnly, trackingJobs, retry, locationOn, locationMessage } = useLocationTracking();
+  // İş yokken de konum izni beklenir; kapalıysa uyarı ve ayar butonları gösterilir.
+  const off = status === 'no_job' && !locationOn;
+  const copy = off ? LOCATION_OFF : COPY[status];
   const on = status === 'active' || status === 'starting';
-  const Icon = status === 'active' ? Navigation : status === 'denied' || status === 'error' ? MapPinOff : LocateFixed;
+  const Icon = status === 'active' ? Navigation : status === 'denied' || status === 'error' || off ? MapPinOff : LocateFixed;
 
   return (
-    <Card tone={on ? 'ink' : 'surface'} style={[styles.card, !on && status !== 'no_job' && styles.warn]}>
+    <Card tone={on ? 'ink' : 'surface'} style={[styles.card, ((!on && status !== 'no_job') || off) && styles.warn]}>
       <View style={styles.row}>
         <View style={[styles.icon, on && styles.iconOn]}>
           <Icon size={18} color={on ? colors.text : colors.textSecondary} strokeWidth={2} />
         </View>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="subheading" tone={on ? 'inverse' : status === 'no_job' ? 'default' : 'danger'}>{copy.title}</Text>
+          <Text variant="subheading" tone={on ? 'inverse' : status === 'no_job' && !off ? 'default' : 'danger'}>{copy.title}</Text>
           {!compact || !on ? (
             <Text variant="bodySmall" tone={on ? 'inverseMuted' : 'secondary'}>
-              {(status === 'error' || status === 'denied') && error ? error : copy.body}
+              {off && locationMessage ? locationMessage : (status === 'error' || status === 'denied') && error ? error : copy.body}
             </Text>
           ) : null}
           {on && trackingJobs.length > 1 ? <Text variant="bodySmall" tone="inverseMuted">{trackingJobs.length} aktif iş için paylaşılıyor</Text> : null}
@@ -46,7 +50,7 @@ export const LocationShareCard = memo(function LocationShareCard({ compact }: { 
           <Text variant="bodySmall" tone="inverseMuted">{pending} konum bağlantı bekliyor; internet gelince gönderilecek.</Text>
         </View>
       ) : null}
-      {status === 'denied' ? (
+      {status === 'denied' || off ? (
         <View style={styles.actions}>
           <Button label="Ayarları aç" variant="secondary" size="sm" onPress={() => Linking.openSettings().catch(() => {})} style={{ flex: 1 }} />
           <Button label="Tekrar dene" size="sm" onPress={() => void retry()} style={{ flex: 1 }} />

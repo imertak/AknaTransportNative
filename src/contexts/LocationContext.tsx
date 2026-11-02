@@ -12,6 +12,7 @@ import {
   startTracking,
   stopTracking,
   trackingEvents,
+  watchForegroundPosition,
   type PrepareResult,
 } from '@/services/tracking';
 import { refreshAll } from '@/store';
@@ -36,6 +37,10 @@ interface LocationContextValue {
   /** Ağ yokken cihazda bekleyen konum sayısı. */
   pending: number;
   error: string | null;
+  /** Cihaz konumu bu uygulama için açık mı (en az ön plan izni). İş olmasa da haritada konum gösterilir. */
+  locationOn: boolean;
+  /** Konum kapalıysa nedeni (izin reddi, konum servisi kapalı vb.). */
+  locationMessage: string | null;
   /** Web önizlemede takip yalnızca sayfa açıkken çalışır. */
   foregroundOnly: boolean;
   /**
@@ -59,7 +64,7 @@ const LocationContext = createContext<LocationContextValue | null>(null);
  * istenmez; yalnızca işletim sisteminin izinleri gerekir.
  */
 export function LocationProvider({ children }: { children: ReactNode }) {
-  const { user, status: authStatus } = useAuth();
+  const { user, status: authStatus, viewMode } = useAuth();
   const { open } = useDriverJobs(user?.id);
   const trackingJobs = useMemo(() => open.filter((j) => isTrackable(j.status)), [open]);
   const driverId = authStatus === 'signedIn' ? user?.id : undefined;
@@ -71,6 +76,51 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const reconciling = useRef<Promise<void> | null>(null);
+  const [permissionState, setPermission] = useState<{ userId: string | null; on: boolean; message: string | null }>({ userId: null, on: false, message: null });
+  const askedFor = useRef<string | null>(null);
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  const isDriverView = authStatus === 'signedIn' && viewMode === 'driver' && !!user;
+  const userIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    userIdRef.current = user?.id ?? null;
+  }, [user?.id]);
+
+  const applyPermission = useCallback((r: PrepareResult) => {
+    // Arka plan izni olmasa da ön plan izni varsa konum gösterilebilir.
+    const on = r.ok || r.code === 'background_denied';
+    setPermission({ userId: userIdRef.current, on, message: r.ok ? null : r.message });
+    return on;
+  }, []);
+  // İzin bilgisi kullanıcıya bağlıdır; oturum değişince eskisi geçersiz sayılır.
+  const permissionValid = permissionState.userId === (user?.id ?? null);
+  const permission = { on: permissionValid && permissionState.on, message: permissionValid ? permissionState.message : null };
+
+  // Şoför uygulamaya girer girmez (iş olmasa da) konum izni istenir; her oturumda bir kez.
+  useEffect(() => {
+    if (!isDriverView || !user) {
+      if (authStatus !== 'signedIn') askedFor.current = null;
+      return;
+    }
+    if (askedFor.current === user.id) return;
+    askedFor.current = user.id;
+    prepareTracking(true).then(applyPermission, () => {});
+  }, [isDriverView, user, authStatus, applyPermission]);
+
+  // Aktif iş yokken konum yalnızca cihazda, uygulama açıkken izlenir (sunucuya gönderilmez).
+  const watchLocally = isDriverView && permission.on && appActive && runState !== 'running';
+  useEffect(() => {
+    if (!watchLocally) return;
+    let sub: { remove(): void } | null = null;
+    let cancelled = false;
+    watchForegroundPosition(setLastFix).then((s) => {
+      if (cancelled) s?.remove();
+      else sub = s;
+    });
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
+  }, [watchLocally]);
 
   useEffect(
     () =>
@@ -131,12 +181,15 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   // Ön plana dönünce izinleri yeniden kontrol et ve bekleyen konumları gönder.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => {
+      setAppActive(s === 'active');
       if (s !== 'active') return;
+      // Kullanıcı ayarlardan izni açıp döndüyse fark edilir (pencere açılmaz).
+      if (askedFor.current) prepareTracking(false).then(applyPermission, () => {});
       void runReconcile();
       flushQueue().catch(() => {});
     });
     return () => sub.remove();
-  }, [runReconcile]);
+  }, [runReconcile, applyPermission]);
 
   const ensureReady = useCallback(async () => {
     const r = await prepareTracking(true);
@@ -169,13 +222,14 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
   const retry = useCallback(async () => {
     const r = await prepareTracking(true);
+    applyPermission(r);
     if (!r.ok) {
       setRunState('denied');
       setError(r.message);
       return;
     }
     await runReconcile();
-  }, [runReconcile]);
+  }, [runReconcile, applyPermission]);
 
   const status: TrackingStatus = !shouldTrack
     ? 'no_job'
@@ -196,13 +250,15 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       lastPublishedAt,
       pending,
       error,
+      locationOn: permission.on || runState === 'running',
+      locationMessage: permission.message,
       foregroundOnly: Platform.OS === 'web',
       ensureReady,
       startNow,
       stopSharing,
       retry,
     }),
-    [status, trackingJobs, lastFix, lastPublishedAt, pending, error, ensureReady, startNow, stopSharing, retry],
+    [status, trackingJobs, lastFix, lastPublishedAt, pending, error, permission.on, permission.message, runState, ensureReady, startNow, stopSharing, retry],
   );
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
 }

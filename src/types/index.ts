@@ -31,7 +31,17 @@ export interface Session {
   expiresAt?: ISODateTime;
 }
 
-export type VehicleType = 'panelvan' | 'small_panelvan' | 'pickup' | 'truck' | 'other';
+/** Araç tipinin kodu (ör. "Panelvan"). Tipler yönetici tarafından eklenir; ekranda adı gösterilir. */
+export type VehicleType = string;
+
+/** Yöneticinin tanımladığı araç tipi. Pasif tipler yeni kayıtlarda seçilemez, eski kayıtlarda adıyla görünür. */
+export interface VehicleTypeDef {
+  id: string;
+  code: VehicleType;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+}
 
 /** Yönetici tarafından kaydedilen araç. Bir araç aynı anda yalnızca bir şoföre aktif olarak atanır. */
 export interface Vehicle {

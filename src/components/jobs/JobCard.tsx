@@ -3,7 +3,7 @@ import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Card, StatusBadge, Text } from '@/components/ui';
-import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
+import { vehicleTypeLabel } from '@/constants/vehicles';
 import { colors, spacing } from '@/theme';
 import type { TransportJob } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
@@ -31,7 +31,7 @@ export const JobCard = memo(function JobCard({ job, onPress, showPrice, driverNa
         </View>
         <View style={styles.metaItem}>
           <Truck size={14} color={colors.textTertiary} />
-          <Text variant="bodySmall" tone="secondary">{VEHICLE_TYPE_LABEL[job.vehicleType]}</Text>
+          <Text variant="bodySmall" tone="secondary">{vehicleTypeLabel(job.vehicleType)}</Text>
         </View>
       </View>
       <View style={styles.route}>

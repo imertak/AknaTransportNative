@@ -33,6 +33,7 @@ export const routes = {
   editDriver: (id: string): Href => ({ pathname: '/admin/driver-form', params: { id } }) as Href,
   vehicles: '/admin/vehicles' as Href,
   newVehicle: '/admin/vehicle-form' as Href,
+  vehicleTypes: '/admin/vehicle-types' as Href,
   editVehicle: (id: string): Href => ({ pathname: '/admin/vehicle-form', params: { id } }) as Href,
   /** Profil her iki görünümde de sekme değil, geri butonlu yığın ekranıdır. */
   profile: (mode: ViewMode): Href => (mode === 'admin' ? '/admin/profile' : '/driver/profile') as Href,

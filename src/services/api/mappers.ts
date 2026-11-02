@@ -18,6 +18,7 @@ import type {
   VehicleInput,
   VehicleLocation,
   VehicleType,
+  VehicleTypeDef,
 } from '@/types';
 import type { UserCredentialResult, UserInput } from '../contracts';
 import { buildRouteDescription, orderStops, toStops } from '@/utils/stops';
@@ -215,8 +216,19 @@ const toSnake = (v: string) => v.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerC
 const toPascal = (v: string) => v.replace(/(^|_)([a-z])/g, (_, __, c: string) => c.toUpperCase());
 
 export const jobStatusFromApi = (v: string) => toSnake(v) as JobStatus;
-export const vehicleTypeFromApi = (v: string) => toSnake(v) as VehicleType;
-export const vehicleTypeToApi = (v: VehicleType) => toPascal(v);
+// Araç tipi kodu sunucudaki haliyle saklanır (ör. "SmallPanelvan"); tipler yönetici tarafından eklenebilir.
+export const vehicleTypeFromApi = (v: string): VehicleType => v;
+export const vehicleTypeToApi = (v: VehicleType) => v;
+
+export interface ApiVehicleType {
+  id: string;
+  code: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export const vehicleTypeDefFromApi = (t: ApiVehicleType): VehicleTypeDef => ({ id: t.id, code: t.code, name: t.name, sortOrder: t.sortOrder, isActive: t.isActive });
 export const stopTypeFromApi = (v: ApiJobStop['stopType']): StopType => (v === 'Pickup' ? 'pickup' : 'delivery');
 export const stopTypeToApi = (v: StopType): ApiJobStop['stopType'] => (v === 'pickup' ? 'Pickup' : 'Delivery');
 export const billingStatusFromApi = (v: ApiJob['billingStatus'] | undefined): JobBillingStatus =>

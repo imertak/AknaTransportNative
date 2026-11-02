@@ -11,7 +11,7 @@ import { StatusTimeline } from '@/components/jobs/StatusTimeline';
 import { Button, Card, EmptyState, IconButton, InfoRow, NavHeader, OptionSheet, Screen, ScrollContent, Section, StatusBadge, Text, type SelectOption } from '@/components/ui';
 import { isClosed, isTrackable } from '@/constants/jobStatus';
 import { can } from '@/constants/permissions';
-import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
+import { vehicleTypeLabel } from '@/constants/vehicles';
 import { useAuth, useCurrentUser } from '@/contexts/AuthContext';
 import { useLocationTracking } from '@/contexts/LocationContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
@@ -148,7 +148,7 @@ export default function JobDetailScreen() {
             </View>
             <View style={styles.meta}>
               <Truck size={15} color={colors.textTertiary} />
-              <Text variant="bodySmall" tone="secondary">{VEHICLE_TYPE_LABEL[job.vehicleType]}</Text>
+              <Text variant="bodySmall" tone="secondary">{vehicleTypeLabel(job.vehicleType)}</Text>
             </View>
             {job.vehiclePlate ? (
               <View style={styles.meta}>

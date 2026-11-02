@@ -10,7 +10,7 @@ import {
 import { errorMessage } from '@/services/errors';
 import { sortJobs } from '@/services/jobUtils';
 import type { UserInput } from '@/services/contracts';
-import type { CustomerInput, InvoiceInput, JobInput, JobStatus, User, Vehicle, VehicleInput } from '@/types';
+import type { CustomerInput, InvoiceInput, JobInput, JobStatus, User, Vehicle, VehicleInput, VehicleTypeDef } from '@/types';
 import { dataStore, upsert } from './dataStore';
 
 const set = dataStore.setState;
@@ -25,9 +25,11 @@ export function loadAll(force = false): Promise<void> {
   if (status !== 'ready') set({ status: 'loading', error: undefined });
   inflight = (async () => {
     try {
-      const [users, vehicles, customers, jobs, invoices, locations] = await Promise.all([
+      const [users, vehicles, vehicleTypes, customers, jobs, invoices, locations] = await Promise.all([
         userService.list(),
         userService.listVehicles(),
+        // Araç tipleri eklenmeden önceki sunucularda uç nokta yoktur; o durumda hazır adlar kullanılır.
+        vehicleService.listTypes().catch(() => [] as VehicleTypeDef[]),
         customerService.list(),
         jobService.list(),
         invoiceService.list(),
@@ -37,6 +39,7 @@ export function loadAll(force = false): Promise<void> {
         status: 'ready',
         users,
         vehicles,
+        vehicleTypes: sortTypes(vehicleTypes),
         customers,
         jobs,
         invoices,
@@ -95,6 +98,13 @@ export const customerActions = {
   },
 };
 
+const sortTypes = (list: VehicleTypeDef[]) => [...list].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'tr'));
+
+function patchType(t: VehicleTypeDef) {
+  set((s) => ({ vehicleTypes: sortTypes(upsert(s.vehicleTypes, t)) }));
+  return t;
+}
+
 const sortVehicles = (list: Vehicle[]) =>
   list.sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.plate.localeCompare(b.plate, 'tr'));
 
@@ -138,6 +148,9 @@ export const vehicleActions = {
   update: async (id: string, input: VehicleInput) => patchVehicle(await vehicleService.update(id, input)),
   assign: async (id: string, driverId: string) => patchVehicle(await vehicleService.assign(id, driverId)),
   unassign: async (id: string) => patchVehicle(await vehicleService.unassign(id)),
+  refreshTypes: async () => set({ vehicleTypes: sortTypes(await vehicleService.listTypes()) }),
+  createType: async (name: string) => patchType(await vehicleService.createType(name)),
+  updateType: async (id: string, input: { name: string; isActive: boolean }) => patchType(await vehicleService.updateType(id, input)),
 };
 
 async function refreshInvoice(id: string) {

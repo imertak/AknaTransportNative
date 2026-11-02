@@ -3,7 +3,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
-import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
+import { vehicleTypeLabel } from '@/constants/vehicles';
 import type { Customer, DateRange, Invoice, JobsReport, TransportJob } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, partyLabel } from '@/utils/format';
 import { composeJobText } from '@/utils/stops';
@@ -102,7 +102,7 @@ function jobsReportHtml(report: JobsReport, title = 'NAKLİYE İŞLERİ DÖKÜM�
           (j) => `<tr>
             <td>${formatDate(j.date)}</td>
             <td class="strong">${esc(partyLabel(j.customerName, j.storeName))}</td>
-            <td>${VEHICLE_TYPE_LABEL[j.vehicleType]}</td>
+            <td>${vehicleTypeLabel(j.vehicleType)}</td>
             <td>${esc(composeJobText(j.routeDescription, j.description))}</td>
             <td class="num strong">${formatCurrency(j.price)} + KDV</td>
           </tr>`,

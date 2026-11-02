@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { PdfReadySheet } from '@/components/PdfReadySheet';
 import { Button, Card, Chip, DateField, EmptyState, NavHeader, Screen, Section, SegmentedControl, SelectField, Text, type SelectOption } from '@/components/ui';
-import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
+import { vehicleTypeLabel } from '@/constants/vehicles';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useCustomers, useJobs } from '@/hooks/useData';
 import { reportService } from '@/services';
@@ -133,7 +133,7 @@ export default function ReportsScreen() {
                     <Text variant="bodySmall" style={styles.cDate}>{formatDate(j.date).slice(0, 5)}</Text>
                     <View style={styles.cMain}>
                       <Text variant="label" numberOfLines={1}>
-                        {partyLabel(j.customerName, j.storeName)} · {VEHICLE_TYPE_LABEL[j.vehicleType]}
+                        {partyLabel(j.customerName, j.storeName)} · {vehicleTypeLabel(j.vehicleType)}
                       </Text>
                       <Text variant="bodySmall" tone="secondary" numberOfLines={2}>{composeJobText(j.routeDescription, j.description)}</Text>
                     </View>

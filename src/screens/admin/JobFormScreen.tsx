@@ -21,7 +21,7 @@ import {
   type SelectOption,
 } from '@/components/ui';
 import { isClosed } from '@/constants/jobStatus';
-import { VEHICLE_TYPE_LABEL, VEHICLE_TYPES } from '@/constants/vehicles';
+import { useVehicleTypeOptions, vehicleTypeLabel } from '@/constants/vehicles';
 import { useCurrentUser } from '@/contexts/AuthContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useAssignableUsers, useCustomerAddresses, useCustomers, useDriverVehicles, useJob, useJobs, useVehicles } from '@/hooks/useData';
@@ -227,7 +227,7 @@ export default function JobFormScreen() {
   };
 
   const customerOptions = useMemo<SelectOption[]>(() => customers.map((c) => ({ value: c.id, label: c.companyName, description: c.contactName })), [customers]);
-  const vehicleTypeOptions = useMemo<SelectOption<VehicleType>[]>(() => VEHICLE_TYPES.map((v) => ({ value: v, label: VEHICLE_TYPE_LABEL[v] })), []);
+  const vehicleTypeOptions: SelectOption<VehicleType>[] = useVehicleTypeOptions(existing?.vehicleType);
   const driverOptions = useMemo<SelectOption[]>(
     () => [
       { value: NO_DRIVER, label: 'Şimdilik atama yapma', description: 'İş Bekliyor durumunda kalır' },
@@ -238,7 +238,7 @@ export default function JobFormScreen() {
   const vehicleOptions = useMemo<SelectOption[]>(
     () => [
       { value: NO_VEHICLE, label: 'Araç seçme', description: 'Araç daha sonra seçilebilir' },
-      ...driverVehicles.map((v) => ({ value: v.id, label: v.plate, description: `${[v.brand, v.model].filter(Boolean).join(' ')} · ${VEHICLE_TYPE_LABEL[v.type]}` })),
+      ...driverVehicles.map((v) => ({ value: v.id, label: v.plate, description: `${[v.brand, v.model].filter(Boolean).join(' ')} · ${vehicleTypeLabel(v.type)}` })),
     ],
     [driverVehicles],
   );

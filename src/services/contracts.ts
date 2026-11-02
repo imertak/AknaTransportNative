@@ -17,6 +17,7 @@ import type {
   User,
   Vehicle,
   VehicleInput,
+  VehicleTypeDef,
   VehicleLocation,
 } from '@/types';
 
@@ -70,6 +71,10 @@ export interface VehicleService {
   /** Araç başka bir şoförde aktifse çakışma hatası döner. */
   assign(id: string, driverId: string): Promise<Vehicle>;
   unassign(id: string): Promise<Vehicle>;
+  /** Araç tipleri (pasifler dahil; seçim listeleri yalnızca aktifleri gösterir). */
+  listTypes(): Promise<VehicleTypeDef[]>;
+  createType(name: string): Promise<VehicleTypeDef>;
+  updateType(id: string, input: { name: string; isActive: boolean }): Promise<VehicleTypeDef>;
 }
 
 export interface DashboardService {

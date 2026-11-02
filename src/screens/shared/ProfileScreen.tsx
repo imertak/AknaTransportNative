@@ -7,7 +7,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Avatar, Badge, Button, Card, InfoRow, Input, ListItem, NavHeader, Screen, ScrollContent, Section, Sheet, Text } from '@/components/ui';
 import { APP_CONFIG } from '@/constants/config';
 import { can } from '@/constants/permissions';
-import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
+import { vehicleTypeLabel } from '@/constants/vehicles';
 import { useAuth, useCurrentUser } from '@/contexts/AuthContext';
 import { useLocationTracking } from '@/contexts/LocationContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -80,7 +80,7 @@ export default function ProfileScreen() {
                   key={v.id}
                   icon={Truck}
                   label={v.plate}
-                  value={`${[v.brand, v.model].filter(Boolean).join(' ') || 'Model belirtilmedi'} · ${VEHICLE_TYPE_LABEL[v.type]}`}
+                  value={`${[v.brand, v.model].filter(Boolean).join(' ') || 'Model belirtilmedi'} · ${vehicleTypeLabel(v.type)}`}
                   last={i === vehicles.length - 1}
                 />
               ))

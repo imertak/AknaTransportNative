@@ -1,4 +1,4 @@
-import type { Customer, Invoice, TransportJob, User, Vehicle, VehicleLocation } from '@/types';
+import type { Customer, Invoice, TransportJob, User, Vehicle, VehicleLocation, VehicleTypeDef } from '@/types';
 import { createStore, useStore } from './createStore';
 
 export interface DataState {
@@ -6,6 +6,8 @@ export interface DataState {
   error?: string;
   users: User[];
   vehicles: Vehicle[];
+  /** Araç tipleri (pasifler dahil). */
+  vehicleTypes: VehicleTypeDef[];
   customers: Customer[];
   jobs: TransportJob[];
   invoices: Invoice[];
@@ -16,6 +18,7 @@ const initialState: DataState = {
   status: 'idle',
   users: [],
   vehicles: [],
+  vehicleTypes: [],
   customers: [],
   jobs: [],
   invoices: [],

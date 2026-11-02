@@ -135,9 +135,9 @@ export interface EArchiveGateway {
   discardDraft(invoiceId: string): Promise<Invoice>;
 }
 
-/** Faturanın müşteriye e-posta ile iletilmesi (backend tarafında yapılacak). */
+/** Faturanın (taslak dahil) iş dökümüyle birlikte müşteriye e-postayla gönderilmesi. Gönderim sunucuda kuyruğa alınır. */
 export interface InvoiceMailer {
-  send(invoiceId: string, to: string): Promise<{ status: 'queued' | 'sent' }>;
+  send(invoiceId: string): Promise<Invoice>;
 }
 
 /** Konum verisinin sunucuya iletildiği/okunduğu katman. */

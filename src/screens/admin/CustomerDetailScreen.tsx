@@ -67,7 +67,16 @@ export default function CustomerDetailScreen() {
           <Card padded={false} style={styles.listCard}>
             <InfoRow icon={UserRound} label="Yetkili kişi" value={customer.contactName} />
             <InfoRow icon={Phone} label="Telefon" value={customer.phone ? formatPhone(customer.phone) : '—'} onPress={customer.phone ? () => callPhone(customer.phone) : undefined} />
-            <InfoRow icon={Mail} label="E-posta" value={customer.email || '—'} onPress={customer.email ? () => sendEmail(customer.email) : undefined} last />
+            <InfoRow
+              icon={Mail}
+              label={customer.extraEmails.length ? 'E-posta (ana)' : 'E-posta'}
+              value={customer.email || '—'}
+              onPress={customer.email ? () => sendEmail(customer.email) : undefined}
+              last={!customer.extraEmails.length}
+            />
+            {customer.extraEmails.map((m, i) => (
+              <InfoRow key={m} icon={Mail} label="E-posta (CC)" value={m} onPress={() => sendEmail(m)} last={i === customer.extraEmails.length - 1} />
+            ))}
           </Card>
         </Section>
 

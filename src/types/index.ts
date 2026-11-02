@@ -65,7 +65,10 @@ export interface Customer {
   companyName: string;
   contactName: string;
   phone: string;
+  /** Ana e-posta (faturanın gönderildiği adres). */
   email: string;
+  /** Ek e-posta adresleri; fatura e-postası bunlara bilgi (CC) olarak gider. */
+  extraEmails: string[];
   taxOffice: string;
   taxNumber: string;
   billingAddress: string;
@@ -240,6 +243,8 @@ export interface Invoice {
   vatAmount: number;
   total: number;
   email: { to: string; status: InvoiceEmailStatus; sentAt?: ISODateTime };
+  /** "E-posta gönder" ile elle yapılan son gönderim (taslak faturalar dahil). */
+  manualEmail?: { to: string; status: InvoiceEmailStatus; sentAt?: ISODateTime; requestedAt: ISODateTime; error?: string };
   /** KDV tevkifatı (kod yoksa tevkifat yok). Oran KDV'nin yüzdesidir: 2/10 → 20. */
   withholdingCode?: string;
   withholdingName?: string;

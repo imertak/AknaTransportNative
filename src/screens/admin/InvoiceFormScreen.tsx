@@ -249,7 +249,9 @@ export default function InvoiceFormScreen() {
               iban={iban.trim() ? formatIban(iban) : "Firma IBAN'ı (sunucu ayarı)"}
             />
             <Text variant="bodySmall" tone="secondary">
-              {customer?.email ? `Entegrasyon sonrası fatura ${customer.email} adresine otomatik gönderilecek.` : 'Müşterinin kayıtlı e-posta adresi yok.'}
+              {customer?.email
+                ? `Fatura kesilince ${customer.email} adresine${customer.extraEmails.length ? ` (bilgi: ${customer.extraEmails.join(', ')})` : ''} otomatik gönderilecek.`
+                : 'Müşterinin kayıtlı e-posta adresi yok.'}
             </Text>
           </Section>
         ) : null}

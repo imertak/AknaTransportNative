@@ -54,6 +54,8 @@ export interface ApiCustomer {
   contactPerson: string | null;
   phoneNumber: string | null;
   email: string | null;
+  /** Tüm adresler, ilki ana adres. Eski sunucularda gelmez. */
+  emails?: string[];
   taxOffice: string | null;
   taxNumber: string | null;
   address: string | null;
@@ -187,6 +189,8 @@ export interface ApiInvoiceDetail extends Omit<ApiInvoiceListItem, 'firstJobId' 
   lastError: string | null;
   items: { jobId: string; jobNumber: string; jobDate: string; storeName: string; description: string; lineTotal: number }[];
   email: { recipientEmail: string; status: 'Pending' | 'Sent' | 'Failed'; sentAt: string | null } | null;
+  /** Elle ("E-posta gönder") yapılan son gönderim; taslak faturalar dahil. */
+  manualEmail?: { recipientEmail: string; status: 'Pending' | 'Sent' | 'Failed'; sentAt: string | null; lastError: string | null; createdAt: string } | null;
   withholdingName: string | null;
   withholdingRate: number;
   amountInWords: string;
@@ -273,6 +277,7 @@ export function customerFromApi(c: ApiCustomer): Customer {
     contactName: c.contactPerson ?? '',
     phone: c.phoneNumber ?? '',
     email: c.email ?? '',
+    extraEmails: (c.emails ?? []).filter((e) => e.toLowerCase() !== (c.email ?? '').toLowerCase()),
     taxOffice: c.taxOffice ?? '',
     taxNumber: c.taxNumber ?? '',
     billingAddress: c.address ?? '',
@@ -290,6 +295,8 @@ export function customerToApi(c: CustomerInput, isActive = true) {
     contactPerson: orNull(c.contactName),
     phoneNumber: orNull(c.phone),
     email: orNull(c.email),
+    // Ana adres önce; sunucu boşları ve tekrarları ayıklar.
+    emails: [c.email, ...c.extraEmails].map((e) => e.trim()).filter(Boolean),
     taxOffice: orNull(c.taxOffice),
     taxNumber: orNull(c.taxNumber),
     address: orNull(c.billingAddress),
@@ -505,6 +512,15 @@ export function invoiceFromApiDetail(i: ApiInvoiceDetail): Invoice {
     email: i.email
       ? { to: i.email.recipientEmail, status: EMAIL_STATUS[i.email.status], sentAt: i.email.sentAt ?? undefined }
       : { to: i.customerEmail ?? '', status: 'not_sent' },
+    manualEmail: i.manualEmail
+      ? {
+          to: i.manualEmail.recipientEmail,
+          status: EMAIL_STATUS[i.manualEmail.status],
+          sentAt: i.manualEmail.sentAt ?? undefined,
+          requestedAt: i.manualEmail.createdAt,
+          error: i.manualEmail.lastError ?? undefined,
+        }
+      : undefined,
     externalId: i.eArchiveInvoiceNumber ?? undefined,
     ettn: i.eArchiveReference ?? undefined,
     withholdingCode: i.withholdingCode ?? undefined,

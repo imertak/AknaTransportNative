@@ -1,12 +1,14 @@
-import { Download, FileSpreadsheet, Printer } from 'lucide-react-native';
+import { Eye, FileSpreadsheet, Printer } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { PdfReadySheet } from '@/components/PdfReadySheet';
 import { Button, Card, Chip, DateField, EmptyState, NavHeader, Screen, Section, SegmentedControl, SelectField, Text, type SelectOption } from '@/components/ui';
 import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useCustomers, useJobs } from '@/hooks/useData';
 import { reportService } from '@/services';
+import { type PdfFile } from '@/services/files';
 import { composeJobsReport } from '@/services/reportService';
 import { colors, radius, spacing } from '@/theme';
 import type { DateRange } from '@/types';
@@ -39,6 +41,8 @@ export default function ReportsScreen() {
   const [customerId, setCustomerId] = useState(ALL);
   const [scope, setScope] = useState<'completed' | 'all'>('completed');
   const exportAction = useAsyncAction();
+  /** Hazırlanan PDF: önce önizlenir, sonra paylaşılır. */
+  const [pdf, setPdf] = useState<PdfFile | null>(null);
   const printAction = useAsyncAction();
 
   const rangeError = range.from > range.to ? 'Bitiş tarihi başlangıçtan önce olamaz.' : undefined;
@@ -96,12 +100,12 @@ export default function ReportsScreen() {
 
           <View style={styles.row}>
             <Button
-              label="PDF indir"
-              icon={Download}
+              label="PDF önizle"
+              icon={Eye}
               style={{ flex: 1 }}
               disabled={!!rangeError || report.totalCount === 0}
               loading={exportAction.pending}
-              onPress={() => exportAction.run(async () => reportService.shareJobsReport(await fresh()), { error: 'PDF oluşturulamadı.' })}
+              onPress={() => exportAction.run(async () => setPdf(await reportService.jobsReportPdf(await fresh())), { error: 'PDF oluşturulamadı.' })}
             />
             <Button
               label="Yazdır"
@@ -150,6 +154,7 @@ export default function ReportsScreen() {
           </Section>
         </View>
       </ScrollView>
+      <PdfReadySheet pdf={pdf} onClose={() => setPdf(null)} />
     </Screen>
   );
 }

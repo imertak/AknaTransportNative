@@ -1,4 +1,5 @@
 import { File, Paths } from 'expo-file-system';
+import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
@@ -19,6 +20,30 @@ export async function savePdf(bytes: ArrayBuffer, fileName: string): Promise<str
   target.create();
   await target.write(new Uint8Array(bytes));
   return target.uri;
+}
+
+/** Hazırlanmış PDF: önizleme ve paylaşım aynı dosyayı kullanır. */
+export interface PdfFile {
+  uri: string;
+  title: string;
+}
+
+/**
+ * PDF'in kendisini sistemin önizleme ekranında açar (iOS/Android yazdırma önizlemesi; ek paket gerekmez).
+ * Web'de yeni sekmede açılır.
+ */
+export async function previewPdf(uri: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    globalThis.open?.(uri, '_blank');
+    return;
+  }
+  try {
+    await Print.printAsync({ uri });
+  } catch (e) {
+    // Kullanıcı önizlemeyi kapattığında bazı sürümler iptal hatası verir; bu bir hata değildir.
+    if (e instanceof Error && /cancel|iptal|did not complete/i.test(e.message)) return;
+    throw e;
+  }
 }
 
 /** PDF'i paylaşım menüsüyle açar; web'de yeni sekmede gösterir. */

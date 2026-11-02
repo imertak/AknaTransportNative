@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ban, ChevronRight, FileSpreadsheet, Mail, MessageSquareLock, Send, Share2, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
+import { Ban, ChevronRight, FileSpreadsheet, FileText, Mail, MessageSquareLock, Send, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -10,7 +10,8 @@ import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useCustomer, useInvoice, useJobs } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
 import { invoiceService, reportService } from '@/services';
-import { sharePdf } from '@/services/files';
+import { type PdfFile } from '@/services/files';
+import { PdfReadySheet } from '@/components/PdfReadySheet';
 import { invoiceActions } from '@/store';
 import { colors, spacing } from '@/theme';
 import type { InvoiceEmailStatus } from '@/types';
@@ -37,6 +38,8 @@ export default function InvoiceDetailScreen() {
   /** GİB portalı imza SMS'i: kod istendiğinde dolar. */
   const [challenge, setChallenge] = useState<{ operationId: string; maskedPhone?: string } | null>(null);
   const [smsCode, setSmsCode] = useState('');
+  /** Hazırlanan PDF: önce önizlenir, sonra paylaşılır. */
+  const [pdf, setPdf] = useState<PdfFile | null>(null);
 
   // Liste yanıtında e-posta/e-Arşiv ayrıntıları yoktur; detay açılınca fatura tazelenir.
   useEffect(() => {
@@ -77,13 +80,15 @@ export default function InvoiceDetailScreen() {
   /** Sunucunun ürettiği PDF indirilir; web gibi dosya kaydedilemeyen ortamlarda cihazda üretilir. */
   const shareInvoicePdf = async () => {
     const uri = await invoiceService.downloadPdf(invoice.id, 'invoice');
-    if (uri) await sharePdf(uri, invoice.invoiceNo);
-    else await reportService.shareInvoice(invoice, customer ?? null);
+    setPdf(uri ? { uri, title: invoice.invoiceNo } : await reportService.invoicePdf(invoice, customer ?? null));
   };
   const shareJobReportPdf = async () => {
     const uri = await invoiceService.downloadPdf(invoice.id, 'job-report');
-    if (uri) await sharePdf(uri, `${invoice.invoiceNo} iş dökümü`);
-    else await reportService.shareInvoiceJobReport(invoice, jobs.filter((j) => items.some((it) => it.jobId === j.id)));
+    setPdf(
+      uri
+        ? { uri, title: `${invoice.invoiceNo} iş dökümü` }
+        : await reportService.invoiceJobReportPdf(invoice, jobs.filter((j) => items.some((it) => it.jobId === j.id))),
+    );
   };
 
   const issue = async () => {
@@ -151,7 +156,7 @@ export default function InvoiceDetailScreen() {
         />
 
         <View style={styles.row}>
-          <Button label="Fatura PDF" icon={Share2} variant="secondary" style={{ flex: 1 }} loading={share.pending} onPress={() => share.run(shareInvoicePdf, { error: 'Fatura PDF indirilemedi.' })} />
+          <Button label="Fatura PDF" icon={FileText} variant="secondary" style={{ flex: 1 }} loading={share.pending} onPress={() => share.run(shareInvoicePdf, { error: 'Fatura PDF indirilemedi.' })} />
           <Button label="İş dökümü PDF" icon={FileSpreadsheet} variant="secondary" style={{ flex: 1 }} loading={jobReport.pending} onPress={() => jobReport.run(shareJobReportPdf, { error: 'İş dökümü PDF indirilemedi.' })} />
         </View>
 
@@ -248,6 +253,7 @@ export default function InvoiceDetailScreen() {
           />
         </View>
       </Sheet>
+      <PdfReadySheet pdf={pdf} onClose={() => setPdf(null)} />
     </Screen>
   );
 }

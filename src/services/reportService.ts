@@ -290,23 +290,32 @@ export const reportService = {
   jobsReportHtml,
   invoiceHtml,
 
-  async shareJobsReport(report: JobsReport) {
+  /** Tarih aralığı dökümünün PDF'ini üretir (önizleme ve paylaşım için). */
+  async jobsReportPdf(report: JobsReport): Promise<{ uri: string; title: string }> {
     const name = fileSafe(`AKNA_Is_Dokumu_${formatDate(report.range.from)}-${formatDate(report.range.to)}.pdf`);
-    const uri = await htmlToPdf(jobsReportHtml(report), A4_LANDSCAPE, name);
-    await share(uri, 'Nakliye işleri dökümü');
+    return { uri: await htmlToPdf(jobsReportHtml(report), A4_LANDSCAPE, name), title: 'Nakliye işleri dökümü' };
+  },
+
+  async shareJobsReport(report: JobsReport) {
+    const pdf = await reportService.jobsReportPdf(report);
+    await share(pdf.uri, pdf.title);
   },
 
   async printJobsReport(report: JobsReport) {
     await Print.printAsync({ html: jobsReportHtml(report), ...A4_LANDSCAPE, orientation: Print.Orientation.landscape });
   },
 
+  async invoicePdf(invoice: Invoice, customer: Customer | null): Promise<{ uri: string; title: string }> {
+    return { uri: await htmlToPdf(invoiceHtml(invoice, customer), A4_PORTRAIT, fileSafe(`${invoice.invoiceNo}.pdf`)), title: invoice.invoiceNo };
+  },
+
   async shareInvoice(invoice: Invoice, customer: Customer | null) {
-    const uri = await htmlToPdf(invoiceHtml(invoice, customer), A4_PORTRAIT, fileSafe(`${invoice.invoiceNo}.pdf`));
-    await share(uri, invoice.invoiceNo);
+    const pdf = await reportService.invoicePdf(invoice, customer);
+    await share(pdf.uri, pdf.title);
   },
 
   /** Faturadaki işlerin dökümü (sunucu PDF'i indirilemeyen ortamlarda cihazda üretilir). */
-  async shareInvoiceJobReport(invoice: Invoice, jobs: TransportJob[]) {
+  async invoiceJobReportPdf(invoice: Invoice, jobs: TransportJob[]): Promise<{ uri: string; title: string }> {
     const sorted = [...jobs].sort((a, b) => a.date.localeCompare(b.date) || a.jobNo.localeCompare(b.jobNo));
     const report: JobsReport = {
       range: { from: sorted[0]?.date ?? invoice.issueDate, to: sorted[sorted.length - 1]?.date ?? invoice.issueDate },
@@ -316,7 +325,7 @@ export const reportService = {
       generatedAt: new Date().toISOString(),
     };
     const uri = await htmlToPdf(jobsReportHtml(report, `${invoice.invoiceNo} · İŞ DÖKÜMÜ`), A4_LANDSCAPE, fileSafe(`${invoice.invoiceNo}_Is_Dokumu.pdf`));
-    await share(uri, `${invoice.invoiceNo} iş dökümü`);
+    return { uri, title: `${invoice.invoiceNo} iş dökümü` };
   },
 
   async printInvoice(invoice: Invoice, customer: Customer | null) {

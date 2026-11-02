@@ -5,7 +5,7 @@ import { FlatList, StyleSheet, View } from 'react-native';
 
 import { Badge, Button, Card, EmptyState, IconButton, NavHeader, Screen, SearchBar, SegmentedControl, Text } from '@/components/ui';
 import { can } from '@/constants/permissions';
-import { VEHICLE_TYPE_LABEL } from '@/constants/vehicles';
+import { vehicleTypeLabel } from '@/constants/vehicles';
 import { useCurrentUser } from '@/contexts/AuthContext';
 import { useRefresh } from '@/hooks/useRefresh';
 import { useVehicles } from '@/hooks/useData';
@@ -98,7 +98,7 @@ function VehicleCard({ vehicle: v, onPress }: { vehicle: Vehicle; onPress: (v: V
       <View style={{ flex: 1, gap: 2 }}>
         <Text variant="subheading">{v.plate}</Text>
         <Text variant="bodySmall" tone="secondary" numberOfLines={1}>
-          {[v.brand, v.model].filter(Boolean).join(' ') || 'Model belirtilmedi'} · {VEHICLE_TYPE_LABEL[v.type]}
+          {[v.brand, v.model].filter(Boolean).join(' ') || 'Model belirtilmedi'} · {vehicleTypeLabel(v.type)}
         </Text>
         <Text variant="bodySmall" tone={v.driverName ? 'default' : 'tertiary'}>
           {v.driverName ? `Şoför: ${v.driverName}` : 'Şoföre atanmamış'}

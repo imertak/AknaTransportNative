@@ -5,7 +5,7 @@ import { StyleSheet, Switch, View } from 'react-native';
 
 import { BottomBar, Button, Card, EmptyState, InfoRow, Input, NavHeader, OptionSheet, Screen, ScrollContent, Section, SelectField, Text, type SelectOption } from '@/components/ui';
 import { can } from '@/constants/permissions';
-import { VEHICLE_TYPE_LABEL, VEHICLE_TYPES } from '@/constants/vehicles';
+import { useVehicleTypeOptions, vehicleTypeLabel } from '@/constants/vehicles';
 import { useCurrentUser } from '@/contexts/AuthContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useAssignableUsers, useVehicle } from '@/hooks/useData';
@@ -64,7 +64,7 @@ export default function VehicleFormScreen() {
       return next;
     });
 
-  const typeOptions = useMemo<SelectOption<VehicleType>[]>(() => VEHICLE_TYPES.map((t) => ({ value: t, label: VEHICLE_TYPE_LABEL[t] })), []);
+  const typeOptions: SelectOption<VehicleType>[] = useVehicleTypeOptions(existing?.type);
   const driverOptions = useMemo<SelectOption[]>(
     () => assignable.map((u) => ({ value: u.id, label: u.id === user.id ? `${u.fullName} (Ben)` : u.fullName, description: u.role === 'admin' ? 'Yönetici' : 'Şoför' })),
     [assignable, user.id],

@@ -31,6 +31,7 @@ import {
   userFromApi,
   userToApi,
   vehicleFromApi,
+  vehicleTypeDefFromApi,
   vehicleToApi,
   type ApiActiveJobLocation,
   type ApiAuthResponse,
@@ -44,6 +45,7 @@ import {
   type ApiUser,
   type ApiUserCredential,
   type ApiVehicle,
+  type ApiVehicleType,
 } from './mappers';
 
 /**
@@ -148,6 +150,10 @@ export const apiVehicleService: VehicleService = {
   update: async (id, input) => vehicleFromApi(await http<ApiVehicle>(`/api/vehicles/${id}`, { method: 'PUT', json: vehicleToApi(input) })),
   assign: async (id, driverId) => vehicleFromApi(await http<ApiVehicle>(`/api/vehicles/${id}/assign`, { method: 'POST', json: { driverId } })),
   unassign: async (id) => vehicleFromApi(await http<ApiVehicle>(`/api/vehicles/${id}/unassign`, { method: 'POST', json: {} })),
+  listTypes: async () => (await http<ApiVehicleType[]>('/api/vehicle-types', { query: { includeInactive: true } })).map(vehicleTypeDefFromApi),
+  createType: async (name) => vehicleTypeDefFromApi(await http<ApiVehicleType>('/api/vehicle-types', { method: 'POST', json: { name: name.trim() } })),
+  updateType: async (id, input) =>
+    vehicleTypeDefFromApi(await http<ApiVehicleType>(`/api/vehicle-types/${id}`, { method: 'PUT', json: { name: input.name.trim(), isActive: input.isActive } })),
 };
 
 export const apiDashboardService: DashboardService = {

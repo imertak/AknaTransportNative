@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { BottomBar, Button, Card, Chip, EmptyState, Input, NavHeader, OptionSheet, Screen, ScrollContent, Section, Sheet, Text, type SelectOption } from '@/components/ui';
 import { can } from '@/constants/permissions';
-import { VEHICLE_TYPE_LABEL, VEHICLE_TYPES } from '@/constants/vehicles';
+import { useVehicleTypeOptions, vehicleTypeLabel } from '@/constants/vehicles';
 import { useCurrentUser } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
@@ -61,6 +61,7 @@ export default function DriverFormScreen() {
   const toast = useToast();
   const existing = useMemo(() => users.find((u) => u.id === id), [users, id]);
   const isEdit = !!id;
+  const typeOptions = useVehicleTypeOptions();
   const save = useAsyncAction();
   const vehicleAction = useAsyncAction();
   const resetAction = useAsyncAction();
@@ -89,7 +90,7 @@ export default function DriverFormScreen() {
     const chosen = new Set(pending.flatMap((p) => (p.kind === 'existing' ? [p.vehicle.id] : [])));
     return vehicles
       .filter((v) => v.isActive && !v.driverId && !chosen.has(v.id))
-      .map((v) => ({ value: v.id, label: v.plate, description: [VEHICLE_TYPE_LABEL[v.type], v.brand, v.model].filter(Boolean).join(' · ') }));
+      .map((v) => ({ value: v.id, label: v.plate, description: [vehicleTypeLabel(v.type), v.brand, v.model].filter(Boolean).join(' · ') }));
   }, [vehicles, pending]);
 
   if (!can(user, 'drivers.manage')) {
@@ -278,7 +279,7 @@ export default function DriverFormScreen() {
               </Text>
             ) : null}
             {assigned.map((v) => (
-              <VehicleRow key={v.id} plate={v.plate} detail={[VEHICLE_TYPE_LABEL[v.type], v.brand, v.model].filter(Boolean).join(' · ')} note="Atanmış" onRemove={() => unassign(v)} />
+              <VehicleRow key={v.id} plate={v.plate} detail={[vehicleTypeLabel(v.type), v.brand, v.model].filter(Boolean).join(' · ')} note="Atanmış" onRemove={() => unassign(v)} />
             ))}
             {pending.map((p) => (
               <VehicleRow
@@ -286,8 +287,8 @@ export default function DriverFormScreen() {
                 plate={p.kind === 'existing' ? p.vehicle.plate : p.plate}
                 detail={
                   p.kind === 'existing'
-                    ? [VEHICLE_TYPE_LABEL[p.vehicle.type], p.vehicle.brand, p.vehicle.model].filter(Boolean).join(' · ')
-                    : [VEHICLE_TYPE_LABEL[p.type], p.brand, p.model].filter(Boolean).join(' · ')
+                    ? [vehicleTypeLabel(p.vehicle.type), p.vehicle.brand, p.vehicle.model].filter(Boolean).join(' · ')
+                    : [vehicleTypeLabel(p.type), p.brand, p.model].filter(Boolean).join(' · ')
                 }
                 note={p.kind === 'new' ? 'Yeni araç · kaydedince eklenir' : 'Kaydedince atanır'}
                 onRemove={() => setPending((list) => list.filter((x) => x.key !== p.key))}
@@ -335,8 +336,8 @@ export default function DriverFormScreen() {
           <View style={{ gap: spacing.xs + 2 }}>
             <Text variant="label" tone="secondary">Araç tipi *</Text>
             <View style={styles.chips} accessibilityRole="radiogroup">
-              {VEHICLE_TYPES.map((t) => (
-                <Chip key={t} label={VEHICLE_TYPE_LABEL[t]} active={newVehicle.type === t} onPress={() => setNewVehicle((s) => ({ ...s, type: t }))} />
+              {typeOptions.map(({ value: t, label }) => (
+                <Chip key={t} label={label} active={newVehicle.type === t} onPress={() => setNewVehicle((s) => ({ ...s, type: t }))} />
               ))}
             </View>
             {newErrors.type ? <Text variant="bodySmall" tone="danger">{newErrors.type}</Text> : null}

@@ -3,7 +3,7 @@ import { ClipboardList, LayoutGrid, Map, Plus, ReceiptText } from 'lucide-react-
 import { Pressable, StyleSheet } from 'react-native';
 
 import { routes } from '@/navigation/routes';
-import { tabIcon, tabScreenOptions } from '@/navigation/tabOptions';
+import { tabIcon, useTabScreenOptions } from '@/navigation/tabOptions';
 import { colors } from '@/theme';
 
 /** Alt menünün ortasındaki siyah yuvarlak "yeni iş" butonu. */
@@ -23,7 +23,7 @@ function CreateJobButton() {
 /** Müşteriler ve Profilim alt menüde yer almaz: müşterilere panelden, profile sağ üstten ulaşılır. */
 export default function AdminTabs() {
   return (
-    <Tabs screenOptions={tabScreenOptions}>
+    <Tabs screenOptions={useTabScreenOptions()}>
       <Tabs.Screen name="dashboard" options={{ title: 'Panel', tabBarIcon: tabIcon(LayoutGrid) }} />
       <Tabs.Screen name="jobs" options={{ title: 'İşler', tabBarIcon: tabIcon(ClipboardList) }} />
       <Tabs.Screen

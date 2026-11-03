@@ -12,6 +12,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LocationProvider } from '@/contexts/LocationContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { RealtimeProvider } from '@/contexts/RealtimeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import SplashScreen from '@/screens/auth/SplashScreen';
 import { RESERVES_NAV_BAR } from '@/hooks/useBottomInset';
@@ -74,13 +75,15 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <ToastProvider>
         <AuthProvider>
-          <LocationProvider>
-            <NotificationProvider>
-              <NavBarArea>
-                <RootNavigator />
-              </NavBarArea>
-            </NotificationProvider>
-          </LocationProvider>
+          <RealtimeProvider>
+            <LocationProvider>
+              <NotificationProvider>
+                <NavBarArea>
+                  <RootNavigator />
+                </NavBarArea>
+              </NotificationProvider>
+            </LocationProvider>
+          </RealtimeProvider>
         </AuthProvider>
       </ToastProvider>
     </SafeAreaProvider>

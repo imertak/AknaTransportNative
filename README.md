@@ -6,7 +6,7 @@ Nakliye operasyonlarını yönetmek için React Native (Expo) mobil uygulaması.
 
 ```bash
 npm install
-npx expo start        # Expo Go veya development build ile açın
+npx expo start        # development build ile açın (MapLibre yerel modül içerir, Expo Go'da harita çalışmaz)
 npx tsc --noEmit      # tip kontrolü
 npm run lint          # ESLint (eslint-config-expo)
 ```
@@ -16,11 +16,15 @@ npm run lint          # ESLint (eslint-config-expo)
 | Değişken | Ne için | Zorunlu mu |
 |---|---|---|
 | `EXPO_PUBLIC_API_BASE_URL` | API adresi, örn. `http://192.168.1.34:5080`. Telefonda `localhost` telefonun kendisidir; bilgisayarın veya sunucunun IP'sini yazın. | Evet |
-| `GOOGLE_MAPS_ANDROID_API_KEY` | Android'de harita (react-native-maps, Google sağlayıcı). `app.config.ts` derleme sırasında okur; koda yazılmaz. | Android haritası için evet |
+| `EXPO_PUBLIC_MAP_TILES_URL` | Vektör karo TileJSON adresi (OpenMapTiles şeması). Varsayılan: OpenFreeMap (`https://tiles.openfreemap.org/planet`, anahtarsız, ücretsiz). | Hayır |
+| `EXPO_PUBLIC_MAP_GLYPHS_URL` | Harita yazı glifleri (`{fontstack}/{range}`). Varsayılan: OpenFreeMap. | Hayır |
+| `EXPO_PUBLIC_ROUTING_URL` | OSRM uyumlu rota servisi. Varsayılan genel OSRM demo sunucusu (düşük hacim); üretimde kendi OSRM'iniz önerilir. `off` verilirse duraklar düz kesikli çizgiyle birleştirilir. | Hayır |
+| `EXPO_PUBLIC_MAP_STALE_AFTER_MS` | Bu süreden eski konum haritada "güncel değil" olarak gösterilir (varsayılan 300000 = 5 dk). | Hayır |
+| `EXPO_PUBLIC_TRACKING_DISTANCE_M`, `EXPO_PUBLIC_TRACKING_INTERVAL_MS`, `EXPO_PUBLIC_TRACKING_PUBLISH_MS` | Şoför konum takibi: minimum hareket (30 m), minimum aralık (15 sn), toplu gönderim aralığı (30 sn). | Hayır |
 | `EAS_PROJECT_ID` | expo.dev'deki proje kimliği. Expo push token'ı almak için gerekir (`eas init` app.json'a yazdıysa gerekmez). | Telefon bildirimi için evet |
 | `GOOGLE_SERVICES_JSON` | Android push (FCM) için `google-services.json` dosyasının yolu. EAS'te "file" tipinde ortam değişkeni olarak verilebilir. FCM anahtarı Expo panelinde (Credentials) tanımlanmalıdır. | Android bildirimi için evet |
 
-Anahtarı `.env.local` dosyasına veya EAS Secrets'a koyun. Anahtar yoksa Android'de "Haritada kontrol et" penceresi harita yerine "Harita sağlayıcısı yapılandırılmamış" uyarısı gösterir; sahte harita veya koordinat gösterilmez. iOS Apple Haritalar'ı kullanır ve anahtar istemez. Web önizlemede harita ve adres arama yoktur.
+Değerleri `.env.local` dosyasına veya EAS ortam değişkenlerine koyun. Harita için API anahtarı gerekmez (Google Maps kullanılmıyor). Web önizlemede harita ve adres arama yoktur.
 
 ### API'ye bağlı çalıştırma (yerel)
 
@@ -118,9 +122,26 @@ src/
 
 Yönetici iş detayındaki **Canlı konumu paylaş** butonuyla müşteriye takip bağlantısı gönderir (WhatsApp, SMS vb.). Bağlantı API'nin `/takip/#<token>` sayfasını açar; araç konumu haritada 15 saniyede bir güncellenir. Bağlantı sunucunun adresiyle üretildiği için müşterinin erişebildiği bir adres (alan adı) kullanılmalıdır; yerel ağ IP'si yalnızca aynı ağda çalışır. Farklı bir adres için API'de `App__TrackingUrl` verilebilir.
 
+## Harita ve canlı araç takibi
+
+**Altyapı.** Harita `@maplibre/maplibre-react-native` (MapLibre Native) ile çizilir, veri OpenStreetMap'tir. Varsayılan karo sağlayıcısı OpenFreeMap'tir (anahtarsız). Karo sağlayıcısı veya rota servisi değişse de tema aynı kalır.
+
+**Tema.** Harita görünümü tek yerden yönetilir: `src/theme/map/tokens.ts` (renk ve yazı belirteçleri) ve `src/theme/map/buildMapStyle.ts` (bu belirteçlerden MapLibre Style JSON üretir). Yeni tema için yeni bir `MapThemeTokens` nesnesi yazıp `src/theme/map/index.ts` içindeki `activeMapTheme`'i değiştirmek yeterlidir. AKNA teması: açık gri zemin, beyaz/gri yollar (otoyol > ana yol > tali > ara sokak), yakın zoom'da çok açık gri binalar, siyah yazılar, POI simgesi yok, kırmızı yalnızca seçim ve uyarıda.
+
+**Bileşenler** (`src/components/map`): `MapCanvas` (harita + kamera; araçlar, sıralı duraklar, rota), `VehicleMarker` (yöne göre dönen ok, plaka etiketi, eski konumda gri + kırmızı nokta, yeni konuma yumuşak kayma), `StopMarker` (yükleme: siyah daire, teslimat: beyaz kare, güzergâh sıra numarası), `RouteLayer` (OSRM yol geometrisi; yoksa kesikli düz çizgi). Kamera konum güncellemelerinde oynamaz; yalnızca seçim değişince sığdırır veya canlı takipte aracı ortalar. Harita kuzey yukarı sabittir.
+
+**Filo ekranı** (yönetici › Harita): tüm aktif araçlar; araca dokununca plaka, şoför (arama), iş, son konum zamanı, hız ve durum kartı açılır ve canlı takip başlar (harita aracı izler, elle kaydırınca takip bırakılır). "Tüm filo" ile genel görünüme dönülür. Seçili aracın işinin durakları sıralı ve rotasıyla gösterilir. `/admin/map?jobId=<id>` ile belirli bir işin aracı seçili açılır.
+
+**Gerçek zamanlı akış.**
+1. Şoför cihazı GPS konumunu alır (arka plan görevi, Android'de kalıcı bildirimli servis, iOS'ta "Her Zaman" izni).
+2. Konumlar AsyncStorage kuyruğuna yazılır ve `POST /api/locations/me` ile sırayla gönderilir; ağ yoksa kuyrukta bekler (en fazla ~1000 nokta), bağlantı gelince eskiden yeniye gönderilir. Sunucu son konumdan eski noktayı son konum yapmaz.
+3. API konumu doğrular (işe atanmış kişi, aktif iş, doğruluk/zaman sınırları) ve SignalR `/hubs/tracking` üzerinden yalnızca yöneticilere ve yetkili izleyicilere `locationUpdated` yayınlar.
+4. Uygulama ön plandayken `RealtimeProvider` hub'a JWT ile bağlanır, gelen konumu depoda yalnızca ilgili iş için günceller; işaretçi yeni noktaya kayar. Kopunca artan aralıklarla yeniden bağlanır ve kaçan konumları tek REST isteğiyle tamamlar. Arka planda bağlantı kapatılır (pil).
+5. İş durumu, ataması değiştiğinde, iş iptal edildiğinde veya silindiğinde sunucu `jobChanged` gönderir; uygulama işi yeniden okur. Şoförün aktif işi kalmazsa konum takibi durur.
+
 ## Bilinen notlar
 
-- Android haritası için `GOOGLE_MAPS_ANDROID_API_KEY` gerekir (yukarıdaki tablo).
+- Harita MapLibre yerel modülü kullanır: Expo Go'da çalışmaz; `npx expo run:android|ios` veya EAS development/preview build gerekir. `react-native-maps` kaldırıldığı için mevcut kurulumlar yeniden derlenmelidir.
 - Web önizlemesinde harita yerine konum listesi gösterilir; uygulamanın hedefi iOS ve Android'dir.
 - Adres geçmişi müşterinin önceki işlerinden gelir; "Geçmiş adresler" ile seçilir.
 - Fatura ve iş dökümü PDF'leri sunucudan indirilir; tarih aralığı dökümü cihazda üretilir.

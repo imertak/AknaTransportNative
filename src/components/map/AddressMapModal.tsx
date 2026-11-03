@@ -1,13 +1,14 @@
-import { LocateFixed, MapPinOff, X } from 'lucide-react-native';
+import { Camera, Map, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
+import { LocateFixed, MapPin, MapPinOff, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT, type MapPressEvent, type MarkerDragStartEndEvent } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Text } from '@/components/ui';
 import { errorMessage } from '@/services/errors';
 import { geocodeAddress, mapAvailability } from '@/services/geocoding';
 import { colors, radius, spacing } from '@/theme';
+import { mapStyle } from '@/theme/map';
 import type { GeoPoint } from '@/types';
 import { ISTANBUL_CENTER } from '@/utils/geo';
 import type { AddressMapModalProps } from './AddressMapModal.types';
@@ -16,7 +17,7 @@ type Phase = { kind: 'searching' } | { kind: 'found' } | { kind: 'not_found' } |
 
 /**
  * Adresi haritada kontrol etme: adres aranır, bulunan konuma pin konur, kullanıcı pini
- * sürükleyerek veya haritaya dokunarak düzeltir ve onaylar. Adres bulunamazsa açık bir
+ * haritaya dokunarak düzeltir ve onaylar. Adres bulunamazsa açık bir
  * hata gösterilir; pin yalnızca kullanıcı haritada bir nokta seçerse oluşur.
  */
 export function AddressMapModal(props: AddressMapModalProps) {
@@ -32,7 +33,7 @@ export function AddressMapModal(props: AddressMapModalProps) {
 function MapPicker({ address, initialPoint, onClose, onConfirm }: AddressMapModalProps) {
   const insets = useSafeAreaInsets();
   const availability = mapAvailability();
-  const mapRef = useRef<MapView>(null);
+  const camera = useRef<CameraRef>(null);
   const [pin, setPin] = useState<GeoPoint | null>(initialPoint ?? null);
   const [phase, setPhase] = useState<Phase>(initialPoint || !availability.available ? { kind: 'found' } : { kind: 'searching' });
 
@@ -40,7 +41,7 @@ function MapPicker({ address, initialPoint, onClose, onConfirm }: AddressMapModa
     if (found) {
       setPin(found);
       setPhase({ kind: 'found' });
-      mapRef.current?.animateToRegion({ ...found, latitudeDelta: 0.01, longitudeDelta: 0.01 }, 350);
+      camera.current?.flyTo({ center: [found.longitude, found.latitude], zoom: 16, duration: 600 });
     } else {
       setPin(null);
       setPhase({ kind: 'not_found' });
@@ -104,26 +105,27 @@ function MapPicker({ address, initialPoint, onClose, onConfirm }: AddressMapModa
       ) : (
         <>
           <View style={styles.mapWrap}>
-            <MapView
-              ref={mapRef}
+            <Map
               style={StyleSheet.absoluteFill}
-              provider={PROVIDER_DEFAULT}
-              initialRegion={{ ...center, latitudeDelta: pin ? 0.01 : 0.35, longitudeDelta: pin ? 0.01 : 0.35 }}
-              onPress={(e: MapPressEvent) => place(e.nativeEvent.coordinate)}
-              showsPointsOfInterests={false}
-              toolbarEnabled={false}
-              userInterfaceStyle="light"
-            >
+              mapStyle={mapStyle}
+              logo={false}
+              compass={false}
+              touchRotate={false}
+              touchPitch={false}
+              attributionPosition={{ bottom: 8, left: 8 }}
+              onPress={(e) => {
+                const [longitude, latitude] = e.nativeEvent.lngLat;
+                place({ latitude, longitude });
+              }}>
+              <Camera ref={camera} initialViewState={{ center: [center.longitude, center.latitude], zoom: pin ? 16 : 10 }} />
               {pin ? (
-                <Marker
-                  coordinate={pin}
-                  draggable
-                  onDragEnd={(e: MarkerDragStartEndEvent) => place(e.nativeEvent.coordinate)}
-                  pinColor={colors.ink}
-                  title={address}
-                />
+                <Marker id="address-pin" lngLat={[pin.longitude, pin.latitude]} anchor="bottom">
+                  <View accessibilityLabel={address}>
+                    <MapPin size={36} color={colors.surface} fill={colors.ink} strokeWidth={1.5} />
+                  </View>
+                </Marker>
               ) : null}
-            </MapView>
+            </Map>
             {phase.kind === 'searching' ? (
               <View style={styles.searching}>
                 <ActivityIndicator color={colors.text} />
@@ -153,7 +155,7 @@ function MapPicker({ address, initialPoint, onClose, onConfirm }: AddressMapModa
               </View>
             ) : pin ? (
               <Text variant="bodySmall" tone="secondary">
-                Pini sürükleyerek veya haritaya dokunarak konumu düzeltebilirsiniz. {pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}
+                Haritada doğru noktaya dokunarak pini taşıyabilirsiniz. {pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}
               </Text>
             ) : null}
             <View style={styles.row}>

@@ -62,9 +62,6 @@
     },
     "backgroundColor": "#000000",
     "extra": {
-      "maps": {
-        "androidConfigured": false
-      },
       "router": {
         "asyncRoutes": {
           "web": true

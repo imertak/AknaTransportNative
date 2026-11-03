@@ -1,8 +1,9 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { memo } from 'react';
-import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, hitSlop, radius } from '@/theme';
+import { ScalePressable } from './ScalePressable';
 
 interface Props {
   icon: LucideIcon;
@@ -16,12 +17,12 @@ interface Props {
 export const IconButton = memo(function IconButton({ icon: Icon, onPress, label, tone = 'light', size = 40, style }: Props) {
   const dark = tone === 'dark';
   return (
-    <Pressable
+    <ScalePressable
       onPress={onPress}
       hitSlop={hitSlop}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [
+      style={(pressed) => [
         styles.base,
         { width: size, height: size },
         tone === 'light' && styles.light,
@@ -30,7 +31,7 @@ export const IconButton = memo(function IconButton({ icon: Icon, onPress, label,
         style,
       ]}>
       <Icon size={20} color={dark ? colors.textInverse : colors.text} strokeWidth={2} />
-    </Pressable>
+    </ScalePressable>
   );
 });
 

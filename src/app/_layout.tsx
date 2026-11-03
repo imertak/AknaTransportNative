@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -24,6 +25,8 @@ ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
  */
 function RootNavigator() {
   const { status, viewMode } = useAuth();
+  // Sistemde "hareketi azalt" açıksa ekran geçişleri kaydırma yerine yumuşak geçişle yapılır.
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     // Yerel splash, marka splash ekranı çizildikten hemen sonra kapanır.
@@ -34,7 +37,7 @@ function RootNavigator() {
 
   const signedIn = status === 'signedIn';
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: 'slide_from_right' }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: reduced ? 'fade' : 'slide_from_right', animationMatchesGesture: true }}>
       <Stack.Screen name="index" options={{ animation: 'none' }} />
       <Stack.Protected guard={status === 'signedOut'}>
         <Stack.Screen name="login" />

@@ -4,6 +4,7 @@ import { memo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/theme';
+import { ScalePressable } from './ScalePressable';
 import { Text } from './Text';
 
 /** Etiket–değer satırı (detay ekranları). */
@@ -29,12 +30,13 @@ export const InfoRow = memo(function InfoRow({ label, value, icon: Icon, onPress
 /** Dashboard ve özet kartlarındaki sayı kutusu. */
 export const StatTile = memo(function StatTile({ label, value, hint, onPress, emphasis }: { label: string; value: string | number; hint?: string; onPress?: () => void; emphasis?: boolean }) {
   return (
-    <Pressable
+    <ScalePressable
       onPress={onPress}
       disabled={!onPress}
+      pressedScale={0.98}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`${label}: ${value}`}
-      style={({ pressed }) => [styles.tile, emphasis && styles.tileEmphasis, pressed && { opacity: 0.85 }]}>
+      style={(pressed) => [styles.tile, emphasis && styles.tileEmphasis, pressed && { opacity: 0.85 }]}>
       <Text variant="bodySmall" tone={emphasis ? 'inverseMuted' : 'secondary'} numberOfLines={1}>
         {label}
       </Text>
@@ -42,7 +44,7 @@ export const StatTile = memo(function StatTile({ label, value, hint, onPress, em
         {value}
       </Text>
       {hint ? <Text variant="bodySmall" tone={emphasis ? 'inverseMuted' : 'tertiary'} numberOfLines={1}>{hint}</Text> : null}
-    </Pressable>
+    </ScalePressable>
   );
 });
 

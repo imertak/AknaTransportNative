@@ -1,8 +1,9 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { memo } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, radius, spacing, typography } from '@/theme';
+import { ScalePressable } from './ScalePressable';
 import { Text } from './Text';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'inverse';
@@ -54,14 +55,15 @@ export const Button = memo(function Button({
   const inactive = disabled || loading;
   const iconEl = Icon ? <Icon size={s.icon} color={v.fg} strokeWidth={2} /> : null;
   return (
-    <Pressable
+    <ScalePressable
       onPress={onPress}
       disabled={inactive}
+      hitSlop={s.h < 44 ? { top: (44 - s.h) / 2, bottom: (44 - s.h) / 2 } : undefined}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
-      style={({ pressed }) => [
+      style={(pressed) => [
         styles.base,
         { height: s.h, paddingHorizontal: s.px, backgroundColor: pressed ? v.pressed : v.bg, borderColor: v.border },
         fullWidth && styles.full,
@@ -79,7 +81,7 @@ export const Button = memo(function Button({
           {iconPosition === 'right' && iconEl}
         </View>
       )}
-    </Pressable>
+    </ScalePressable>
   );
 });
 

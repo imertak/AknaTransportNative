@@ -1,6 +1,8 @@
 import { Tabs, router } from 'expo-router';
 import { ClipboardList, LayoutGrid, Map, Plus, ReceiptText } from 'lucide-react-native';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+
+import { ScalePressable } from '@/components/ui';
 
 import { routes } from '@/navigation/routes';
 import { tabIcon, useTabScreenOptions } from '@/navigation/tabOptions';
@@ -9,14 +11,15 @@ import { colors } from '@/theme';
 /** Alt menünün ortasındaki siyah yuvarlak "yeni iş" butonu. */
 function CreateJobButton() {
   return (
-    <Pressable
+    <ScalePressable
       onPress={() => router.push(routes.newJob())}
-      style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+      pressedScale={0.94}
+      style={styles.fab}
       accessibilityRole="button"
       accessibilityLabel="Yeni iş oluştur"
     >
       <Plus size={28} color={colors.textInverse} strokeWidth={2.5} />
-    </Pressable>
+    </ScalePressable>
   );
 }
 
@@ -57,5 +60,4 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  fabPressed: { opacity: 0.8, transform: [{ scale: 0.95 }] },
 });

@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { useReducedMotion } from 'react-native-reanimated';
+import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-/** Güçlü ease-out: basma anında tepki hemen görünür. */
+/**
+ * Güçlü ease-out: basma anında tepki hemen görünür. Yerel tarafta eğri metin olarak
+ * ('cubic-bezier(...)') kabul edilmez, `cubicBezier()` ile verilmelidir.
+ */
 const PRESS_TRANSITION = {
   transitionProperty: 'transform',
   transitionDuration: 120,
-  transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)',
+  transitionTimingFunction: cubicBezier(0.23, 1, 0.32, 1),
 } as const;
 
 export interface ScalePressableProps extends Omit<PressableProps, 'style'> {

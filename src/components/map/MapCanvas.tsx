@@ -1,9 +1,11 @@
-import { Flag, Truck } from 'lucide-react-native';
+import { Flag, MapPinOff, Truck } from 'lucide-react-native';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 
-import { colors } from '@/theme';
+import { Text } from '@/components/ui';
+import { mapAvailability } from '@/services/geocoding';
+import { colors, spacing } from '@/theme';
 import { regionFor } from '@/utils/geo';
 import type { MapCanvasProps, MapMarkerData } from './types';
 
@@ -25,7 +27,29 @@ const PinView = memo(function PinView({ kind }: { kind: MapMarkerData['kind'] })
   return <View style={styles.pickup} />;
 });
 
-export const MapCanvas = memo(function MapCanvas({ markers, focusId, showsUserLocation, onMarkerPress, bottomInset = 0 }: MapCanvasProps) {
+/**
+ * Android'de Google Maps anahtarı olmadan MapView açılırsa uygulama yerel olarak çöker. Sağlayıcı
+ * yapılandırılmamışsa harita yerine açıklama gösterilir (sahte harita yok).
+ */
+export const MapCanvas = memo(function MapCanvas(props: MapCanvasProps) {
+  const availability = mapAvailability();
+  if (!availability.available) {
+    return (
+      <View style={styles.unavailable}>
+        <MapPinOff size={28} color={colors.textTertiary} />
+        <Text variant="subheading" align="center">
+          Harita kullanılamıyor
+        </Text>
+        <Text variant="bodySmall" tone="secondary" align="center">
+          {availability.reason}
+        </Text>
+      </View>
+    );
+  }
+  return <NativeMap {...props} />;
+});
+
+const NativeMap = memo(function NativeMap({ markers, focusId, showsUserLocation, onMarkerPress, bottomInset = 0 }: MapCanvasProps) {
   const ref = useRef<MapView>(null);
   // Özel marker görünümleri ilk çizimden sonra sabitlenir (Android'de gereksiz yeniden çizimi önler)
   const [tracks, setTracks] = useState(true);
@@ -83,6 +107,7 @@ export const MapCanvas = memo(function MapCanvas({ markers, focusId, showsUserLo
 });
 
 const styles = StyleSheet.create({
+  unavailable: { ...StyleSheet.absoluteFill, backgroundColor: colors.surfaceSunken, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.xl, paddingBottom: 200 },
   vehicle: {
     width: 34,
     height: 34,

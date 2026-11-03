@@ -107,6 +107,57 @@ export default function DashboardScreen() {
 
   return (
     <Screen>
+      {/* Selamlama ve aylık gelir bölümü sabit kalır; altındaki içerik kayar. */}
+      <PageHeader
+        overline={formatDateLong(todayISO())}
+        title={`Merhaba, ${firstName}`}
+        right={
+          <View style={styles.headerActions}>
+            <NotificationBell mode="admin" />
+            <IconButton
+              icon={UserRound}
+              label="Profilim"
+              tone="dark"
+              onPress={() => router.push(routes.profile("admin"))}
+            />
+          </View>
+        }
+      >
+        <View style={styles.revenue}>
+          <View style={styles.periodRow}>
+            <Pressable onPress={() => shiftMonth(-1)} hitSlop={hitSlop} accessibilityRole="button" accessibilityLabel="Önceki ay">
+              <ChevronLeft size={18} color={colors.textInverseMuted} />
+            </Pressable>
+            <Text variant="bodySmall" tone="inverseMuted">
+              {MONTH_NAMES[period.month - 1]} {period.year} nakliye geliri
+            </Text>
+            <Pressable
+              onPress={() => shiftMonth(1)}
+              disabled={isCurrentMonth}
+              hitSlop={hitSlop}
+              accessibilityRole="button"
+              accessibilityLabel="Sonraki ay"
+              style={isCurrentMonth && { opacity: 0.3 }}>
+              <ChevronRight size={18} color={colors.textInverseMuted} />
+            </Pressable>
+          </View>
+          {revenue.data ? (
+            <Text variant="display" tone="inverse" style={styles.tabular}>
+              {formatCurrency(revenue.data.revenue)}
+            </Text>
+          ) : revenue.error ? (
+            <Pressable onPress={revenue.reload} accessibilityRole="button">
+              <Text variant="bodySmall" tone="inverse">Gelir alınamadı: {revenue.error} · Tekrar dene</Text>
+            </Pressable>
+          ) : (
+            <ActivityIndicator color={colors.textInverse} style={styles.revenueLoading} />
+          )}
+          <Text variant="bodySmall" tone="inverseMuted">
+            {revenue.data ? `${revenue.data.completedJobs} tamamlanan iş · İptaller hariç` : " "}
+            {isCurrentMonth ? ` · Açık işler ${formatCurrency(stats.openValue)}` : ""}
+          </Text>
+        </View>
+      </PageHeader>
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -114,61 +165,10 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.textInverseMuted}
+            tintColor={colors.textTertiary}
           />
         }
       >
-        <PageHeader
-          overline={formatDateLong(todayISO())}
-          title={`Merhaba, ${firstName}`}
-          right={
-            <View style={styles.headerActions}>
-              <NotificationBell mode="admin" />
-              <IconButton
-                icon={UserRound}
-                label="Profilim"
-                tone="dark"
-                onPress={() => router.push(routes.profile("admin"))}
-              />
-            </View>
-          }
-        >
-          <View style={styles.revenue}>
-            <View style={styles.periodRow}>
-              <Pressable onPress={() => shiftMonth(-1)} hitSlop={hitSlop} accessibilityRole="button" accessibilityLabel="Önceki ay">
-                <ChevronLeft size={18} color={colors.textInverseMuted} />
-              </Pressable>
-              <Text variant="bodySmall" tone="inverseMuted">
-                {MONTH_NAMES[period.month - 1]} {period.year} nakliye geliri
-              </Text>
-              <Pressable
-                onPress={() => shiftMonth(1)}
-                disabled={isCurrentMonth}
-                hitSlop={hitSlop}
-                accessibilityRole="button"
-                accessibilityLabel="Sonraki ay"
-                style={isCurrentMonth && { opacity: 0.3 }}>
-                <ChevronRight size={18} color={colors.textInverseMuted} />
-              </Pressable>
-            </View>
-            {revenue.data ? (
-              <Text variant="display" tone="inverse" style={styles.tabular}>
-                {formatCurrency(revenue.data.revenue)}
-              </Text>
-            ) : revenue.error ? (
-              <Pressable onPress={revenue.reload} accessibilityRole="button">
-                <Text variant="bodySmall" tone="inverse">Gelir alınamadı: {revenue.error} · Tekrar dene</Text>
-              </Pressable>
-            ) : (
-              <ActivityIndicator color={colors.textInverse} style={styles.revenueLoading} />
-            )}
-            <Text variant="bodySmall" tone="inverseMuted">
-              {revenue.data ? `${revenue.data.completedJobs} tamamlanan iş · İptaller hariç` : " "}
-              {isCurrentMonth ? ` · Açık işler ${formatCurrency(stats.openValue)}` : ""}
-            </Text>
-          </View>
-        </PageHeader>
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}

@@ -245,6 +245,10 @@ export const apiJobService: JobService = {
   },
 
   cancel: (id, _actorId, reason) => jobAction(id, 'cancel', { reason: reason ?? null }),
+
+  async remove(id) {
+    await http(`/api/jobs/${id}`, { method: 'DELETE' });
+  },
 };
 
 const INVOICE_STATUS_TO_API: Record<NonNullable<InvoiceFilter['status']>, string> = {

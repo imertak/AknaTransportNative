@@ -66,6 +66,14 @@ function patchJob(job: Awaited<ReturnType<typeof jobService.get>>) {
   return job;
 }
 
+function forgetJob(id: string) {
+  set((s) => {
+    const locations = { ...s.locations };
+    delete locations[id];
+    return { jobs: s.jobs.filter((j) => j.id !== id), locations };
+  });
+}
+
 export const jobActions = {
   /** Detay ekranı için işi (durum geçmişiyle) sunucudan tazeler. */
   refresh: async (id: string) => patchJob(await jobService.get(id)),
@@ -76,11 +84,7 @@ export const jobActions = {
     try {
       await jobActions.refresh(id);
     } catch {
-      set((s) => {
-        const locations = { ...s.locations };
-        delete locations[id];
-        return { jobs: s.jobs.filter((j) => j.id !== id), locations };
-      });
+      forgetJob(id);
     }
   },
   create: async (input: JobInput, actorId: string) => patchJob(await jobService.create(input, actorId)),
@@ -90,6 +94,11 @@ export const jobActions = {
   takeOver: async (id: string, actorId: string, vehicleId?: string | null) => patchJob(await jobService.takeOver(id, actorId, vehicleId)),
   advance: async (id: string, next: JobStatus, actorId: string) => patchJob(await jobService.advance(id, next, actorId)),
   cancel: async (id: string, actorId: string, reason?: string) => patchJob(await jobService.cancel(id, actorId, reason)),
+  /** Kalıcı silme: iş sunucudan ve tüm yerel listelerden kaldırılır. */
+  async remove(id: string) {
+    await jobService.remove(id);
+    forgetJob(id);
+  },
 };
 
 export const customerActions = {

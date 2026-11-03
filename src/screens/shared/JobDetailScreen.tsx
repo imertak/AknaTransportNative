@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import {
   Ban,
   Building2,
+  Trash2,
   CalendarDays,
   CarFront,
   FileText,
@@ -217,13 +218,34 @@ export default function JobDetailScreen() {
         if (!link.url)
           throw new Error("Takip bağlantısı adresi sunucuda tanımlı değil.");
         const store = job.storeName ? `${job.storeName} ` : "";
+        const plate = job.vehiclePlate ? `\nAraç plakası: ${job.vehiclePlate}` : "";
         await Share.share({
           title: "Canlı konum",
-          message: `AKPINAR NAKLİYAT · ${store}${job.jobNo} numaralı gönderinizin aracını canlı takip edebilirsiniz:\n${link.url}`,
+          message: `AKPINAR NAKLİYAT · ${store}${job.jobNo} numaralı gönderinizin aracını canlı takip edebilirsiniz:${plate}\n${link.url}`,
         });
       },
       { error: "Takip bağlantısı oluşturulamadı." },
     );
+
+  const removeJob = async () => {
+    const ok = await confirm({
+      title: "İşi sil",
+      message: `${job.jobNo} numaralı iş, durum geçmişi ve konum kayıtlarıyla birlikte kalıcı olarak silinecek ve listelerde görünmeyecek. Bu işlem geri alınamaz.`,
+      confirmLabel: "Sil",
+      destructive: true,
+    });
+    if (!ok) return;
+    const done = await run(
+      async () => {
+        await jobActions.remove(job.id);
+        return true;
+      },
+      { success: "İş silindi." },
+    );
+    if (!done) return;
+    if (router.canGoBack()) router.back();
+    else router.replace(routes.adminJobs);
+  };
 
   const cancel = async () => {
     const ok = await confirm({
@@ -495,6 +517,16 @@ export default function JobDetailScreen() {
             variant="danger"
             icon={Ban}
             onPress={cancel}
+            loading={pending}
+          />
+        ) : null}
+
+        {isAdminView && !job.invoiceId ? (
+          <Button
+            label="İşi sil"
+            variant="ghost"
+            icon={Trash2}
+            onPress={removeJob}
             loading={pending}
           />
         ) : null}

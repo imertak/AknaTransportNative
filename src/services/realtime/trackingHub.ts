@@ -1,4 +1,4 @@
-import { HubConnectionBuilder, HubConnectionState, LogLevel, type HubConnection } from '@microsoft/signalr';
+import { HttpTransportType, HubConnectionBuilder, HubConnectionState, LogLevel, type HubConnection } from '@microsoft/signalr';
 
 import { APP_CONFIG } from '@/constants/config';
 import type { JobStatus } from '@/types';
@@ -85,9 +85,13 @@ export class TrackingHubClient {
         accessTokenFactory: async () => (await getAccessToken()) ?? '',
         // Çerez kullanılmaz; web önizlemede CORS kimlik bilgisi gerekmez.
         withCredentials: false,
+        // React Native'de EventSource yoktur. WebSocket açılamazsa (ör. sunucu önündeki proxy upgrade'i
+        // iletmiyorsa) long polling ile devam edilir; canlı akış yine çalışır.
+        transport: HttpTransportType.WebSockets | HttpTransportType.LongPolling,
       })
       .withAutomaticReconnect({ nextRetryDelayInMilliseconds: (ctx) => RETRY_MS[ctx.previousRetryCount] ?? 30_000 })
-      .configureLogging(__DEV__ ? LogLevel.Warning : LogLevel.None)
+      // WebSocket'ten long polling'e düşüş normaldir; geliştirmede kırmızı hata ekranı açmasın.
+      .configureLogging(__DEV__ ? LogLevel.Critical : LogLevel.None)
       .build();
     connection.serverTimeoutInMilliseconds = 45_000;
     connection.keepAliveIntervalInMilliseconds = 15_000;

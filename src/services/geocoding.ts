@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import { Platform } from 'react-native';
 
+import { MAP_UNAVAILABLE_REASON, mapNativeAvailable } from '@/components/map/nativeMap';
 import type { GeoPoint } from '@/types';
 import { ServiceError } from './errors';
 
@@ -13,6 +14,7 @@ export function mapAvailability(): { available: true } | { available: false; rea
   if (Platform.OS === 'web') {
     return { available: false, reason: 'Harita ve adres doğrulama web önizlemede kullanılamaz. Konumu mobil uygulamadan kontrol edin.' };
   }
+  if (!mapNativeAvailable) return { available: false, reason: MAP_UNAVAILABLE_REASON };
   return { available: true };
 }
 

@@ -1,6 +1,5 @@
-import { Camera, Map, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
-import { LocateFixed, MapPin, MapPinOff, X } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { LocateFixed, MapPinOff, X } from 'lucide-react-native';
+import { useEffect, useState, type ComponentType } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,10 +7,16 @@ import { Button, Text } from '@/components/ui';
 import { errorMessage } from '@/services/errors';
 import { geocodeAddress, mapAvailability } from '@/services/geocoding';
 import { colors, radius, spacing } from '@/theme';
-import { mapStyle } from '@/theme/map';
 import type { GeoPoint } from '@/types';
 import { ISTANBUL_CENTER } from '@/utils/geo';
 import type { AddressMapModalProps } from './AddressMapModal.types';
+import { mapNativeAvailable } from './nativeMap';
+
+// Expo Go'da MapLibre yoktur; import anında çökmesin diye yalnızca yerel modül varsa yüklenir.
+const PickerMap: ComponentType<import('./AddressPickerMap').AddressPickerMapProps> | null = mapNativeAvailable
+  ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require('./AddressPickerMap') as typeof import('./AddressPickerMap')).AddressPickerMap
+  : null;
 
 type Phase = { kind: 'searching' } | { kind: 'found' } | { kind: 'not_found' } | { kind: 'error'; message: string };
 
@@ -33,7 +38,7 @@ export function AddressMapModal(props: AddressMapModalProps) {
 function MapPicker({ address, initialPoint, onClose, onConfirm }: AddressMapModalProps) {
   const insets = useSafeAreaInsets();
   const availability = mapAvailability();
-  const camera = useRef<CameraRef>(null);
+  const [focus, setFocus] = useState<GeoPoint | null>(null);
   const [pin, setPin] = useState<GeoPoint | null>(initialPoint ?? null);
   const [phase, setPhase] = useState<Phase>(initialPoint || !availability.available ? { kind: 'found' } : { kind: 'searching' });
 
@@ -41,7 +46,7 @@ function MapPicker({ address, initialPoint, onClose, onConfirm }: AddressMapModa
     if (found) {
       setPin(found);
       setPhase({ kind: 'found' });
-      camera.current?.flyTo({ center: [found.longitude, found.latitude], zoom: 16, duration: 600 });
+      setFocus(found);
     } else {
       setPin(null);
       setPhase({ kind: 'not_found' });
@@ -105,27 +110,7 @@ function MapPicker({ address, initialPoint, onClose, onConfirm }: AddressMapModa
       ) : (
         <>
           <View style={styles.mapWrap}>
-            <Map
-              style={StyleSheet.absoluteFill}
-              mapStyle={mapStyle}
-              logo={false}
-              compass={false}
-              touchRotate={false}
-              touchPitch={false}
-              attributionPosition={{ bottom: 8, left: 8 }}
-              onPress={(e) => {
-                const [longitude, latitude] = e.nativeEvent.lngLat;
-                place({ latitude, longitude });
-              }}>
-              <Camera ref={camera} initialViewState={{ center: [center.longitude, center.latitude], zoom: pin ? 16 : 10 }} />
-              {pin ? (
-                <Marker id="address-pin" lngLat={[pin.longitude, pin.latitude]} anchor="bottom">
-                  <View accessibilityLabel={address}>
-                    <MapPin size={36} color={colors.surface} fill={colors.ink} strokeWidth={1.5} />
-                  </View>
-                </Marker>
-              ) : null}
-            </Map>
+            {PickerMap ? <PickerMap center={center} pin={pin} focus={focus} label={address} onPress={place} /> : null}
             {phase.kind === 'searching' ? (
               <View style={styles.searching}>
                 <ActivityIndicator color={colors.text} />

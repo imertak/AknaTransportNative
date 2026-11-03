@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 import * as Location from 'expo-location';
 import { Platform } from 'react-native';
 
@@ -6,24 +5,13 @@ import type { GeoPoint } from '@/types';
 import { ServiceError } from './errors';
 
 /**
- * Harita ve adres doğrulama için kullanılabilirlik. Sağlayıcı yapılandırılmamışsa harita
- * gösterilmez ve koordinat üretilmez (sahte harita/koordinat yok).
- * - iOS: Apple Haritalar ve CLGeocoder, anahtar gerekmez.
- * - Android: Google Maps için GOOGLE_MAPS_ANDROID_API_KEY gerekir (app.config.ts).
- * - Web: yerel harita ve geocoder yoktur.
+ * Harita kullanılabilirliği. Harita MapLibre Native + OpenStreetMap ile çizilir; API anahtarı gerekmez.
+ * Web önizlemede yerel harita bileşeni yoktur. Adres arama cihazın kendi geocoder'ını kullanır
+ * (iOS: Apple, Android: Google Play hizmetleri).
  */
 export function mapAvailability(): { available: true } | { available: false; reason: string } {
   if (Platform.OS === 'web') {
     return { available: false, reason: 'Harita ve adres doğrulama web önizlemede kullanılamaz. Konumu mobil uygulamadan kontrol edin.' };
-  }
-  if (Platform.OS === 'android') {
-    const extra = Constants.expoConfig?.extra as { maps?: { androidConfigured?: boolean } } | undefined;
-    if (!extra?.maps?.androidConfigured) {
-      return {
-        available: false,
-        reason: 'Android harita sağlayıcısı yapılandırılmamış. Yönetici GOOGLE_MAPS_ANDROID_API_KEY ortam değişkeniyle uygulamayı yeniden derlemeli.',
-      };
-    }
   }
   return { available: true };
 }

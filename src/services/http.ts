@@ -184,3 +184,28 @@ export async function httpBinary(path: string, init: HttpOptions = {}): Promise<
 
 /** Arka plan görevleri gibi oturum bağlamı olmayan yerlerde token sağlayıcının kurulu olup olmadığı. */
 export const hasToken = () => !!getToken();
+
+/** JWT'nin bitiş zamanı (ms). Çözülemezse null. */
+function tokenExpiry(token: string): number | null {
+  try {
+    const part = token.split('.')[1];
+    if (!part) return null;
+    const json = atob(part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '='));
+    const exp = (JSON.parse(json) as { exp?: number }).exp;
+    return typeof exp === 'number' ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Uzun ömürlü bağlantılar (SignalR) için geçerli erişim token'ı. Süresi dolmak üzereyse (60 sn) önce
+ * yenilenir; böylece yeniden bağlanma reddedilmez.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  const token = getToken();
+  if (!token) return null;
+  const exp = tokenExpiry(token);
+  if (exp !== null && exp - Date.now() < 60_000) return (await refreshOnce()) ?? null;
+  return token;
+}

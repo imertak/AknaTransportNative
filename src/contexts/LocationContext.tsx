@@ -191,6 +191,16 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, [runReconcile, applyPermission]);
 
+  // Ağ yokken biriken konumlar: uygulama açıkken bağlantı gelir gelmez gönderilsin diye düzenli denenir
+  // (arka planda her yeni GPS noktası zaten kuyruğu boşaltmayı dener). Sıra korunur; eski nokta yeniyi ezmez.
+  useEffect(() => {
+    if (!appActive || pending === 0 || runState !== 'running') return;
+    const t = setInterval(() => {
+      flushQueue().catch(() => {});
+    }, 20_000);
+    return () => clearInterval(t);
+  }, [appActive, pending, runState]);
+
   const ensureReady = useCallback(async () => {
     const r = await prepareTracking(true);
     if (!r.ok) setError(r.message);

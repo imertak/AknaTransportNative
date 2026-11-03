@@ -1,7 +1,8 @@
 import { memo, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, radius, spacing } from '@/theme';
+import { ScalePressable } from './ScalePressable';
 
 interface Props {
   children: ReactNode;
@@ -16,13 +17,14 @@ export const Card = memo(function Card({ children, onPress, padded = true, tone 
   const toneStyle = tone === 'ink' ? styles.ink : tone === 'muted' ? styles.muted : styles.surface;
   if (onPress) {
     return (
-      <Pressable
+      <ScalePressable
         onPress={onPress}
+        pressedScale={0.98}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [styles.base, toneStyle, padded && styles.padded, pressed && styles.pressed, style]}>
+        style={(pressed) => [styles.base, toneStyle, padded && styles.padded, pressed && styles.pressed, style]}>
         {children}
-      </Pressable>
+      </ScalePressable>
     );
   }
   return <View style={[styles.base, toneStyle, padded && styles.padded, style]}>{children}</View>;

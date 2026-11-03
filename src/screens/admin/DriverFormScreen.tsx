@@ -373,7 +373,7 @@ function VehicleRow({ plate, detail, note, onRemove }: { plate: string; detail: 
         <Text variant="bodySmall" tone="secondary" numberOfLines={1}>{detail}</Text>
         <Text variant="caption" tone="tertiary">{note}</Text>
       </View>
-      <Pressable onPress={onRemove} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${plate} aracını kaldır`} style={({ pressed }) => [styles.remove, pressed && { opacity: 0.6 }]}>
+      <Pressable onPress={onRemove} hitSlop={12} accessibilityRole="button" accessibilityLabel={`${plate} aracını kaldır`} style={({ pressed }) => [styles.remove, pressed && { opacity: 0.6 }]}>
         <X size={18} color={colors.textSecondary} />
       </Pressable>
     </View>

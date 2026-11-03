@@ -2,8 +2,9 @@ import { Search, X } from 'lucide-react-native';
 import { memo } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { colors, hitSlop, radius, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography } from '@/theme';
 import { initials } from '@/utils/format';
+import { ScalePressable } from './ScalePressable';
 import { Text } from './Text';
 
 interface SegmentedProps<T extends string> {
@@ -38,20 +39,20 @@ export function SegmentedControl<T extends string>({ options, value, onChange, d
 
 export const Chip = memo(function Chip({ label, active, onPress, onClear }: { label: string; active?: boolean; onPress?: () => void; onClear?: () => void }) {
   return (
-    <Pressable
+    <ScalePressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: !!active }}
-      style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && { opacity: 0.8 }]}>
+      style={(pressed) => [styles.chip, active && styles.chipActive, pressed && { opacity: 0.8 }]}>
       <Text variant="label" tone={active ? 'inverse' : 'default'}>
         {label}
       </Text>
       {onClear ? (
-        <Pressable onPress={onClear} hitSlop={hitSlop} accessibilityLabel={`${label} filtresini kaldır`}>
+        <Pressable onPress={onClear} hitSlop={15} accessibilityRole="button" accessibilityLabel={`${label} filtresini kaldır`}>
           <X size={14} color={active ? colors.textInverse : colors.textSecondary} />
         </Pressable>
       ) : null}
-    </Pressable>
+    </ScalePressable>
   );
 });
 
@@ -71,7 +72,7 @@ export const SearchBar = memo(function SearchBar({ value, onChange, placeholder 
         accessibilityLabel={placeholder}
       />
       {value ? (
-        <Pressable onPress={() => onChange('')} hitSlop={hitSlop} accessibilityLabel="Aramayı temizle">
+        <Pressable onPress={() => onChange('')} hitSlop={14} accessibilityRole="button" accessibilityLabel="Aramayı temizle">
           <X size={16} color={dark ? colors.textInverseMuted : colors.textTertiary} />
         </Pressable>
       ) : null}

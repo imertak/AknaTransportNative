@@ -244,11 +244,20 @@ export const apiJobService: JobService = {
     return jobAction(id, action);
   },
 
-  cancel: (id, _actorId, reason) => jobAction(id, 'cancel', { reason: reason ?? null }),
+  cancel: (id, _actorId, reason) => jobAction(id, 'cancel', { reason }),
 
-  async remove(id) {
-    await http(`/api/jobs/${id}`, { method: 'DELETE' });
+  async remove(id, reason) {
+    await http(`/api/jobs/${id}`, { method: 'DELETE', json: { reason: reason?.trim() || null } });
   },
+
+  async listDeleted(search) {
+    const jobs = await httpAll<ApiJob>('/api/jobs/deleted', { search: search?.trim() || undefined });
+    return jobs.map((j) => jobFromApi(j));
+  },
+
+  getDeleted: async (id) => jobDetailFromApi(await http<ApiJobDetail>(`/api/jobs/${id}`, { query: { includeDeleted: true } })),
+
+  restore: (id) => jobAction(id, 'restore'),
 };
 
 const INVOICE_STATUS_TO_API: Record<NonNullable<InvoiceFilter['status']>, string> = {

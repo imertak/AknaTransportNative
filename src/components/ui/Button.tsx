@@ -6,7 +6,7 @@ import { colors, radius, spacing, typography } from '@/theme';
 import { ScalePressable } from './ScalePressable';
 import { Text } from './Text';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'inverse';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'destructive' | 'inverse';
 type Size = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps {
@@ -28,6 +28,8 @@ const V: Record<Variant, { bg: string; fg: string; border: string; pressed: stri
   secondary: { bg: colors.surface, fg: colors.text, border: colors.borderStrong, pressed: colors.surfaceSunken },
   ghost: { bg: 'transparent', fg: colors.text, border: 'transparent', pressed: colors.surfaceSunken },
   danger: { bg: colors.surface, fg: colors.danger, border: colors.dangerBorder, pressed: colors.dangerSoft },
+  /** Geri alınması zor işlemlerin son onayı (ör. iş silme). Yalnızca onay ekranlarında kullanılır. */
+  destructive: { bg: colors.danger, fg: colors.textInverse, border: colors.danger, pressed: '#B71C1C' },
   inverse: { bg: colors.surface, fg: colors.text, border: colors.surface, pressed: colors.surfaceSunken },
 };
 

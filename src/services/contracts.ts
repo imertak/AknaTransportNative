@@ -93,9 +93,19 @@ export interface JobService {
   takeOver(id: string, actorId: string, vehicleId?: string | null): Promise<TransportJob>;
   /** Şoför akışındaki bir sonraki duruma geçirir. */
   advance(id: string, next: JobStatus, actorId: string): Promise<TransportJob>;
-  cancel(id: string, actorId: string, reason?: string): Promise<TransportJob>;
-  /** İşi kalıcı olarak siler (durum geçmişi ve konumlarıyla). Faturada kullanılmış iş silinemez. */
-  remove(id: string): Promise<void>;
+  /** Tamamlanmamış her aşamada iptal eder; neden zorunludur. Tekrarlanan istek güvenlidir. */
+  cancel(id: string, actorId: string, reason: string): Promise<TransportJob>;
+  /**
+   * İşi mantıksal olarak siler: standart listelerden çıkar, geçmişi korunur, yönetici geri alabilir.
+   * Devam eden veya tamamlanmış işte neden zorunludur. Faturada kullanılmış iş silinemez.
+   */
+  remove(id: string, reason?: string): Promise<void>;
+  /** Silinmiş işler (yalnızca yönetici), en son silinen önce. */
+  listDeleted(search?: string): Promise<TransportJob[]>;
+  /** Silinmiş işin detayı ve durum geçmişi (yalnızca yönetici). */
+  getDeleted(id: string): Promise<TransportJob>;
+  /** Silinmiş işi geri alır. */
+  restore(id: string): Promise<TransportJob>;
 }
 
 export interface CustomerService {

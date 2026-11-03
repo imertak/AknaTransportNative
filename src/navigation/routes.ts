@@ -16,6 +16,9 @@ export const routes = {
   newJob: (customerId?: string): Href => ({ pathname: '/admin/job-form', params: customerId ? { customerId } : {} }) as Href,
   editJob: (id: string): Href => ({ pathname: '/admin/job-form', params: { id } }) as Href,
   adminJobs: '/admin/jobs' as Href,
+  /** Mantıksal olarak silinmiş işler (yalnızca yönetici). */
+  deletedJobs: '/admin/deleted-jobs' as Href,
+  deletedJob: (id: string): Href => ({ pathname: '/admin/deleted-job/[id]', params: { id } }) as Href,
 
   customer: (id: string): Href => ({ pathname: '/admin/customer/[id]', params: { id } }) as Href,
   newCustomer: '/admin/customer-form' as Href,

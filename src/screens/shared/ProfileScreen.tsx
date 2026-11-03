@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { ArrowLeftRight, BadgeCheck, CarFront, Database, KeyRound, Lock, LogOut, Mail, Phone, ShieldUser, Truck, UserRound } from 'lucide-react-native';
+import { ArrowLeftRight, BadgeCheck, CarFront, Database, KeyRound, Lock, LogOut, Mail, Phone, ShieldUser, Trash2, Truck, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -98,6 +98,19 @@ export default function ProfileScreen() {
                 title={viewMode === 'admin' ? 'Şoför görünümüne geç' : 'Yönetici görünümüne dön'}
                 subtitle={viewMode === 'admin' ? 'Üstlendiğiniz işleri şoför ekranlarından yürütün. Rolünüz değişmez.' : 'Operasyon paneline geri dönün.'}
                 onPress={switchView}
+              />
+            </Card>
+          </Section>
+        ) : null}
+
+        {viewMode === 'admin' && can(user, 'jobs.edit') ? (
+          <Section title="Kayıtlar">
+            <Card padded={false}>
+              <ListItem
+                icon={Trash2}
+                title="Silinen işler"
+                subtitle="Silinmiş işleri ve geçmişlerini görüntüleyin, gerekirse geri alın."
+                onPress={() => router.push(routes.deletedJobs)}
               />
             </Card>
           </Section>

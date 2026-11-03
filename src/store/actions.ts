@@ -69,6 +69,20 @@ function patchJob(job: Awaited<ReturnType<typeof jobService.get>>) {
 export const jobActions = {
   /** Detay ekranı için işi (durum geçmişiyle) sunucudan tazeler. */
   refresh: async (id: string) => patchJob(await jobService.get(id)),
+  /**
+   * Bildirim gelince ilgili işi tazeler. İş artık görülemiyorsa (şoförden alındı, silindi) yerel listeden çıkarılır.
+   */
+  async sync(id: string) {
+    try {
+      await jobActions.refresh(id);
+    } catch {
+      set((s) => {
+        const locations = { ...s.locations };
+        delete locations[id];
+        return { jobs: s.jobs.filter((j) => j.id !== id), locations };
+      });
+    }
+  },
   create: async (input: JobInput, actorId: string) => patchJob(await jobService.create(input, actorId)),
   update: async (id: string, input: JobInput, actorId: string) => patchJob(await jobService.update(id, input, actorId)),
   assign: async (id: string, driverId: string | null, actorId: string, vehicleId?: string | null) =>

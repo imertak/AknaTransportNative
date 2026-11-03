@@ -3,6 +3,7 @@ import { ArrowLeftRight, Building2, ChevronLeft, ChevronRight, Tags, Truck, User
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
+import { NotificationBell } from "@/components/NotificationBell";
 import { JobRow } from "@/components/jobs/JobRow";
 import {
   Avatar,
@@ -121,12 +122,15 @@ export default function DashboardScreen() {
           overline={formatDateLong(todayISO())}
           title={`Merhaba, ${firstName}`}
           right={
-            <IconButton
-              icon={UserRound}
-              label="Profilim"
-              tone="dark"
-              onPress={() => router.push(routes.profile("admin"))}
-            />
+            <View style={styles.headerActions}>
+              <NotificationBell mode="admin" />
+              <IconButton
+                icon={UserRound}
+                label="Profilim"
+                tone="dark"
+                onPress={() => router.push(routes.profile("admin"))}
+              />
+            </View>
           }
         >
           <View style={styles.revenue}>
@@ -334,6 +338,7 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerActions: { flexDirection: 'row', gap: spacing.sm },
   scroll: { paddingBottom: spacing.huge },
   revenue: { gap: spacing.xs, paddingTop: spacing.xs },
   periodRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },

@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { canUseViewMode, defaultViewMode } from '@/constants/permissions';
 import { authService } from '@/services';
 import { setTokenProvider, setTokenRefresher } from '@/services/http';
+import { unregisterFromPush } from '@/services/push';
 import { STORAGE_KEYS, secureStorage, storage } from '@/services/storage';
 import { loadAll, resetDataStore } from '@/store';
 import type { Session, User, ViewMode } from '@/types';
@@ -118,6 +119,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     const current = session.current;
+    // Telefonun bildirim kaydı oturum token'ı geçerliyken silinir.
+    await unregisterFromPush();
     await clearLocal();
     if (current) authService.logout(current).catch(() => {});
   }, [clearLocal]);

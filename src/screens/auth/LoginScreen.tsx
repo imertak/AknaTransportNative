@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail, type LucideIcon } from 'lucide-react-native';
-import { useRef, useState, type ComponentRef, type ReactNode, type Ref } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { useEffect, useRef, useState, type ComponentRef, type ReactNode, type Ref } from 'react';
+import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, type KeyboardEvent, type TextInputProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBottomInset } from '@/hooks/useBottomInset';
@@ -28,6 +28,14 @@ export default function LoginScreen() {
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
   const [loading, setLoading] = useState(false);
   const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const keyboard = useKeyboardOverlap();
+  const keyboardOpen = keyboard.visible;
+
+  // Klavye açılınca form (giriş butonu dahil) klavyenin hemen üstüne kaydırılır.
+  useEffect(() => {
+    if (keyboardOpen) requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+  }, [keyboardOpen, keyboard.overlap]);
 
   const submit = async () => {
     const next: typeof errors = {};
@@ -46,14 +54,23 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View style={styles.root} onLayout={keyboard.onLayout}>
       <Glow />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.huge, paddingBottom: bottomInset + spacing.xl }]}
+        ref={scrollRef}
+        contentContainerStyle={[
+          styles.scroll,
+          keyboardOpen
+            ? // Klavye açıkken logo gizlenir; form klavyenin üstünde, alta yaslı durur.
+              { paddingTop: insets.top + spacing.lg, paddingBottom: keyboard.overlap + spacing.lg, justifyContent: 'flex-end' }
+            : { paddingTop: insets.top + spacing.huge, paddingBottom: bottomInset + spacing.xl },
+        ]}
         keyboardShouldPersistTaps="handled">
-        <View style={styles.brand}>
-          <BrandMark size="md" />
-        </View>
+        {keyboardOpen ? null : (
+          <View style={styles.brand}>
+            <BrandMark size="md" />
+          </View>
+        )}
 
         <View style={styles.form}>
           <View style={styles.heading}>
@@ -125,8 +142,38 @@ export default function LoginScreen() {
           </View>
         ) : null}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
+}
+
+/**
+ * Klavyenin ekranı ne kadar kapattığını ölçer. Pencere klavyeyle küçülüyorsa (Android adjustResize)
+ * kök görünümün yüksekliği de küçülür ve örtüşme 0 olur; küçülmüyorsa (iOS, Android kenardan kenara)
+ * klavye yüksekliği kadar boşluk bırakılır. Böylece iki durumda da çift boşluk oluşmaz.
+ */
+function useKeyboardOverlap() {
+  const [rootHeight, setRootHeight] = useState(0);
+  const [keyboardTop, setKeyboardTop] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = (e: KeyboardEvent) => setKeyboardTop(e.endCoordinates.screenY);
+    const show = Keyboard.addListener(showEvent, onShow);
+    // iOS'ta klavye tipi/öneri çubuğu değişince yükseklik değişir.
+    const change = Platform.OS === 'ios' ? Keyboard.addListener('keyboardWillChangeFrame', onShow) : null;
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboardTop(null));
+    return () => {
+      show.remove();
+      change?.remove();
+      hide.remove();
+    };
+  }, []);
+
+  const visible = keyboardTop !== null;
+  const overlap = visible && rootHeight > 0 ? Math.max(0, rootHeight - keyboardTop) : 0;
+  return { visible, overlap, onLayout: (e: { nativeEvent: { layout: { height: number } } }) => setRootHeight(e.nativeEvent.layout.height) };
 }
 
 /** Sol üst köşedeki hafif beyaz ışıma. Ek paket gerektirmemek için react-native-svg ile çizilir. */

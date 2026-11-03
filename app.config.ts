@@ -18,7 +18,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...(config as ExpoConfig),
     android: { ...config.android, ...(googleServicesFile ? { googleServicesFile } : null) },
-    plugins: [...(config.plugins ?? []), ['react-native-maps', { androidGoogleMapsApiKey: androidMapsKey }]],
+    plugins: [
+      ...(config.plugins ?? []),
+      ['react-native-maps', { androidGoogleMapsApiKey: androidMapsKey }],
+      // Release derlemede R8 WorkManager/Room sınıflarını silmesin (açılışta çökme).
+      './plugins/withRoomProguardRules',
+    ],
     extra: {
       ...config.extra,
       maps: { androidConfigured: !!androidMapsKey },

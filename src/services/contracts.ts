@@ -94,6 +94,8 @@ export interface JobService {
   /** Şoför akışındaki bir sonraki duruma geçirir. */
   advance(id: string, next: JobStatus, actorId: string): Promise<TransportJob>;
   cancel(id: string, actorId: string, reason?: string): Promise<TransportJob>;
+  /** İşi kalıcı olarak siler (durum geçmişi ve konumlarıyla). Faturada kullanılmış iş silinemez. */
+  remove(id: string): Promise<void>;
 }
 
 export interface CustomerService {

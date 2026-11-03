@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { routes } from '@/navigation/routes';
 import { notificationService } from '@/services/notifications';
 import { registerForPush, setAppBadge, type PushData } from '@/services/push';
-import { jobActions } from '@/store';
+import { jobActions, loadAll } from '@/store';
 
 interface NotificationContextValue {
   unreadCount: number;
@@ -79,6 +79,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const received = Notifications.addNotificationReceivedListener((n) => {
       const data = (n.request.content.data ?? {}) as PushData;
       if (data.jobId) jobActions.sync(data.jobId).catch(() => {});
+      // Silinen işin bildirimi işe bağlı değildir; listeler tümüyle tazelenir.
+      else loadAll(true).catch(() => {});
       refreshUnread();
     });
     const responded = Notifications.addNotificationResponseReceivedListener(open);

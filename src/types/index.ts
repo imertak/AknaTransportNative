@@ -163,6 +163,18 @@ export interface TransportJob {
   createdBy: string;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
+  /** İptal denetimi (yalnızca iptal edilmiş işte dolu). */
+  cancellationReason?: string;
+  cancelledAt?: ISODateTime;
+  cancelledByName?: string;
+  /**
+   * Mantıksal silme. Silinen iş standart listelerde gelmez; yalnızca yöneticinin "Silinen işler" ekranında görünür.
+   * İptalden farklıdır: silinen işin durumu (status) değişmez.
+   */
+  isDeleted: boolean;
+  deletedAt?: ISODateTime;
+  deletedByName?: string;
+  deletionReason?: string;
 }
 
 export type JobInput = Pick<TransportJob, 'customerId' | 'date' | 'storeName' | 'vehicleType' | 'description' | 'price' | 'notes'> & {

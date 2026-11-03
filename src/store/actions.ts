@@ -93,12 +93,15 @@ export const jobActions = {
     patchJob(await jobService.assign(id, driverId, actorId, vehicleId)),
   takeOver: async (id: string, actorId: string, vehicleId?: string | null) => patchJob(await jobService.takeOver(id, actorId, vehicleId)),
   advance: async (id: string, next: JobStatus, actorId: string) => patchJob(await jobService.advance(id, next, actorId)),
-  cancel: async (id: string, actorId: string, reason?: string) => patchJob(await jobService.cancel(id, actorId, reason)),
-  /** Kalıcı silme: iş sunucudan ve tüm yerel listelerden kaldırılır. */
-  async remove(id: string) {
-    await jobService.remove(id);
+  /** İptal: iş listede kalır (İptal durumu), canlı konumu yerel haritadan düşer. */
+  cancel: async (id: string, actorId: string, reason: string) => patchJob(await jobService.cancel(id, actorId, reason)),
+  /** Mantıksal silme: iş tüm yerel listelerden ve haritadan kaldırılır; sunucuda geçmişiyle saklanır. */
+  async remove(id: string, reason?: string) {
+    await jobService.remove(id, reason);
     forgetJob(id);
   },
+  /** Silinmiş işi geri alır ve yerel listelere ekler. */
+  restore: async (id: string) => patchJob(await jobService.restore(id)),
 };
 
 export const customerActions = {

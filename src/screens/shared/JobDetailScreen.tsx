@@ -22,6 +22,7 @@ import { Share, StyleSheet, View } from "react-native";
 
 import { BillingStatusBadge } from "@/components/jobs/BillingStatusBadge";
 import { DriverActionCard } from "@/components/jobs/DriverActionCard";
+import { CancelJobSheet, DeleteJobSheet } from "@/components/jobs/JobRemovalSheets";
 import { LocationShareCard } from "@/components/jobs/LocationShareCard";
 import { StatusTimeline } from "@/components/jobs/StatusTimeline";
 import { StopList } from "@/components/jobs/StopList";
@@ -62,6 +63,7 @@ import { confirm } from "@/utils/confirm";
 import {
   formatCurrency,
   formatDateLong,
+  formatDateTime,
   formatPhone,
   partyLabel,
 } from "@/utils/format";
@@ -89,6 +91,7 @@ export default function JobDetailScreen() {
   const { ensureReady, startNow } = useLocationTracking();
   const { run, pending } = useAsyncAction();
   const [step, setStep] = useState<AssignStep>(null);
+  const [removal, setRemoval] = useState<"cancel" | "delete" | null>(null);
 
   // Liste verisinde durum geçmişi yoktur (API); detay açılınca iş tazelenir.
   useEffect(() => {
@@ -227,38 +230,35 @@ export default function JobDetailScreen() {
       { error: "Takip bağlantısı oluşturulamadı." },
     );
 
-  const removeJob = async () => {
-    const ok = await confirm({
-      title: "İşi sil",
-      message: `${job.jobNo} numaralı iş, durum geçmişi ve konum kayıtlarıyla birlikte kalıcı olarak silinecek ve listelerde görünmeyecek. Bu işlem geri alınamaz.`,
-      confirmLabel: "Sil",
-      destructive: true,
-    });
-    if (!ok) return;
+  /** Mantıksal silme: iş listelerden kalkar, sunucuda geçmişiyle saklanır ve geri alınabilir. */
+  const removeJob = async (reason: string) => {
     const done = await run(
       async () => {
-        await jobActions.remove(job.id);
+        await jobActions.remove(job.id, reason || undefined);
         return true;
       },
-      { success: "İş silindi." },
+      { success: "İş silindi. Silinen işler ekranından geri alabilirsiniz.", error: "İş silinemedi." },
     );
-    if (!done) return;
+    if (!done) return false;
+    setRemoval(null);
     if (router.canGoBack()) router.back();
     else router.replace(routes.adminJobs);
+    return true;
   };
 
-  const cancel = async () => {
-    const ok = await confirm({
-      title: "İşi iptal et",
-      message: `${job.jobNo} numaralı iş iptal edilecek. Bu işlem geri alınamaz.`,
-      confirmLabel: "İptal et",
-      destructive: true,
+  /** İptal: iş listede İptal durumuyla kalır; canlı takip durur, şoföre bildirim gider. */
+  const cancel = async (reason: string) => {
+    const done = await run(() => jobActions.cancel(job.id, user.id, reason), {
+      success: "İş iptal edildi.",
+      error: "İş iptal edilemedi.",
     });
-    if (ok)
-      await run(() => jobActions.cancel(job.id, user.id), {
-        success: "İş iptal edildi.",
-      });
+    if (!done) return false;
+    setRemoval(null);
+    return true;
   };
+
+  const canCancel = isAdminView && !closed && !job.invoiceId;
+  const canDelete = isAdminView && !job.invoiceId;
 
   return (
     <Screen>
@@ -315,6 +315,28 @@ export default function JobDetailScreen() {
             <BillingStatusBadge status={job.billingStatus} />
           ) : null}
         </Card>
+
+        {job.status === "cancelled" ? (
+          <Card style={styles.cancelled}>
+            <View style={styles.liveRow}>
+              <Ban size={20} color={colors.danger} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text variant="subheading">İş iptal edildi</Text>
+                <Text variant="bodySmall" tone="secondary">
+                  {[
+                    job.cancelledAt ? formatDateTime(job.cancelledAt) : undefined,
+                    job.cancelledByName,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "—"}
+                </Text>
+                {job.cancellationReason ? (
+                  <Text variant="bodySmall">Neden: {job.cancellationReason}</Text>
+                ) : null}
+              </View>
+            </View>
+          </Card>
+        ) : null}
 
         {isMine ? <DriverActionCard job={job} /> : null}
         {isMine && isTrackable(job.status) ? <LocationShareCard /> : null}
@@ -511,27 +533,57 @@ export default function JobDetailScreen() {
           </Card>
         </Section>
 
-        {isAdminView && !closed && !job.invoiceId ? (
-          <Button
-            label="İşi iptal et"
-            variant="danger"
-            icon={Ban}
-            onPress={cancel}
-            loading={pending}
-          />
-        ) : null}
-
-        {isAdminView && !job.invoiceId ? (
-          <Button
-            label="İşi sil"
-            variant="ghost"
-            icon={Trash2}
-            onPress={removeJob}
-            loading={pending}
-          />
+        {isAdminView ? (
+          <Section title="İş işlemleri">
+            <Card style={{ gap: spacing.md }}>
+              {job.invoiceId ? (
+                <Text variant="bodySmall" tone="secondary">
+                  Faturaya eklenmiş iş iptal edilemez veya silinemez. Önce işi faturadan çıkarın ya da faturayı iptal edin.
+                </Text>
+              ) : (
+                <Text variant="bodySmall" tone="secondary">
+                  {canCancel
+                    ? "İptal edilen iş listede kalır ve geçmişi incelenebilir. Silinen iş listelerden kaldırılır; gerektiğinde geri alınabilir."
+                    : "Silinen iş listelerden kaldırılır; geçmişi saklanır ve gerektiğinde geri alınabilir."}
+                </Text>
+              )}
+              {canCancel ? (
+                <Button
+                  label="İşi iptal et"
+                  variant="danger"
+                  icon={Ban}
+                  onPress={() => setRemoval("cancel")}
+                  disabled={pending}
+                />
+              ) : null}
+              {canDelete ? (
+                <Button
+                  label="İşi sil"
+                  variant="ghost"
+                  icon={Trash2}
+                  onPress={() => setRemoval("delete")}
+                  disabled={pending}
+                />
+              ) : null}
+            </Card>
+          </Section>
         ) : null}
       </ScrollContent>
 
+      <CancelJobSheet
+        job={job}
+        visible={removal === "cancel"}
+        onClose={() => setRemoval(null)}
+        onConfirm={cancel}
+        pending={pending}
+      />
+      <DeleteJobSheet
+        job={job}
+        visible={removal === "delete"}
+        onClose={() => setRemoval(null)}
+        onConfirm={removeJob}
+        pending={pending}
+      />
       <OptionSheet
         visible={step?.kind === "driver"}
         onClose={() => setStep(null)}
@@ -578,4 +630,5 @@ const styles = StyleSheet.create({
   listCard: { paddingHorizontal: spacing.lg },
   invoice: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   liveRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  cancelled: { borderWidth: 1, borderColor: colors.dangerBorder },
 });

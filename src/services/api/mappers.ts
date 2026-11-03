@@ -96,6 +96,13 @@ export interface ApiJob {
   assignedVehicleId: string | null;
   assignedVehiclePlate: string | null;
   billingStatus: 'NotInvoiced' | 'InDraft' | 'Invoiced';
+  /** İptal/silme denetim alanları; eski API sürümlerinde yoktur. */
+  cancelledAt?: string | null;
+  cancelledByUserName?: string | null;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+  deletedByUserName?: string | null;
+  deletionReason?: string | null;
 }
 
 export interface ApiJobContact {
@@ -372,6 +379,13 @@ export function jobFromApi(j: ApiJob, history: ApiJobHistory[] = []): TransportJ
     createdBy: j.createdByUserId,
     createdAt: j.createdAt,
     updatedAt: j.updatedAt ?? j.createdAt,
+    cancellationReason: j.cancellationReason ?? undefined,
+    cancelledAt: j.cancelledAt ?? undefined,
+    cancelledByName: j.cancelledByUserName ?? undefined,
+    isDeleted: j.isDeleted ?? false,
+    deletedAt: j.deletedAt ?? undefined,
+    deletedByName: j.deletedByUserName ?? undefined,
+    deletionReason: j.deletionReason ?? undefined,
   };
 }
 

@@ -88,6 +88,11 @@ src/
 
 **İş akışı.** Bekliyor → Atandı → Kabul Edildi → Yolda → Yükleme Yapılıyor → Teslimat Yapılıyor → Tamamlandı (veya İptal Edildi). Şoför aksiyonları `constants/jobStatus.ts` içindeki `DRIVER_FLOW` ile tanımlıdır ve servis tarafında da doğrulanır.
 
+**İptal ve silme (yönetici).** İş detayının altındaki "İş işlemleri" bölümünden yapılır (`components/jobs/JobRemovalSheets.tsx`).
+- "İşi iptal et": tamamlanmamış her aşamada. Sade bir onay sayfasında iptal nedeni zorunludur. İş İptal Edildi durumunda listede kalır; detayda iptal tarihi, iptal eden ve neden görünür.
+- "İşi sil": her aşamada, belirgin kırmızı onay sayfasıyla. Devam eden veya tamamlanmış işte silme nedeni zorunludur. Silme mantıksaldır: iş listelerden ve haritadan kalkar, sunucuda geçmişiyle saklanır. Profil › Silinen işler ekranından görüntülenip geri alınabilir.
+- Faturaya eklenmiş işte ikisi de kapalıdır. Kurallar sunucuda da doğrulanır; hata mesajı sunucudan gelir.
+
 **Konum takibi (zorunlu).** `services/tracking/` cihaz GPS'ine erişen tek noktadır; `contexts/LocationContext.tsx` durumu yönetir:
 - Şoför "İşi kabul et" dediğinde önce konum servisi, ön plan ve arka plan izni kontrol edilir; izin yoksa iş kabul edilmez. Kabulden sonra takip hemen başlar.
 - Native'de `expo-task-manager` + `Location.startLocationUpdatesAsync` ile gerçek arka plan takibi yapılır (Android'de kalıcı bildirimli ön plan servisi, iOS'ta "Her Zaman" izni ve mavi gösterge). Görev `_layout.tsx` en başta import edildiği için uygulama arka planda başlatıldığında da tanımlıdır.

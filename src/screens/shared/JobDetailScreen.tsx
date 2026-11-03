@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ban, Building2, CalendarDays, CarFront, FileText, Hand, Mail, Pencil, Phone, ReceiptText, Truck, UserRound, UserRoundCog } from 'lucide-react-native';
+import { Ban, Building2, CalendarDays, CarFront, FileText, Hand, Mail, MapPinned, Pencil, Phone, ReceiptText, Share2, Truck, UserRound, UserRoundCog } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Share, StyleSheet, View } from 'react-native';
 
 import { DriverActionCard } from '@/components/jobs/DriverActionCard';
 import { LocationShareCard } from '@/components/jobs/LocationShareCard';
@@ -17,6 +17,7 @@ import { useLocationTracking } from '@/contexts/LocationContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useAssignableUsers, useCustomer, useInvoice, useJob, useUserMap, useVehicles } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
+import { trackingLinkService } from '@/services/notifications';
 import { jobActions } from '@/store';
 import { colors, spacing } from '@/theme';
 import { confirm } from '@/utils/confirm';
@@ -122,6 +123,18 @@ export default function JobDetailScreen() {
         ]
       : [];
 
+  /** Müşteriye gönderilecek canlı konum bağlantısını üretir ve paylaşım menüsünü (WhatsApp, SMS vb.) açar. */
+  const shareLiveLocation = () =>
+    run(async () => {
+      const link = await trackingLinkService.create(job.id);
+      if (!link.url) throw new Error('Takip bağlantısı adresi sunucuda tanımlı değil.');
+      const store = job.storeName ? `${job.storeName} ` : '';
+      await Share.share({
+        title: 'Canlı konum',
+        message: `AKNA Transport · ${store}${job.jobNo} numaralı gönderinizin aracını canlı takip edebilirsiniz:\n${link.url}`,
+      });
+    }, { error: 'Takip bağlantısı oluşturulamadı.' });
+
   const cancel = async () => {
     const ok = await confirm({ title: 'İşi iptal et', message: `${job.jobNo} numaralı iş iptal edilecek. Bu işlem geri alınamaz.`, confirmLabel: 'İptal et', destructive: true });
     if (ok) await run(() => jobActions.cancel(job.id, user.id), { success: 'İş iptal edildi.' });
@@ -226,6 +239,20 @@ export default function JobDetailScreen() {
           </Card>
         </Section>
 
+        {isAdminView && !closed ? (
+          <Section title="Canlı konum">
+            <Card style={{ gap: spacing.md }}>
+              <View style={styles.liveRow}>
+                <MapPinned size={20} color={colors.text} />
+                <Text variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
+                  Müşteriye bağlantı gönderin; aracı haritada canlı izlesin. Şoför işi kabul edince konum görünür, iş bitince paylaşım durur.
+                </Text>
+              </View>
+              <Button label="Canlı konumu paylaş" icon={Share2} onPress={shareLiveLocation} loading={pending} />
+            </Card>
+          </Section>
+        ) : null}
+
         {isAdminView && job.status !== 'cancelled' ? (
           <Section title="Fatura">
             {invoice ? (
@@ -282,4 +309,5 @@ const styles = StyleSheet.create({
   notes: { gap: 2, paddingTop: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderStrong },
   listCard: { paddingHorizontal: spacing.lg },
   invoice: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  liveRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
 });

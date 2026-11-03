@@ -3,6 +3,7 @@ import { CalendarCheck2, UserRound } from 'lucide-react-native';
 import { useCallback } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { NotificationBell } from '@/components/NotificationBell';
 import { DriverActionCard } from '@/components/jobs/DriverActionCard';
 import { JobCard } from '@/components/jobs/JobCard';
 import { LocationShareCard } from '@/components/jobs/LocationShareCard';
@@ -39,7 +40,12 @@ export default function DriverHomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textInverseMuted} />}>
         <PageHeader overline={formatDateLong(todayISO())} title={`Merhaba, ${user.fullName.split(' ')[0]}`}
           subtitle={vehicleLabel}
-          right={<IconButton icon={UserRound} label="Profilim" tone="dark" onPress={() => router.push(routes.profile('driver'))} />}>
+          right={
+            <View style={styles.headerActions}>
+              <NotificationBell mode="driver" />
+              <IconButton icon={UserRound} label="Profilim" tone="dark" onPress={() => router.push(routes.profile('driver'))} />
+            </View>
+          }>
           <View style={styles.stats}>
             <Stat label="Bugün" value={today.length} />
             <Stat label="Bekleyen" value={waiting.length} />
@@ -101,6 +107,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 const styles = StyleSheet.create({
+  headerActions: { flexDirection: 'row', gap: spacing.sm },
   stats: { flexDirection: 'row', gap: spacing.sm },
   stat: { flex: 1, backgroundColor: colors.inkRaised, borderWidth: 1, borderColor: colors.inkLine, borderRadius: radius.md, padding: spacing.md, gap: 2 },
   body: { padding: spacing.lg, gap: spacing.xxl },

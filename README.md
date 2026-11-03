@@ -17,6 +17,8 @@ npm run lint          # ESLint (eslint-config-expo)
 |---|---|---|
 | `EXPO_PUBLIC_API_BASE_URL` | API adresi, örn. `http://192.168.1.34:5080`. Telefonda `localhost` telefonun kendisidir; bilgisayarın veya sunucunun IP'sini yazın. | Evet |
 | `GOOGLE_MAPS_ANDROID_API_KEY` | Android'de harita (react-native-maps, Google sağlayıcı). `app.config.ts` derleme sırasında okur; koda yazılmaz. | Android haritası için evet |
+| `EAS_PROJECT_ID` | expo.dev'deki proje kimliği. Expo push token'ı almak için gerekir (`eas init` app.json'a yazdıysa gerekmez). | Telefon bildirimi için evet |
+| `GOOGLE_SERVICES_JSON` | Android push (FCM) için `google-services.json` dosyasının yolu. EAS'te "file" tipinde ortam değişkeni olarak verilebilir. FCM anahtarı Expo panelinde (Credentials) tanımlanmalıdır. | Android bildirimi için evet |
 
 Anahtarı `.env.local` dosyasına veya EAS Secrets'a koyun. Anahtar yoksa Android'de "Haritada kontrol et" penceresi harita yerine "Harita sağlayıcısı yapılandırılmamış" uyarısı gösterir; sahte harita veya koordinat gösterilmez. iOS Apple Haritalar'ı kullanır ve anahtar istemez. Web önizlemede harita ve adres arama yoktur.
 
@@ -99,6 +101,17 @@ src/
 **Fatura.** Fatura önce taslak oluşturulur ve her yerde "resmi fatura değildir" olarak işaretlenir. e-Arşiv sağlayıcısından başarılı sonuç gelmeden kesilmiş sayılmaz.
 
 **PDF iş dökümü.** `services/reportService.ts` A4 yatay, siyah-beyaz, sayfa numaralı ve oluşturulma tarihli HTML üretir; `expo-print` ile PDF'e çevrilip `expo-sharing` ile paylaşılır veya doğrudan yazdırılır. Örnek: 19.10.2026–22.10.2026 aralığı 7 iş ve 36.500 TL toplam verir.
+
+## Bildirimler
+
+- Girişten sonra uygulama bildirim izni ister, Expo push token'ını alır ve `POST /api/notifications/devices` ile sunucuya kaydeder. Çıkışta kayıt silinir.
+- Şoför: iş atandı, iş sizden alındı, iş bilgileri güncellendi, iş iptal edildi. Yönetici: şoför işi kabul etti, yola çıktı, yüklemeye başladı, teslimata çıktı, tamamladı.
+- Bildirime dokununca ilgili işin detayı açılır. Ana ekrandaki zil okunmamış sayısını gösterir ve bildirim listesini açar.
+- Telefon bildirimleri Expo Go'da çalışmaz (Android); development veya production build gerekir. İzin verilmezse uygulama içi liste yine çalışır.
+
+## Canlı konum paylaşımı
+
+Yönetici iş detayındaki **Canlı konumu paylaş** butonuyla müşteriye takip bağlantısı gönderir (WhatsApp, SMS vb.). Bağlantı API'nin `/takip/#<token>` sayfasını açar; araç konumu haritada 15 saniyede bir güncellenir. Bağlantı sunucunun adresiyle üretildiği için müşterinin erişebildiği bir adres (alan adı) kullanılmalıdır; yerel ağ IP'si yalnızca aynı ağda çalışır. Farklı bir adres için API'de `App__TrackingUrl` verilebilir.
 
 ## Bilinen notlar
 

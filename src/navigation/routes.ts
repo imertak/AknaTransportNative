@@ -38,5 +38,6 @@ export const routes = {
   /** Profil her iki görünümde de sekme değil, geri butonlu yığın ekranıdır. */
   profile: (mode: ViewMode): Href => (mode === 'admin' ? '/admin/profile' : '/driver/profile') as Href,
   driverJobs: '/driver/jobs' as Href,
+  notifications: (mode: ViewMode): Href => (mode === 'admin' ? '/admin/notifications' : '/driver/notifications') as Href,
   driverMap: '/driver/map' as Href,
 };

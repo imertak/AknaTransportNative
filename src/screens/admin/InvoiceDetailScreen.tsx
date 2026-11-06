@@ -295,7 +295,9 @@ export default function InvoiceDetailScreen() {
             label="SMS kodu"
             value={smsCode}
             onChangeText={setSmsCode}
-            keyboardType="number-pad"
+            keyboardType="default"
+            autoCapitalize="characters"
+            autoCorrect={false}
             autoComplete="sms-otp"
             textContentType="oneTimeCode"
             maxLength={10}

@@ -1,6 +1,6 @@
 import { X } from 'lucide-react-native';
-import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Keyboard, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing } from '@/theme';
@@ -16,15 +16,37 @@ interface Props {
   footer?: ReactNode;
 }
 
+/**
+ * Klavye yüksekliği. Android edge-to-edge çalıştığı için pencere klavyede yeniden boyutlanmaz ve
+ * KeyboardAvoidingView Modal içinde perdeyi yukarı itmez; perdeyi klavyenin üstüne bu değerle taşırız.
+ */
+function useKeyboardHeight(active: boolean) {
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, (e) => setHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener(hideEvent, () => setHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+      setHeight(0);
+    };
+  }, [active]);
+  return active ? height : 0;
+}
+
 /** Alt sayfa (bottom sheet). Seçim listeleri, filtreler ve onaylar için. */
 export function Sheet({ visible, onClose, title, subtitle, children, footer }: Props) {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight(visible);
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
-      <View style={styles.root}>
+      <View style={[styles.root, { paddingBottom: keyboardHeight }]}>
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Kapat" />
-        <KeyboardAvoidingView style={styles.frame} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+        <View style={styles.frame}>
+          <View style={[styles.sheet, { paddingBottom: keyboardHeight > 0 ? spacing.lg : Math.max(insets.bottom, spacing.lg) }]}>
             <View style={styles.grabber} />
             <View style={styles.header}>
               <View style={{ flex: 1 }}>
@@ -36,7 +58,7 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer }: P
             <View style={styles.body}>{children}</View>
             {footer ? <View style={styles.footer}>{footer}</View> : null}
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );

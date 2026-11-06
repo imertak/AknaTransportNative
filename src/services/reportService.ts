@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import { vehicleTypeLabel } from '@/constants/vehicles';
 import type { Customer, DateRange, Invoice, JobsReport, TransportJob } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, partyLabel } from '@/utils/format';
+import { SINGLE_LINE_TITLE } from '@/utils/invoiceText';
 import { composeJobText } from '@/utils/stops';
 import { jobService } from './registry';
 import { ServiceError } from './errors';
@@ -216,7 +217,9 @@ function invoiceHtml(invoice: Invoice, customer: Customer | null): string {
     <table>
       <thead><tr><th>Açıklama</th><th class="num" style="width:70px">Miktar</th><th class="num" style="width:110px">Tutar</th></tr></thead>
       <tbody>${
-        invoice.items?.length
+        invoice.singleLine
+          ? `<tr><td>${esc(SINGLE_LINE_TITLE)}</td><td class="num">1 Adet</td><td class="num">${formatCurrency(invoice.subtotal, { decimals: 2 })}</td></tr>`
+          : invoice.items?.length
           ? invoice.items
               .map((it) => `<tr><td>${esc(it.jobNo)} · ${formatDate(it.jobDate)} · ${esc(it.description)}</td><td class="num">1 Adet</td><td class="num">${formatCurrency(it.amount, { decimals: 2 })}</td></tr>`)
               .join('')

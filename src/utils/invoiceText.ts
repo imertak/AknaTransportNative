@@ -59,6 +59,9 @@ export function amountInWords(amount: number): string {
   return `YALNIZ: ${numberInWords(whole)} TÜRK LİRASI${cents > 0 ? ` ${numberInWords(cents)} KURUŞ` : ''}`;
 }
 
+/** Tek kalemli faturada işler yerine yazılan kalem adı (API ile aynı). */
+export const SINGLE_LINE_TITLE = 'Nakliye Bedeli';
+
 export const normalizeIban = (v: string) => v.replace(/[\s-]/g, '').toUpperCase();
 
 export function isValidIban(value: string): boolean {

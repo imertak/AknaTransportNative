@@ -270,6 +270,8 @@ export interface Invoice {
   bankName?: string;
   /** GİB portalında taslak; kesilmesi için SMS koduyla imzalanmalı. */
   requiresSmsSignature?: boolean;
+  /** true: faturaya işler tek tek değil, tek kalem "Nakliye Bedeli" olarak yazılır (iş dökümü değişmez). */
+  singleLine?: boolean;
   /** e-Arşiv entegrasyonunda dolacak alanlar. */
   externalId?: string;
   ettn?: string;
@@ -292,6 +294,8 @@ export type InvoiceInput = Pick<Invoice, 'issueDate' | 'description' | 'subtotal
   withholdingCode?: string | null;
   /** Boşsa firmanın varsayılan IBAN'ı kullanılır. */
   iban?: string;
+  /** true: faturaya tek kalem "Nakliye Bedeli" yazılır; işler yalnızca dökümde ayrı ayrı yer alır. */
+  singleLine?: boolean;
 };
 
 export type { WithholdingType } from '@/utils/invoiceText';

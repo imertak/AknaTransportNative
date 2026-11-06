@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Info, ReceiptText, X } from 'lucide-react-native';
+import { Info, ReceiptText, Square, SquareCheck, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -15,7 +15,7 @@ import { invoiceActions } from '@/store';
 import { colors, radius, spacing } from '@/theme';
 import { formatAmountInput, formatCurrency, formatDate, todayISO } from '@/utils/format';
 import { composeJobText } from '@/utils/stops';
-import { amountInWords, calculateWithholding, DEFAULT_WITHHOLDING_TYPES, formatIban, isValidIban } from '@/utils/invoiceText';
+import { amountInWords, calculateWithholding, DEFAULT_WITHHOLDING_TYPES, formatIban, isValidIban, SINGLE_LINE_TITLE } from '@/utils/invoiceText';
 
 const NO_WITHHOLDING = 'none';
 
@@ -72,6 +72,8 @@ export default function InvoiceFormScreen() {
     [withholdingTypes],
   );
   const [iban, setIban] = useState('');
+  // İşaretliyse faturaya işler tek tek yazılmaz, tek kalem "Nakliye Bedeli" yazılır. İş dökümü değişmez.
+  const [singleLine, setSingleLine] = useState(false);
 
   const jobOptions = useMemo<SelectOption[]>(
     () => availableJobs.filter(j => !selectedJobIds.includes(j.id)).map((j) => ({
@@ -111,6 +113,7 @@ export default function InvoiceFormScreen() {
         vatRate,
         withholdingCode: vatRate > 0 ? withholding?.code ?? null : null,
         iban: iban.trim() || undefined,
+        singleLine,
       }, user.id),
       { success: 'Taslak fatura oluşturuldu.' },
     );
@@ -172,6 +175,20 @@ export default function InvoiceFormScreen() {
 
         <Section title="Fatura bilgileri">
           <Card style={styles.card}>
+            <Pressable
+              style={styles.checkRow}
+              onPress={() => setSingleLine((v) => !v)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: singleLine }}
+              hitSlop={6}>
+              {singleLine ? <SquareCheck size={22} color={colors.ink} /> : <Square size={22} color={colors.textTertiary} />}
+              <View style={{ flex: 1 }}>
+                <Text variant="subheading">Tek kalem: {SINGLE_LINE_TITLE}</Text>
+                <Text variant="bodySmall" tone="secondary">
+                  İşler faturaya tek tek yazılmaz, toplam tutar tek satırda kesilir. İş dökümünde işler yine ayrı ayrı yer alır.
+                </Text>
+              </View>
+            </Pressable>
             <DateField label="Fatura tarihi" required value={issueDate} onChange={setIssueDate} />
             <Input
               label="Fatura notu (isteğe bağlı)"
@@ -179,7 +196,7 @@ export default function InvoiceFormScreen() {
               value={displayDescription}
               onChangeText={(v) => setDescription(v)}
               error={errors.description}
-              hint="İşler faturaya ayrı satırlar olarak yazılır; burayı yalnızca ek not için kullanın."
+              hint={singleLine ? 'Fatura tek kalem olarak kesilir; burayı yalnızca ek not için kullanın.' : 'İşler faturaya ayrı satırlar olarak yazılır; burayı yalnızca ek not için kullanın.'}
             />
             <Input
               label="Ara toplam (KDV hariç)"
@@ -232,13 +249,17 @@ export default function InvoiceFormScreen() {
               customer={customer}
               description={displayDescription}
               note={description.trim() || undefined}
-              lines={selectedJobs.map((j) => ({
-                key: j.id,
-                title: `${j.jobNo} · ${formatDate(j.date)}`,
-                // İşin ek açıklaması faturaya yazılmaz, yalnızca dökümde yer alır.
-                detail: [j.storeName, j.routeDescription || j.description].filter(Boolean).join(' · '),
-                amount: j.price,
-              }))}
+              lines={
+                singleLine
+                  ? [{ key: 'single', title: SINGLE_LINE_TITLE, detail: '', amount }]
+                  : selectedJobs.map((j) => ({
+                      key: j.id,
+                      title: `${j.jobNo} · ${formatDate(j.date)}`,
+                      // İşin ek açıklaması faturaya yazılmaz, yalnızca dökümde yer alır.
+                      detail: [j.storeName, j.routeDescription || j.description].filter(Boolean).join(' · '),
+                      amount: j.price,
+                    }))
+              }
               vatRate={vatRate}
               {...totals}
               demo
@@ -267,5 +288,6 @@ export default function InvoiceFormScreen() {
 const styles = StyleSheet.create({
   card: { gap: spacing.lg },
   notice: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.ink, alignItems: 'flex-start' },
+  checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   jobChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceMuted, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
 });

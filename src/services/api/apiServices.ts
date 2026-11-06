@@ -297,6 +297,7 @@ export const apiInvoiceService: InvoiceService = {
         withholdingCode: input.withholdingCode ?? null,
         noWithholding: !input.withholdingCode,
         iban: input.iban?.trim() || null,
+        singleLine: input.singleLine ?? false,
       },
     });
     return invoiceFromApiDetail(detail);

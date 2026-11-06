@@ -17,6 +17,7 @@ import { colors, spacing } from '@/theme';
 import type { InvoiceEmailStatus } from '@/types';
 import { confirm } from '@/utils/confirm';
 import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
+import { SINGLE_LINE_TITLE } from '@/utils/invoiceText';
 import { composeJobText } from '@/utils/stops';
 
 const EMAIL_LABEL: Record<InvoiceEmailStatus, string> = {
@@ -165,12 +166,16 @@ export default function InvoiceDetailScreen() {
           jobNo={items.length > 1 ? `${items.length} iş` : invoice.jobNo}
           customer={customer ?? { companyName: invoice.customerName, taxOffice: '', taxNumber: '', billingAddress: '' }}
           description={invoice.description}
-          lines={items.map((it) => ({
-            key: it.jobId,
-            title: `${it.jobNo} · ${formatDate(it.jobDate)}`,
-            detail: it.description,
-            amount: it.amount,
-          }))}
+          lines={
+            invoice.singleLine
+              ? [{ key: 'single', title: SINGLE_LINE_TITLE, detail: '', amount: invoice.subtotal }]
+              : items.map((it) => ({
+                  key: it.jobId,
+                  title: `${it.jobNo} · ${formatDate(it.jobDate)}`,
+                  detail: it.description,
+                  amount: it.amount,
+                }))
+          }
           subtotal={invoice.subtotal}
           vatRate={invoice.vatRate}
           vatAmount={invoice.vatAmount}

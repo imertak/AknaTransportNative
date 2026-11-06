@@ -195,6 +195,8 @@ export interface ApiInvoiceDetail extends Omit<ApiInvoiceListItem, 'firstJobId' 
   eArchiveReference: string | null;
   lastError: string | null;
   items: { jobId: string; jobNumber: string; jobDate: string; storeName: string; description: string; lineTotal: number }[];
+  /** true: faturaya tek kalem "Nakliye Bedeli" yazılır. Eski sunucularda gelmez. */
+  singleLine?: boolean;
   email: { recipientEmail: string; status: 'Pending' | 'Sent' | 'Failed'; sentAt: string | null } | null;
   /** Elle ("E-posta gönder") yapılan son gönderim; taslak faturalar dahil. */
   manualEmail?: { recipientEmail: string; status: 'Pending' | 'Sent' | 'Failed'; sentAt: string | null; lastError: string | null; createdAt: string } | null;
@@ -546,6 +548,7 @@ export function invoiceFromApiDetail(i: ApiInvoiceDetail): Invoice {
     iban: i.iban ?? undefined,
     bankName: i.bankName ?? undefined,
     requiresSmsSignature: i.requiresSmsSignature,
+    singleLine: i.singleLine ?? false,
     createdAt: i.createdAt,
   };
 }

@@ -2,6 +2,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import {
   Ban,
   Building2,
+  CircleCheckBig,
+  ExternalLink,
   Trash2,
   CalendarDays,
   CarFront,
@@ -18,7 +20,7 @@ import {
   UserRoundCog,
 } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { Share, StyleSheet, View } from "react-native";
+import { Linking, Share, StyleSheet, View } from "react-native";
 
 import { BillingStatusBadge } from "@/components/jobs/BillingStatusBadge";
 import { DriverActionCard } from "@/components/jobs/DriverActionCard";
@@ -92,6 +94,8 @@ export default function JobDetailScreen() {
   const { run, pending } = useAsyncAction();
   const [step, setStep] = useState<AssignStep>(null);
   const [removal, setRemoval] = useState<"cancel" | "delete" | null>(null);
+  // Son oluşturulan takip bağlantısı: "Bağlantıyı aç" müşteriye gönderilenle aynı bağlantıyı açar.
+  const [trackingUrl, setTrackingUrl] = useState<{ jobId: string; url: string } | null>(null);
 
   // Liste verisinde durum geçmişi yoktur (API); detay açılınca iş tazelenir.
   useEffect(() => {
@@ -213,18 +217,35 @@ export default function JobDetailScreen() {
         ]
       : [];
 
+  /** Bu iş için takip bağlantısı: daha önce oluşturulduysa aynısı, yoksa yenisi. */
+  const liveLocationUrl = async () => {
+    if (trackingUrl?.jobId === job.id) return trackingUrl.url;
+    const link = await trackingLinkService.create(job.id);
+    if (!link.url)
+      throw new Error("Takip bağlantısı adresi sunucuda tanımlı değil.");
+    setTrackingUrl({ jobId: job.id, url: link.url });
+    return link.url;
+  };
+
+  /** Yönetici takip sayfasını kendisi açar (müşterinin gördüğü sayfa). */
+  const openLiveLocation = () =>
+    run(
+      async () => {
+        await Linking.openURL(await liveLocationUrl());
+      },
+      { error: "Takip bağlantısı açılamadı." },
+    );
+
   /** Müşteriye gönderilecek canlı konum bağlantısını üretir ve paylaşım menüsünü (WhatsApp, SMS vb.) açar. */
   const shareLiveLocation = () =>
     run(
       async () => {
-        const link = await trackingLinkService.create(job.id);
-        if (!link.url)
-          throw new Error("Takip bağlantısı adresi sunucuda tanımlı değil.");
+        const url = await liveLocationUrl();
         const store = job.storeName ? `${job.storeName} ` : "";
         const plate = job.vehiclePlate ? `\nAraç plakası: ${job.vehiclePlate}` : "";
         await Share.share({
           title: "Canlı konum",
-          message: `AKPINAR NAKLİYAT · ${store}${job.jobNo} numaralı gönderinizin aracını canlı takip edebilirsiniz:${plate}\n${link.url}`,
+          message: `AKPINAR NAKLİYAT · ${store}${job.jobNo} numaralı gönderinizin aracını canlı takip edebilirsiniz:${plate}\n${url}`,
         });
       },
       { error: "Takip bağlantısı oluşturulamadı." },
@@ -255,6 +276,22 @@ export default function JobDetailScreen() {
     if (!done) return false;
     setRemoval(null);
     return true;
+  };
+
+  /** Yönetici işi şoför atamadan ve ara adımları beklemeden doğrudan tamamlar. */
+  const completeNow = async () => {
+    const ok = await confirm({
+      title: "İşi tamamla",
+      message: driver
+        ? "İş, şoförün adımları beklenmeden Tamamlandı durumuna alınacak. Canlı konum paylaşımı durur."
+        : "İş, kimseye atanmadan Tamamlandı durumuna alınacak.",
+      confirmLabel: "Tamamla",
+    });
+    if (!ok) return;
+    await run(() => jobActions.advance(job.id, "completed", user.id), {
+      success: "İş tamamlandı.",
+      error: "İş tamamlanamadı.",
+    });
   };
 
   const canCancel = isAdminView && !closed && !job.invoiceId;
@@ -480,7 +517,7 @@ export default function JobDetailScreen() {
                 <MapPinned size={20} color={colors.text} />
                 <Text variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
                   Müşteriye bağlantı gönderin; aracı haritada canlı izlesin.
-                  Şoför işi kabul edince konum görünür, iş bitince paylaşım
+                  “Bağlantıyı aç” ile müşterinin göreceği sayfayı siz de açabilirsiniz. Şoför işi kabul edince konum görünür, iş bitince paylaşım
                   durur.
                 </Text>
               </View>
@@ -488,7 +525,14 @@ export default function JobDetailScreen() {
                 label="Canlı konumu paylaş"
                 icon={Share2}
                 onPress={shareLiveLocation}
-                loading={pending}
+                disabled={pending}
+              />
+              <Button
+                label="Bağlantıyı aç"
+                variant="secondary"
+                icon={ExternalLink}
+                onPress={openLiveLocation}
+                disabled={pending}
               />
             </Card>
           </Section>
@@ -547,6 +591,15 @@ export default function JobDetailScreen() {
                     : "Silinen iş listelerden kaldırılır; geçmişi saklanır ve gerektiğinde geri alınabilir."}
                 </Text>
               )}
+              {isAdminView && !closed ? (
+                <Button
+                  label="Tamamlandı olarak işaretle"
+                  variant="secondary"
+                  icon={CircleCheckBig}
+                  onPress={completeNow}
+                  disabled={pending}
+                />
+              ) : null}
               {canCancel ? (
                 <Button
                   label="İşi iptal et"

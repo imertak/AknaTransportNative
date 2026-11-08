@@ -66,20 +66,72 @@ function paginate<T>(rows: T[], weight: (row: T) => number, firstCapacity: numbe
     current.push(row);
     used += w;
   }
-  // Toplam alanı son sayfaya sığmıyorsa yeni sayfaya taşı
+  // Toplam alanı son sayfaya sığmıyorsa son satırları (toplamla birlikte) yeni sayfaya taşı
   if (current.length && used + lastReserve > cap) {
-    const moved = current.pop()!;
-    pages.push(current);
-    current = [moved];
+    const moved: T[] = [];
+    while (current.length > 1 && used + lastReserve > cap) {
+      const row = current.pop()!;
+      used -= weight(row);
+      moved.unshift(row);
+    }
+    if (moved.length) {
+      pages.push(current);
+      current = moved;
+    }
   }
   pages.push(current);
   return pages;
 }
 
+/**
+ * Döküm sayfa ölçüleri (yakınlaştırma öncesi px). Satırlar sayfaya tahmini yükseklikle yerleştirilir; tahmin
+ * düşük kalırsa satırlar sayfanın altında kesilip kaybolur (.page overflow: hidden). Bu yüzden karakter/satır
+ * değerleri gerçek ölçümden (Chromium, 10.5px yazı) biraz düşük, sayfa alanları da birkaç px pay bırakılarak seçildi.
+ */
+const ROW_PADDING_PX = 17; // 8 + 8 dolgu + kenarlık
+const ROW_LINE_PX = 15; // 10.5px × 1.4 satır yüksekliği
+const PARTY_CHARS_PER_LINE = 24; // Firma / Mağaza sütunu (kalın yazı, ~150px)
+const ROUTE_CHARS_PER_LINE = 44; // Yapılan Nakliyeler sütunu (~246px)
+const FIRST_PAGE_BODY_PX = 384; // başlıklı ilk sayfada tablo gövdesi için alan
+const PAGE_BODY_PX = 446; // sonraki sayfalarda
+const TOTALS_PX = 96; // son sayfadaki toplam kutusu
+
+/** Metnin sütunda kaç satıra kayacağını kelime kelime tahmin eder. */
+function wrappedLines(text: string, perLine: number): number {
+  let lines = 1;
+  let used = 0;
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const len = word.length;
+    if (used === 0) {
+      lines += Math.floor(Math.max(0, len - 1) / perLine);
+      used = len % perLine || perLine;
+    } else if (used + 1 + len <= perLine) {
+      used += 1 + len;
+    } else {
+      lines += 1 + Math.floor(Math.max(0, len - 1) / perLine);
+      used = len % perLine || perLine;
+    }
+  }
+  return lines;
+}
+
 function jobsReportHtml(report: JobsReport, title = 'NAKLİYE İŞLERİ DÖKÜMÜ'): string {
   const generated = formatDateTime(report.generatedAt);
   const rangeLabel = `${formatDate(report.range.from)} – ${formatDate(report.range.to)}`;
-  const pages = paginate(report.jobs, (j) => Math.max(1, Math.ceil(composeJobText(j.routeDescription, j.description).length / 62)), 14, 19, 4);
+  // Ağırlık: satırın tahmini yüksekliği (px). En çok satıra kayan sütun (firma veya yapılan nakliye) belirler.
+  const pages = paginate(
+    report.jobs,
+    (j) =>
+      ROW_PADDING_PX +
+      ROW_LINE_PX *
+        Math.max(
+          wrappedLines(partyLabel(j.customerName, j.storeName), PARTY_CHARS_PER_LINE),
+          wrappedLines(composeJobText(j.routeDescription, j.description), ROUTE_CHARS_PER_LINE),
+        ),
+    FIRST_PAGE_BODY_PX,
+    PAGE_BODY_PX,
+    TOTALS_PX,
+  );
   const totalPages = pages.length;
 
   const header = `

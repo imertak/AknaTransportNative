@@ -10,7 +10,6 @@ import {
   FileText,
   Hand,
   Mail,
-  MapPinned,
   Pencil,
   Phone,
   ReceiptText,
@@ -511,16 +510,10 @@ export default function JobDetailScreen() {
         </Section>
 
         {isAdminView && !closed ? (
-          <Section title="Canlı konum">
+          <Section
+            title="Canlı konum"
+            info="Müşteriye bağlantı gönderin; aracı haritada canlı izlesin. “Bağlantıyı aç” ile müşterinin göreceği sayfayı siz de açabilirsiniz. Şoför işi kabul edince konum görünür, iş bitince paylaşım durur.">
             <Card style={{ gap: spacing.md }}>
-              <View style={styles.liveRow}>
-                <MapPinned size={20} color={colors.text} />
-                <Text variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
-                  Müşteriye bağlantı gönderin; aracı haritada canlı izlesin.
-                  “Bağlantıyı aç” ile müşterinin göreceği sayfayı siz de açabilirsiniz. Şoför işi kabul edince konum görünür, iş bitince paylaşım
-                  durur.
-                </Text>
-              </View>
               <Button
                 label="Canlı konumu paylaş"
                 icon={Share2}

@@ -450,10 +450,8 @@ export default function JobFormScreen() {
           <CollapsibleCard
             title="Yetkili kişiler"
             summary={form.contacts.length ? contactSummary(form.contacts) : 'Eklenmedi'}
+            info="Yük sahibi, teslim alan gibi kişilerin telefonlarını ekleyin; şoför iş detayından arayabilir."
             forceOpen={!!errors.contactErrors && Object.keys(errors.contactErrors).length > 0}>
-            {form.contacts.length === 0 ? (
-              <Text variant="bodySmall" tone="secondary">Yük sahibi, teslim alan gibi kişilerin telefonlarını ekleyin; şoför iş detayından arayabilir.</Text>
-            ) : null}
             {form.contacts.map((c, idx) => (
               <View key={c.key} style={[styles.contact, idx > 0 && styles.contactBorder]}>
                 <View style={styles.contactHead}>

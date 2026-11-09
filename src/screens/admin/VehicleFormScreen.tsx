@@ -3,7 +3,7 @@ import { Truck, UserRoundCog, UserRoundX } from 'lucide-react-native';
 import { useMemo, useRef, useState } from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
 
-import { BottomBar, Button, Card, EmptyState, InfoRow, Input, NavHeader, OptionSheet, Screen, ScrollContent, Section, SelectField, Text, type SelectOption } from '@/components/ui';
+import { BottomBar, Button, Card, EmptyState, InfoRow, Input, LabelWithInfo, NavHeader, OptionSheet, Screen, ScrollContent, Section, SelectField, Text, type SelectOption } from '@/components/ui';
 import { can } from '@/constants/permissions';
 import { useVehicleTypeOptions, vehicleTypeLabel } from '@/constants/vehicles';
 import { useCurrentUser } from '@/contexts/AuthContext';
@@ -155,8 +155,9 @@ export default function VehicleFormScreen() {
             {isEdit ? (
               <View style={styles.switchRow}>
                 <View style={{ flex: 1 }}>
-                  <Text variant="label">Aktif</Text>
-                  <Text variant="bodySmall" tone="secondary">Pasif araçlar şoföre atanamaz ve işlere seçilemez.</Text>
+                  <LabelWithInfo info="Pasif araçlar şoföre atanamaz ve işlere seçilemez.">
+                    <Text variant="label">Aktif</Text>
+                  </LabelWithInfo>
                 </View>
                 <Switch
                   value={form.isActive}
@@ -171,7 +172,9 @@ export default function VehicleFormScreen() {
         </Section>
 
         {existing ? (
-          <Section title="Şoför ataması">
+          <Section
+            title="Şoför ataması"
+            info="Bir araç aynı anda yalnızca bir şoföre atanır. Bir şoförün birden fazla aracı olabilir. Başka şoföre vermek için önce mevcut atamayı kaldırın.">
             <Card style={{ gap: spacing.md }}>
               <InfoRow
                 icon={UserRoundCog}
@@ -179,9 +182,6 @@ export default function VehicleFormScreen() {
                 value={existing.driverName ? `${existing.driverName}${existing.assignedAt ? ` · ${formatDateTime(existing.assignedAt)}` : ''}` : 'Atanmamış'}
                 last
               />
-              <Text variant="bodySmall" tone="secondary">
-                Bir araç aynı anda yalnızca bir şoföre atanır. Bir şoförün birden fazla aracı olabilir. Başka şoföre vermek için önce mevcut atamayı kaldırın.
-              </Text>
               {existing.isActive ? (
                 existing.driverId ? (
                   <Button label="Atamayı kaldır" variant="secondary" icon={UserRoundX} onPress={unassign} loading={assignAction.pending} />

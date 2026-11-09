@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { StatusTimeline } from '@/components/jobs/StatusTimeline';
 import { StopList } from '@/components/jobs/StopList';
-import { Button, Card, ErrorState, InfoRow, LoadingState, NavHeader, Screen, ScrollContent, Section, StatusBadge, Text } from '@/components/ui';
+import { Button, Card, ErrorState, InfoRow, LabelWithInfo, LoadingState, NavHeader, Screen, ScrollContent, Section, StatusBadge, Text } from '@/components/ui';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useUserMap } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
@@ -71,14 +71,13 @@ export default function DeletedJobDetailScreen() {
           <View style={styles.row}>
             <Trash2 size={20} color={colors.danger} />
             <View style={{ flex: 1, gap: 2 }}>
-              <Text variant="subheading">Bu iş silindi</Text>
+              <LabelWithInfo info="Silinen iş listelerde, haritada ve raporlarda görünmez. Kayıtlar denetim için saklanır.">
+                <Text variant="subheading">Bu iş silindi</Text>
+              </LabelWithInfo>
               <Text variant="bodySmall" tone="secondary">
                 {[job.deletedAt ? formatDateTime(job.deletedAt) : undefined, job.deletedByName].filter(Boolean).join(' · ') || '—'}
               </Text>
               {job.deletionReason ? <Text variant="bodySmall">Neden: {job.deletionReason}</Text> : null}
-              <Text variant="bodySmall" tone="tertiary">
-                Silinen iş listelerde, haritada ve raporlarda görünmez. Kayıtlar denetim için saklanır.
-              </Text>
             </View>
           </View>
           <Button label="İşi geri al" variant="secondary" icon={ArchiveRestore} onPress={restore} loading={pending} />

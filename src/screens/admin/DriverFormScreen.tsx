@@ -3,7 +3,7 @@ import { KeyRound, Mail, Phone, Plus, Truck, UserRound, UsersRound, X } from 'lu
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
-import { BottomBar, Button, Card, Chip, EmptyState, Input, NavHeader, OptionSheet, Screen, ScrollContent, Section, Sheet, Text, type SelectOption } from '@/components/ui';
+import { BottomBar, Button, Card, Chip, EmptyState, Input, LabelWithInfo, NavHeader, OptionSheet, Screen, ScrollContent, Section, Sheet, Text, type SelectOption } from '@/components/ui';
 import { can } from '@/constants/permissions';
 import { useVehicleTypeOptions, vehicleTypeLabel } from '@/constants/vehicles';
 import { useCurrentUser } from '@/contexts/AuthContext';
@@ -262,8 +262,9 @@ export default function DriverFormScreen() {
             {isEdit ? (
               <View style={styles.switchRow}>
                 <View style={{ flex: 1 }}>
-                  <Text variant="label">Aktif</Text>
-                  <Text variant="bodySmall" tone="secondary">Pasif şoför giriş yapamaz, işe ve araca atanamaz.</Text>
+                  <LabelWithInfo info="Pasif şoför giriş yapamaz, işe ve araca atanamaz.">
+                    <Text variant="label">Aktif</Text>
+                  </LabelWithInfo>
                 </View>
                 <Switch value={form.isActive} onValueChange={(v) => set('isActive', v)} trackColor={{ true: colors.ink, false: colors.borderStrong }} thumbColor={colors.surface} accessibilityLabel="Şoför aktif" />
               </View>
@@ -334,7 +335,9 @@ export default function DriverFormScreen() {
           <Input label="Plaka" required autoCapitalize="characters" value={newVehicle.plate} onChangeText={(v) => setNewVehicle((s) => ({ ...s, plate: v }))} error={newErrors.plate} placeholder="34 ABC 123" />
           {/* Sayfa üstü bir sheet içinde ikinci bir seçim penceresi açmamak için tipler doğrudan seçilir. */}
           <View style={{ gap: spacing.xs + 2 }}>
-            <Text variant="label" tone="secondary">Araç tipi *</Text>
+            <LabelWithInfo info="Marka, model ve açıklamayı sonra Araçlar ekranından ekleyebilirsiniz.">
+              <Text variant="label" tone="secondary">Araç tipi *</Text>
+            </LabelWithInfo>
             <View style={styles.chips} accessibilityRole="radiogroup">
               {typeOptions.map(({ value: t, label }) => (
                 <Chip key={t} label={label} active={newVehicle.type === t} onPress={() => setNewVehicle((s) => ({ ...s, type: t }))} />
@@ -342,7 +345,6 @@ export default function DriverFormScreen() {
             </View>
             {newErrors.type ? <Text variant="bodySmall" tone="danger">{newErrors.type}</Text> : null}
           </View>
-          <Text variant="bodySmall" tone="tertiary">Marka, model ve açıklamayı sonra Araçlar ekranından ekleyebilirsiniz.</Text>
         </ScrollView>
       </Sheet>
 

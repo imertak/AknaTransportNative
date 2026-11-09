@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import { InvoiceRow } from '@/components/invoices/InvoiceRow';
-import { Button, Chip, DateField, EmptyState, ErrorState, IconButton, LoadingState, LoadMoreFooter, MonthHeader, PageHeader, Screen, SegmentedControl, SelectField, Sheet, Text, type SelectOption } from '@/components/ui';
+import { Button, Chip, DateField, EmptyState, ErrorState, IconButton, LoadingState, LoadMoreFooter, MonthHeader, PageHeader, Screen, SegmentedControl, SelectField, Sheet, type SelectOption } from '@/components/ui';
 import { useCustomers, useDataStatus, useInvoices } from '@/hooks/useData';
 import { useRefreshOnCountChange } from '@/hooks/useListSync';
 import { useRefresh } from '@/hooks/useRefresh';
@@ -168,13 +168,12 @@ export default function InvoicesScreen() {
           <SelectField label="Müşteri" options={customerOptions} value={customerId} onChange={setCustomerId} searchable />
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <View style={{ flex: 1 }}>
-              <DateField label="Başlangıç" value={dateFrom ?? null} onChange={setDateFrom} />
+              <DateField label="Başlangıç" value={dateFrom ?? null} onChange={setDateFrom} hint="Tarih filtresi fatura tarihine göre uygulanır." />
             </View>
             <View style={{ flex: 1 }}>
               <DateField label="Bitiş" value={dateTo ?? null} onChange={setDateTo} error={rangeError} />
             </View>
           </View>
-          <Text variant="bodySmall" tone="tertiary">Tarih filtresi fatura tarihine göre uygulanır.</Text>
         </View>
       </Sheet>
     </Screen>

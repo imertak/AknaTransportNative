@@ -106,5 +106,5 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSunken },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   chips: { gap: spacing.xs },
-  following: { backgroundColor: colors.accent },
+  following: { borderWidth: 2, borderColor: colors.accent },
 });

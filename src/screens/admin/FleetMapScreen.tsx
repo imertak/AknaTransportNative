@@ -241,7 +241,7 @@ function VehicleCard({
       </Pressable>
 
       <View style={styles.metaRow}>
-        <View style={[styles.dot, { backgroundColor: !vehicle.fix ? colors.borderStrong : stale ? colors.accent : colors.ink }]} />
+        <View style={[styles.dot, { backgroundColor: !vehicle.fix ? colors.borderStrong : stale ? colors.danger : colors.ink }]} />
         <Text variant="bodySmall" tone={stale ? 'danger' : 'secondary'} style={{ flex: 1 }}>
           {vehicle.fix
             ? `Son konum ${formatRelative(vehicle.fix.timestamp, now)}${stale ? ' · konum güncel değil, şoförün bağlantısı kopmuş olabilir' : ''}`

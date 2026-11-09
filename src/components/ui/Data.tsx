@@ -40,7 +40,7 @@ export const StatTile = memo(function StatTile({ label, value, hint, onPress, em
       <Text variant="bodySmall" tone={emphasis ? 'inverseMuted' : 'secondary'} numberOfLines={1}>
         {label}
       </Text>
-      <Text variant="number" tone={emphasis ? 'inverse' : 'default'} numberOfLines={1} adjustsFontSizeToFit>
+      <Text variant="number" tone={emphasis ? 'inverse' : 'default'} style={emphasis && styles.tileEmphasisValue} numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
       {hint ? <Text variant="bodySmall" tone={emphasis ? 'inverseMuted' : 'tertiary'} numberOfLines={1}>{hint}</Text> : null}
@@ -80,6 +80,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   tileEmphasis: { backgroundColor: colors.ink, borderColor: colors.ink },
+  /** Siyah kutuda öne çıkan sayı neon yeşil. */
+  tileEmphasisValue: { color: colors.accent },
   listItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2 },
   listIcon: { width: 36, height: 36, borderRadius: radius.sm + 2, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
 });

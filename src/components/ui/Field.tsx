@@ -3,25 +3,28 @@ import { memo, useState, type ComponentRef, type ReactNode, type Ref } from 'rea
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { colors, radius, spacing, typography } from '@/theme';
+import { InfoTip } from './InfoTip';
 import { Text } from './Text';
 
 export function FieldShell({ label, error, hint, required, children }: { label?: string; error?: string; hint?: string; required?: boolean; children: ReactNode }) {
   return (
     <View style={styles.field}>
-      {label ? (
-        <Text variant="label" tone="secondary">
-          {label}
-          {required ? <Text variant="label" tone="tertiary"> *</Text> : null}
-        </Text>
+      {label || hint ? (
+        <View style={styles.labelRow}>
+          {label ? (
+            <Text variant="label" tone="secondary" style={{ flexShrink: 1 }}>
+              {label}
+              {required ? <Text variant="label" tone="tertiary"> *</Text> : null}
+            </Text>
+          ) : null}
+          {/* Açıklama alanın altında sürekli durmaz; "i" ikonuna dokununca açılır. */}
+          {hint ? <InfoTip text={hint} label={label ? `${label} hakkında` : 'Açıklama'} size={14} /> : null}
+        </View>
       ) : null}
       {children}
       {error ? (
         <Text variant="bodySmall" tone="danger" accessibilityLiveRegion="polite">
           {error}
-        </Text>
-      ) : hint ? (
-        <Text variant="bodySmall" tone="tertiary">
-          {hint}
         </Text>
       ) : null}
     </View>
@@ -73,6 +76,7 @@ export const Input = memo(
 );
 
 const styles = StyleSheet.create({
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   field: { gap: spacing.xs + 2 },
   box: {
     minHeight: 48,

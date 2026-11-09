@@ -305,6 +305,10 @@ export const apiInvoiceService: InvoiceService = {
 
   cancel: async (id) => invoiceFromApiDetail(await http<ApiInvoiceDetail>(`/api/invoices/${id}/cancel`, { method: 'POST', json: {} })),
 
+  async remove(id) {
+    await http(`/api/invoices/${id}`, { method: 'DELETE' });
+  },
+
   async downloadPdf(id, kind, number) {
     const path = kind === 'invoice' ? `/api/invoices/${id}/pdf` : `/api/invoices/${id}/job-report/pdf`;
     const bytes = await httpBinary(path);

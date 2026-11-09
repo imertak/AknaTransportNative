@@ -14,3 +14,4 @@ export * from './Layout';
 export * from './States';
 export * from './Controls';
 export * from './Data';
+export * from './MonthHeader';

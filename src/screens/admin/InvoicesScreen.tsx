@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import { InvoiceRow } from '@/components/invoices/InvoiceRow';
-import { Button, Chip, DateField, EmptyState, IconButton, PageHeader, Screen, SegmentedControl, SelectField, Sheet, Text, type SelectOption } from '@/components/ui';
+import { Button, Chip, DateField, EmptyState, IconButton, MonthHeader, PageHeader, Screen, SegmentedControl, SelectField, Sheet, Text, type SelectOption } from '@/components/ui';
 import { useCustomers, useInvoices } from '@/hooks/useData';
 import { useRefresh } from '@/hooks/useRefresh';
 import { routes } from '@/navigation/routes';
@@ -12,6 +12,7 @@ import { matchesInvoiceFilter } from '@/services/invoiceUtils';
 import { colors, radius, spacing } from '@/theme';
 import type { Invoice, InvoiceFilter } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { groupByMonth, monthRowKey } from '@/utils/monthGroups';
 
 type StatusTab = 'all' | NonNullable<InvoiceFilter['status']>;
 const ALL = '__all';
@@ -33,6 +34,11 @@ export default function InvoicesScreen() {
   );
   const data = useMemo(() => invoices.filter((i) => matchesInvoiceFilter(i, filter)), [invoices, filter]);
   const total = useMemo(() => data.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + i.total, 0), [data]);
+  // Faturalar düzenlenme ayına göre bölünür (yeniden eskiye).
+  const rows = useMemo(
+    () => groupByMonth([...data].sort((a, b) => b.issueDate.localeCompare(a.issueDate) || b.invoiceNo.localeCompare(a.invoiceNo)), (i) => i.issueDate, (i) => i.id),
+    [data],
+  );
   const open = useCallback((inv: Invoice) => router.push(routes.invoice(inv.id)), []);
   const customerOptions = useMemo<SelectOption[]>(() => [{ value: ALL, label: 'Tüm müşteriler' }, ...customers.map((c) => ({ value: c.id, label: c.companyName }))], [customers]);
   const customerName = customers.find((c) => c.id === customerId)?.companyName;
@@ -63,8 +69,8 @@ export default function InvoicesScreen() {
         />
       </PageHeader>
       <FlatList
-        data={data}
-        keyExtractor={(i) => i.id}
+        data={rows}
+        keyExtractor={monthRowKey}
         contentContainerStyle={styles.list}
         refreshing={refreshing}
         onRefresh={onRefresh}
@@ -88,11 +94,19 @@ export default function InvoicesScreen() {
             <Button label="İş dökümü (tarih aralığı PDF)" icon={FileSpreadsheet} variant="secondary" size="sm" onPress={() => router.push(routes.jobReport)} />
           </View>
         }
-        renderItem={({ item, index }) => (
-          <View style={[styles.item, index === 0 && styles.first, index === data.length - 1 && styles.last]}>
-            <InvoiceRow invoice={item} onPress={open} showCustomer last={index === data.length - 1} />
-          </View>
-        )}
+        renderItem={({ item: row, index }) =>
+          row.kind === 'month' ? (
+            <MonthHeader
+              label={row.label}
+              first={index === 0}
+              summary={`${row.items.length} fatura · ${formatCurrency(row.items.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + i.total, 0))}`}
+            />
+          ) : (
+            <View style={[styles.item, row.first && styles.first, row.last && styles.last]}>
+              <InvoiceRow invoice={row.item} onPress={open} showCustomer last={row.last} />
+            </View>
+          )
+        }
         ListEmptyComponent={
           <EmptyState
             icon={ReceiptText}

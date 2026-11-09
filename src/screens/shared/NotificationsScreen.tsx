@@ -1,9 +1,9 @@
 import { router, useFocusEffect } from 'expo-router';
 import { Ban, Bell, CheckCheck, CircleCheck, ClipboardList, PackageOpen, PencilLine, Truck, UserRoundMinus, type LucideIcon } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
-import { EmptyState, ErrorState, IconButton, LoadingState, NavHeader, Screen, Text } from '@/components/ui';
+import { EmptyState, ErrorState, IconButton, LoadingState, MonthHeader, monthSeparator, NavHeader, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { routes } from '@/navigation/routes';
@@ -11,6 +11,7 @@ import { errorMessage } from '@/services/errors';
 import { notificationService, type AppNotification, type NotificationKind } from '@/services/notifications';
 import { colors, radius, spacing } from '@/theme';
 import { formatRelative } from '@/utils/format';
+import { groupByMonth, monthRowKey, type MonthRow } from '@/utils/monthGroups';
 
 const ICONS: Record<NotificationKind, LucideIcon> = {
   JobAssigned: ClipboardList,
@@ -77,6 +78,7 @@ export default function NotificationsScreen() {
   }, [setUnreadCount]);
 
   const hasUnread = !!items?.some((n) => !n.isRead);
+  const rows = useMemo(() => groupByMonth(items ?? [], (n) => n.createdAt, (n) => n.id), [items]);
 
   return (
     <Screen>
@@ -90,9 +92,11 @@ export default function NotificationsScreen() {
         <ErrorState message={error} onRetry={load} />
       ) : (
         <FlatList
-          data={items ?? []}
-          keyExtractor={(n) => n.id}
-          renderItem={({ item }) => <NotificationRow item={item} onPress={open} />}
+          data={rows}
+          keyExtractor={monthRowKey}
+          renderItem={({ item, index }: { item: MonthRow<AppNotification>; index: number }) =>
+            item.kind === 'month' ? <MonthHeader label={item.label} first={index === 0} /> : <NotificationRow item={item.item} onPress={open} />
+          }
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={Separator}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />}
@@ -126,7 +130,7 @@ function NotificationRow({ item, onPress }: { item: AppNotification; onPress: (n
   );
 }
 
-const Separator = () => <View style={{ height: spacing.sm }} />;
+const Separator = monthSeparator(spacing.sm);
 
 const styles = StyleSheet.create({
   list: { padding: spacing.lg, paddingBottom: spacing.huge, flexGrow: 1 },

@@ -6,7 +6,7 @@ import { Button } from './Button';
 import { Text } from './Text';
 
 /** Sayfalı listenin altı: kaçının gösterildiği ve sonraki sayfa butonu. */
-export const LoadMoreFooter = memo(function LoadMoreFooter({ shown, total, unit, onMore }: { shown: number; total: number; unit: string; onMore: () => void }) {
+export const LoadMoreFooter = memo(function LoadMoreFooter({ shown, total, unit, onMore, loading }: { shown: number; total: number; unit: string; onMore: () => void; loading?: boolean }) {
   if (total === 0) return null;
   const hasMore = shown < total;
   return (
@@ -14,7 +14,7 @@ export const LoadMoreFooter = memo(function LoadMoreFooter({ shown, total, unit,
       <Text variant="bodySmall" tone="tertiary" align="center">
         {hasMore ? `${total} ${unit} içinden ${shown} tanesi gösteriliyor` : `${total} ${unit} listelendi`}
       </Text>
-      {hasMore ? <Button label="Daha fazla göster" variant="secondary" size="sm" onPress={onMore} /> : null}
+      {hasMore ? <Button label="Daha fazla göster" variant="secondary" size="sm" loading={loading} onPress={onMore} /> : null}
     </View>
   );
 });

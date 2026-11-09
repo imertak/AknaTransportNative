@@ -4,12 +4,14 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import { InvoiceRow } from '@/components/invoices/InvoiceRow';
-import { Button, Chip, DateField, EmptyState, IconButton, LoadMoreFooter, MonthHeader, PageHeader, Screen, SegmentedControl, SelectField, Sheet, Text, type SelectOption } from '@/components/ui';
-import { useCustomers, useInvoices } from '@/hooks/useData';
-import { usePagedRows } from '@/hooks/usePagedRows';
+import { Button, Chip, DateField, EmptyState, ErrorState, IconButton, LoadingState, LoadMoreFooter, MonthHeader, PageHeader, Screen, SegmentedControl, SelectField, Sheet, Text, type SelectOption } from '@/components/ui';
+import { useCustomers, useDataStatus, useInvoices } from '@/hooks/useData';
+import { useRefreshOnCountChange } from '@/hooks/useListSync';
 import { useRefresh } from '@/hooks/useRefresh';
+import { useServerList } from '@/hooks/useServerList';
 import { routes } from '@/navigation/routes';
 import { matchesInvoiceFilter } from '@/services/invoiceUtils';
+import { invoiceService } from '@/services/registry';
 import { colors, radius, spacing } from '@/theme';
 import type { Invoice, InvoiceFilter } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
@@ -33,15 +35,27 @@ export default function InvoicesScreen() {
     () => ({ status: status === 'all' ? undefined : status, customerId: customerId === ALL ? undefined : customerId, dateFrom, dateTo }),
     [status, customerId, dateFrom, dateTo],
   );
-  const data = useMemo(() => invoices.filter((i) => matchesInvoiceFilter(i, filter)), [invoices, filter]);
-  const total = useMemo(() => data.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + i.total, 0), [data]);
-  // Faturalar düzenlenme ayına göre bölünür (yeniden eskiye).
-  const allRows = useMemo(
-    () => groupByMonth([...data].sort((a, b) => b.issueDate.localeCompare(a.issueDate) || b.invoiceNo.localeCompare(a.invoiceNo)), (i) => i.issueDate, (i) => i.id),
-    [data],
+  // Liste sunucudan sayfa sayfa çekilir (yeniden eskiye); başlıktaki adet ve tutarlar sunucu özetinden gelir.
+  const list = useServerList({
+    key: JSON.stringify(filter),
+    fetchPage: (page, size) => invoiceService.listPage(filter, page, size),
+    fetchSummary: () => invoiceService.summary(filter),
+    getId: (i: Invoice) => i.id,
+  });
+  // Uygulama verisindeki güncel hâl kullanılır (iptal, silme, imza listeye hemen yansır).
+  const ready = useDataStatus() === 'ready';
+  const storeById = useMemo(() => new Map(invoices.map((i) => [i.id, i])), [invoices]);
+  const data = useMemo(
+    () => list.items.map((i) => storeById.get(i.id) ?? (ready ? undefined : i)).filter((i): i is Invoice => !!i && matchesInvoiceFilter(i, filter)),
+    [list.items, storeById, ready, filter],
   );
-  // Sayfalama: filtre değişince ilk sayfaya dönülür.
-  const page = usePagedRows(allRows, filter);
+  // Yeni fatura eklenince veya fatura silinince liste sessizce yenilenir.
+  useRefreshOnCountChange(invoices.length, ready, list.refresh);
+  const months = useMemo(() => new Map(list.summary?.months.map((m) => [m.month, m]) ?? []), [list.summary]);
+  const rows = useMemo(() => groupByMonth(data, (i) => i.issueDate, (i) => i.id), [data]);
+  const onPullRefresh = useCallback(async () => {
+    await Promise.all([onRefresh(), list.refresh()]);
+  }, [onRefresh, list]);
   const open = useCallback((inv: Invoice) => router.push(routes.invoice(inv.id)), []);
   const customerOptions = useMemo<SelectOption[]>(() => [{ value: ALL, label: 'Tüm müşteriler' }, ...customers.map((c) => ({ value: c.id, label: c.companyName }))], [customers]);
   const customerName = customers.find((c) => c.id === customerId)?.companyName;
@@ -52,7 +66,7 @@ export default function InvoicesScreen() {
     <Screen>
       <PageHeader
         title="Faturalarım"
-        subtitle={`${data.length} fatura · ${formatCurrency(total, { decimals: 2 })}`}
+        subtitle={list.summary ? `${list.summary.count} fatura · ${formatCurrency(list.summary.total, { decimals: 2 })}` : 'Yükleniyor…'}
         right={
           <>
             <IconButton icon={SlidersHorizontal} label="Filtreler" tone="dark" onPress={() => setFiltersOpen(true)} />
@@ -71,12 +85,17 @@ export default function InvoicesScreen() {
           ]}
         />
       </PageHeader>
+      {list.loading && list.items.length === 0 ? (
+        <LoadingState label="Faturalar yükleniyor" />
+      ) : list.error && list.items.length === 0 ? (
+        <ErrorState message={list.error} onRetry={list.retry} />
+      ) : (
       <FlatList
-        data={page.rows}
+        data={rows}
         keyExtractor={monthRowKey}
         contentContainerStyle={styles.list}
         refreshing={refreshing}
-        onRefresh={onRefresh}
+        onRefresh={onPullRefresh}
         ListHeaderComponent={
           <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
             {activeFilters ? (
@@ -102,7 +121,9 @@ export default function InvoicesScreen() {
             <MonthHeader
               label={row.label}
               first={index === 0}
-              summary={`${row.items.length} fatura · ${formatCurrency(row.items.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + i.total, 0))}`}
+              summary={`${months.get(row.month)?.count ?? row.items.length} fatura · ${formatCurrency(
+                months.get(row.month)?.total ?? row.items.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + i.total, 0),
+              )}`}
             />
           ) : (
             <View style={[styles.item, row.first && styles.first, row.last && styles.last]}>
@@ -110,9 +131,9 @@ export default function InvoicesScreen() {
             </View>
           )
         }
-        onEndReached={page.loadMore}
+        onEndReached={list.loadMore}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={<LoadMoreFooter shown={page.shown} total={page.total} unit="fatura" onMore={page.loadMore} />}
+        ListFooterComponent={<LoadMoreFooter shown={list.items.length} total={list.totalCount} unit="fatura" onMore={list.loadMore} loading={list.loadingMore} />}
         ListEmptyComponent={
           <EmptyState
             icon={ReceiptText}
@@ -122,6 +143,7 @@ export default function InvoicesScreen() {
           />
         }
       />
+      )}
 
       <Sheet
         visible={filtersOpen}

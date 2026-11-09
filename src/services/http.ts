@@ -149,10 +149,11 @@ export async function http<T>(path: string, init: HttpOptions = {}): Promise<T> 
   return body as T;
 }
 
-interface Paged<T> {
+export interface Paged<T> {
   items: T[];
   pageNumber: number;
   totalPages: number;
+  totalCount: number;
 }
 
 /** Sayfalı listeleri sonuna kadar okur (API sayfa boyutu üst sınırı 200). */

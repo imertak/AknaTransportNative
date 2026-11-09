@@ -117,6 +117,19 @@ src/
 - Şoför: iş atandı, iş sizden alındı, iş bilgileri güncellendi, iş iptal edildi. Yönetici: şoför işi kabul etti, yola çıktı, yüklemeye başladı, teslimata çıktı, tamamladı.
 - Bildirime dokununca ilgili işin detayı açılır. Ana ekrandaki zil okunmamış sayısını gösterir ve bildirim listesini açar.
 - Telefon bildirimleri Expo Go'da çalışmaz (Android); development veya production build gerekir. İzin verilmezse uygulama içi liste yine çalışır.
+- **Profilim → Bildirimler** bu telefonun kayıt durumunu ve hatayı gösterir. "Deneme bildirimi gönder" sunucudan hemen bir bildirim yollar ve gelmezse nedenini (kayıtlı cihaz yok, FCM/APNs anahtarı yok vb.) yazar.
+- İşlemi yapan kişiye bildirim gitmez: yönetici bir işi kendine atarsa veya üstlenirse kendine "iş atandı" bildirimi gelmez.
+
+### Android push kurulumu (bir kez)
+
+Android'de Expo push, Firebase Cloud Messaging (FCM) üzerinden çalışır. Bu ayar yapılmadan derlenen APK'da bildirim kaydı başarısız olur (Profil ekranında "Firebase / google-services.json bu derlemede yok" yazar).
+
+1. [Firebase konsolunda](https://console.firebase.google.com) proje açın, paket adı `app.json`'daki `android.package` olan bir Android uygulaması ekleyin ve `google-services.json` dosyasını indirin.
+2. Dosyayı EAS'e "file" tipinde ortam değişkeni olarak yükleyin: `eas env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret` (veya expo.dev → Proje → Environment variables).
+3. Firebase → Proje ayarları → Hizmet hesapları → "Yeni özel anahtar oluştur" ile JSON anahtarı indirin; `eas credentials` → Android → production → "Google Service Account" → "Push Notifications (FCM V1)" adımıyla yükleyin (veya expo.dev → Credentials).
+4. Yeni bir build alın (`eas build -p android --profile production`) ve telefona kurun.
+
+iPhone için `eas build -p ios` sırasında EAS, push anahtarını (APNs) oluşturmayı önerir; kabul etmek yeterlidir.
 
 ## Canlı konum paylaşımı
 

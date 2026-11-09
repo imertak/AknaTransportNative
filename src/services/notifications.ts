@@ -27,6 +27,14 @@ interface Paged<T> {
   totalCount: number;
 }
 
+/** Deneme bildiriminin sonucu. */
+export interface PushTestResult {
+  enabled: boolean;
+  deviceCount: number;
+  delivered: number;
+  errors: string[];
+}
+
 /** Giriş yapmış kullanıcının bildirimleri ve telefon (push) kaydı. */
 export const notificationService = {
   async list(pageSize = 50): Promise<AppNotification[]> {
@@ -39,6 +47,8 @@ export const notificationService = {
   markRead: (id: string) => http<void>(`/api/notifications/${id}/read`, { method: 'POST', json: {} }),
   markAllRead: () => http<void>('/api/notifications/read-all', { method: 'POST', json: {} }),
   registerDevice: (token: string, platform: string) => http<void>('/api/notifications/devices', { method: 'POST', json: { token, platform } }),
+  /** Kayıtlı telefonlara hemen deneme bildirimi gönderir; sunucu sorunun nerede olduğunu söyler. */
+  sendTest: () => http<PushTestResult>('/api/notifications/test', { method: 'POST', json: {} }),
   unregisterDevice: (token: string) => http<void>('/api/notifications/devices/remove', { method: 'POST', json: { token } }),
 };
 

@@ -218,7 +218,7 @@ export default function DashboardScreen() {
           />
 
           <Card padded={false}>
-            <ListItem icon={Building2} title="Müşteriler" subtitle="Müşteri kayıtları ve geçmiş işler" onPress={() => router.push(routes.customers)} />
+            <ListItem icon={Building2} title="Müşteriler" subtitle="Müşteri kayıtları, bakiyeler ve geçmiş işler" onPress={() => router.push(routes.customers)} />
             <View style={styles.sep} />
             <ListItem icon={UsersRound} title="Şoförler" subtitle="Şoför ekleme, araç atama ve şifre sıfırlama" onPress={() => router.push(routes.drivers)} />
             <View style={styles.sep} />

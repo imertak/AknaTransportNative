@@ -8,6 +8,8 @@ import type { Customer, DateRange, Invoice, JobsReport, TransportJob } from '@/t
 import { formatCurrency, formatDate, formatDateTime, partyLabel } from '@/utils/format';
 import { SINGLE_LINE_TITLE } from '@/utils/invoiceText';
 import { composeJobText } from '@/utils/stops';
+import { savePdf, type PdfFile } from './files';
+import { httpBinary } from './http';
 import { jobService } from './registry';
 import { ServiceError } from './errors';
 
@@ -90,8 +92,8 @@ function paginate<T>(rows: T[], weight: (row: T) => number, firstCapacity: numbe
  */
 const ROW_PADDING_PX = 17; // 8 + 8 dolgu + kenarlık
 const ROW_LINE_PX = 15; // 10.5px × 1.4 satır yüksekliği
-const PARTY_CHARS_PER_LINE = 24; // Firma / Mağaza sütunu (kalın yazı, ~150px)
-const ROUTE_CHARS_PER_LINE = 44; // Yapılan Nakliyeler sütunu (~246px)
+const PARTY_CHARS_PER_LINE = 20; // Firma / Mağaza sütunu (kalın yazı, ~150px; büyük harfli unvanlar daha geniş)
+const ROUTE_CHARS_PER_LINE = 40; // Yapılan Nakliyeler sütunu (~246px)
 const FIRST_PAGE_BODY_PX = 384; // başlıklı ilk sayfada tablo gövdesi için alan
 const PAGE_BODY_PX = 446; // sonraki sayfalarda
 const TOTALS_PX = 96; // son sayfadaki toplam kutusu
@@ -354,7 +356,26 @@ export const reportService = {
   jobsReportHtml,
   invoiceHtml,
 
-  /** Tarih aralığı dökümünün PDF'ini üretir (önizleme ve paylaşım için). */
+  /**
+   * Tarih aralığı dökümünün PDF'i. Önce sunucudaki döküm kullanılır: sunucu satırları gerçek yüksekliğiyle
+   * sayfalara böler ve tablo başlığını her sayfada tekrarlar. Telefonda HTML'den üretilen PDF'te sayfa bölmesi
+   * tahmine dayandığından uzun firma adlarında satırlar kesilebiliyordu; o yalnızca sunucuya ulaşılamazsa kullanılır.
+   */
+  async jobsReportPdfFor(range: DateRange, opts: JobsReportOptions = {}): Promise<PdfFile> {
+    const name = `AKNA_Is_Dokumu_${formatDate(range.from)}-${formatDate(range.to)}.pdf`;
+    try {
+      const query = new URLSearchParams({ startDate: range.from, endDate: range.to, scope: opts.onlyCompleted ? 'Completed' : 'NotCancelled' });
+      if (opts.customerId) query.set('customerId', opts.customerId);
+      const bytes = await httpBinary(`/api/reports/jobs/pdf?${query.toString()}`);
+      return { uri: await savePdf(bytes, name), title: 'Nakliye işleri dökümü' };
+    } catch (e) {
+      // Sunucu reddettiyse (ör. tarih aralığında çok fazla iş) mesajı göster; bağlantı sorununda cihazda üret.
+      if (e instanceof ServiceError && e.code === 'validation') throw e;
+      return reportService.jobsReportPdf(await reportService.buildJobsReport(range, opts));
+    }
+  },
+
+  /** Tarih aralığı dökümünün PDF'ini cihazda HTML'den üretir (sunucuya ulaşılamadığında yedek). */
   async jobsReportPdf(report: JobsReport): Promise<{ uri: string; title: string }> {
     const name = fileSafe(`AKNA_Is_Dokumu_${formatDate(report.range.from)}-${formatDate(report.range.to)}.pdf`);
     return { uri: await htmlToPdf(jobsReportHtml(report), A4_LANDSCAPE, name), title: 'Nakliye işleri dökümü' };
@@ -367,6 +388,12 @@ export const reportService = {
 
   async printJobsReport(report: JobsReport) {
     await Print.printAsync({ html: jobsReportHtml(report), ...A4_LANDSCAPE, orientation: Print.Orientation.landscape });
+  },
+
+  /** Dökümü sunucudaki PDF'ten yazdırır (sayfa bölmesi önizlemeyle aynı). */
+  async printJobsReportFor(range: DateRange, opts: JobsReportOptions = {}) {
+    const pdf = await reportService.jobsReportPdfFor(range, opts);
+    await Print.printAsync({ uri: pdf.uri, orientation: Print.Orientation.landscape });
   },
 
   async invoicePdf(invoice: Invoice, customer: Customer | null): Promise<{ uri: string; title: string }> {

@@ -52,8 +52,6 @@ export default function ReportsScreen() {
   const customerOptions = useMemo<SelectOption[]>(() => [{ value: ALL, label: 'Tüm müşteriler' }, ...customers.map((c) => ({ value: c.id, label: c.companyName }))], [customers]);
   const activePreset = presetList.find((p) => p.range.from === range.from && p.range.to === range.to)?.key;
 
-  // PDF oluşturulmadan önce veri servis katmanından tazelenir
-  const fresh = () => reportService.buildJobsReport(range, opts);
 
   return (
     <Screen>
@@ -105,7 +103,7 @@ export default function ReportsScreen() {
               style={{ flex: 1 }}
               disabled={!!rangeError || report.totalCount === 0}
               loading={exportAction.pending}
-              onPress={() => exportAction.run(async () => setPdf(await reportService.jobsReportPdf(await fresh())), { error: 'PDF oluşturulamadı.' })}
+              onPress={() => exportAction.run(async () => setPdf(await reportService.jobsReportPdfFor(range, opts)), { error: 'PDF oluşturulamadı.' })}
             />
             <Button
               label="Yazdır"
@@ -114,7 +112,7 @@ export default function ReportsScreen() {
               style={{ flex: 1 }}
               disabled={!!rangeError || report.totalCount === 0}
               loading={printAction.pending}
-              onPress={() => printAction.run(async () => reportService.printJobsReport(await fresh()), { error: 'Yazdırma başlatılamadı.' })}
+              onPress={() => printAction.run(() => reportService.printJobsReportFor(range, opts), { error: 'Yazdırma başlatılamadı.' })}
             />
           </View>
 

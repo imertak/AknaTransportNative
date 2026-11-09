@@ -82,8 +82,24 @@ export interface DashboardService {
   revenue(year: number, month: number): Promise<MonthRevenue>;
 }
 
+/** Sunucudan tek sayfa. */
+export interface ListPage<T> {
+  items: T[];
+  totalCount: number;
+}
+
+/** Filtreye uyan tüm kayıtların özeti (iptaller tutara katılmaz). month: "2026-11". */
+export interface ListSummary {
+  count: number;
+  total: number;
+  months: { month: string; count: number; total: number }[];
+}
+
 export interface JobService {
   list(filter?: JobFilter): Promise<TransportJob[]>;
+  /** Liste ekranı: filtreye uyan işlerin bir sayfası (yeniden eskiye). */
+  listPage(filter: JobFilter, page: number, pageSize: number): Promise<ListPage<TransportJob>>;
+  summary(filter: JobFilter): Promise<ListSummary>;
   get(id: string): Promise<TransportJob>;
   create(input: JobInput, actorId: string): Promise<TransportJob>;
   update(id: string, input: JobInput, actorId: string): Promise<TransportJob>;
@@ -120,6 +136,9 @@ export interface CustomerService {
 
 export interface InvoiceService {
   list(filter?: InvoiceFilter): Promise<Invoice[]>;
+  /** Liste ekranı: filtreye uyan faturaların bir sayfası (yeniden eskiye). */
+  listPage(filter: InvoiceFilter, page: number, pageSize: number): Promise<ListPage<Invoice>>;
+  summary(filter: InvoiceFilter): Promise<ListSummary>;
   get(id: string): Promise<Invoice>;
   /** Taslak fatura oluşturur. Resmi geçerliliği yoktur. */
   createDemo(input: InvoiceInput, actorId: string): Promise<Invoice>;

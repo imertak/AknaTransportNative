@@ -2,7 +2,7 @@ import { MONTH_NAMES } from './format';
 
 /** Aylara bölünmüş listede bir satır: ay başlığı veya öğe. */
 export type MonthRow<T> =
-  | { kind: 'month'; key: string; label: string; items: T[] }
+  | { kind: 'month'; key: string; /** "2026-11" (tarihsizse boş). */ month: string; label: string; items: T[] }
   | { kind: 'item'; key: string; item: T; /** Ayın ilk/son öğesi (gruplu kart köşeleri için). */ first: boolean; last: boolean };
 
 /** "2026-11-09" veya ISO tarih-saat → "2026-11" (tarih-saat yerel saate göre). */
@@ -34,7 +34,7 @@ export function groupByMonth<T>(items: readonly T[], date: (item: T) => string |
   }
   const rows: MonthRow<T>[] = [];
   for (const [k, list] of groups) {
-    rows.push({ kind: 'month', key: `month-${k}`, label: k ? monthLabel(k) : 'Tarihsiz', items: list });
+    rows.push({ kind: 'month', key: `month-${k}`, month: k, label: k ? monthLabel(k) : 'Tarihsiz', items: list });
     list.forEach((item, i) => rows.push({ kind: 'item', key: key(item), item, first: i === 0, last: i === list.length - 1 }));
   }
   return rows;

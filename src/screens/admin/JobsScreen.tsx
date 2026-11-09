@@ -5,12 +5,15 @@ import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-na
 
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobFilterSheet, type AdvancedFilter } from '@/components/jobs/JobFilterSheet';
-import { Button, Chip, EmptyState, IconButton, LoadingState, LoadMoreFooter, MonthHeader, monthSeparator, PageHeader, Screen, SearchBar } from '@/components/ui';
+import { Button, Chip, EmptyState, ErrorState, IconButton, LoadingState, LoadMoreFooter, MonthHeader, monthSeparator, PageHeader, Screen, SearchBar } from '@/components/ui';
 import { IN_PROGRESS_STATUSES } from '@/constants/jobStatus';
-import { useCustomers, useDataStatus, useFilteredJobs, useUserMap } from '@/hooks/useData';
-import { usePagedRows } from '@/hooks/usePagedRows';
+import { useCustomers, useDataStatus, useJobs, useUserMap } from '@/hooks/useData';
+import { useDebounced } from '@/hooks/useDebounced';
+import { useRefreshOnCountChange } from '@/hooks/useListSync';
 import { useRefresh } from '@/hooks/useRefresh';
-import { sortJobs } from '@/services/jobUtils';
+import { useServerList } from '@/hooks/useServerList';
+import { matchesJobFilter } from '@/services/jobUtils';
+import { jobService } from '@/services/registry';
 import { routes } from '@/navigation/routes';
 import { colors, spacing } from '@/theme';
 import type { JobFilter, JobStatus, TransportJob } from '@/types';
@@ -48,27 +51,50 @@ export default function JobsScreen() {
     if (isGroup(params.status)) setGroup(params.status);
   }
 
+  // Arama yazarken her harfte değil, yazma durunca sunucuya gidilir.
+  const search = useDebounced(query.trim(), 350);
   const filter = useMemo<JobFilter>(
-    () => ({ ...advanced, query: query.trim() || undefined, statuses: GROUPS.find((g) => g.value === group)?.statuses }),
-    [advanced, query, group],
+    () => ({ ...advanced, query: search || undefined, statuses: GROUPS.find((g) => g.value === group)?.statuses }),
+    [advanced, search, group],
   );
-  const jobs = useFilteredJobs(filter);
-  const total = useMemo(() => jobs.reduce((s, j) => (j.status === 'cancelled' ? s : s + j.price), 0), [jobs]);
 
-  // Liste aylara bölünür (iş tarihine göre, yeniden eskiye).
-  const allRows = useMemo(() => groupByMonth([...jobs].sort(sortJobs), (j) => j.date, (j) => j.id), [jobs]);
-  // Sayfalama: filtre veya arama değişince ilk sayfaya dönülür.
-  const page = usePagedRows(allRows, filter);
+  // Liste sunucudan sayfa sayfa çekilir (yeniden eskiye); başlıktaki adet ve tutarlar sunucu özetinden gelir.
+  const list = useServerList({
+    key: JSON.stringify(filter),
+    fetchPage: (page, size) => jobService.listPage(filter, page, size),
+    fetchSummary: () => jobService.summary(filter),
+    getId: (j: TransportJob) => j.id,
+  });
+
+  // Uygulama verisindeki güncel hâl kullanılır (düzenleme, durum değişikliği, silme listeye hemen yansır).
+  const storeJobs = useJobs();
+  const storeById = useMemo(() => new Map(storeJobs.map((j) => [j.id, j])), [storeJobs]);
+  const ready = status === 'ready';
+  const jobs = useMemo(
+    () =>
+      list.items
+        .map((j) => storeById.get(j.id) ?? (ready ? undefined : j))
+        .filter((j): j is TransportJob => !!j && matchesJobFilter(j, { ...filter, query: undefined })),
+    [list.items, storeById, ready, filter],
+  );
+  // Yeni iş eklenince veya iş silinince liste sessizce yenilenir.
+  useRefreshOnCountChange(storeJobs.length, ready, list.refresh);
+
+  const months = useMemo(() => new Map(list.summary?.months.map((m) => [m.month, m]) ?? []), [list.summary]);
+  const rows = useMemo(() => groupByMonth(jobs, (j) => j.date, (j) => j.id), [jobs]);
+  const onPullRefresh = useCallback(async () => {
+    await Promise.all([onRefresh(), list.refresh()]);
+  }, [onRefresh, list]);
 
   const openJob = useCallback((job: TransportJob) => router.push(routes.job(job.id)), []);
   const renderItem = useCallback(
     ({ item, index }: { item: MonthRow<TransportJob>; index: number }) =>
       item.kind === 'month' ? (
-        <MonthHeader label={item.label} first={index === 0} summary={`${item.items.length} iş · ${formatCurrency(item.items.reduce((s, j) => (j.status === 'cancelled' ? s : s + j.price), 0))}`} />
+        <MonthHeader label={item.label} first={index === 0} summary={monthSummary(months.get(item.month), item.items)} />
       ) : (
         <JobCard job={item.item} onPress={openJob} showPrice driverName={item.item.driverId ? userMap.get(item.item.driverId)?.fullName ?? '—' : undefined} />
       ),
-    [openJob, userMap],
+    [openJob, userMap, months],
   );
 
   const activeChips: { key: keyof AdvancedFilter | 'date'; label: string }[] = [];
@@ -80,7 +106,7 @@ export default function JobsScreen() {
 
   return (
     <Screen>
-      <PageHeader title="İşler" subtitle={`${jobs.length} kayıt · ${formatCurrency(total)}`} right={<IconButton icon={Plus} label="Yeni iş" tone="dark" onPress={() => router.push(routes.newJob())} />}>
+      <PageHeader title="İşler" subtitle={list.summary ? `${list.summary.count} kayıt · ${formatCurrency(list.summary.total)}` : 'Yükleniyor…'} right={<IconButton icon={Plus} label="Yeni iş" tone="dark" onPress={() => router.push(routes.newJob())} />}>
         <View style={styles.searchRow}>
           <View style={{ flex: 1 }}>
             <SearchBar value={query} onChange={setQuery} placeholder="İş no, müşteri, adres, şoför" dark />
@@ -109,11 +135,13 @@ export default function JobsScreen() {
         ) : null}
       </View>
 
-      {status === 'loading' ? (
+      {list.loading && list.items.length === 0 ? (
         <LoadingState label="İşler yükleniyor" />
+      ) : list.error && list.items.length === 0 ? (
+        <ErrorState message={list.error} onRetry={list.retry} />
       ) : (
         <FlatList
-          data={page.rows}
+          data={rows}
           keyExtractor={monthRowKey}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
@@ -121,7 +149,7 @@ export default function JobsScreen() {
           initialNumToRender={8}
           windowSize={7}
           removeClippedSubviews
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPullRefresh} tintColor={colors.textTertiary} />}
           ListEmptyComponent={
             <EmptyState
               icon={ClipboardList}
@@ -130,9 +158,9 @@ export default function JobsScreen() {
               action={<Button label="Yeni iş oluştur" icon={Plus} size="sm" onPress={() => router.push(routes.newJob())} />}
             />
           }
-          onEndReached={page.loadMore}
+          onEndReached={list.loadMore}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={<LoadMoreFooter shown={page.shown} total={page.total} unit="iş" onMore={page.loadMore} />}
+          ListFooterComponent={<LoadMoreFooter shown={list.items.length} total={list.totalCount} unit="iş" onMore={list.loadMore} loading={list.loadingMore} />}
         />
       )}
 
@@ -147,6 +175,13 @@ export default function JobsScreen() {
       />
     </Screen>
   );
+}
+
+/** Ay başlığı özeti: sunucu özeti varsa ayın tamamı, yoksa yüklenenler. İptal edilen işler tutara katılmaz. */
+function monthSummary(month: { count: number; total: number } | undefined, loaded: TransportJob[]) {
+  const count = month?.count ?? loaded.length;
+  const total = month?.total ?? loaded.reduce((s, j) => (j.status === 'cancelled' ? s : s + j.price), 0);
+  return `${count} iş · ${formatCurrency(total)}`;
 }
 
 const Separator = monthSeparator(spacing.md + 2);

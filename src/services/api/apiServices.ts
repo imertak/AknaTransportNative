@@ -6,14 +6,15 @@ import type {
   InvoiceMailer,
   InvoiceService,
   JobService,
+  ListSummary,
   LocationRepository,
   UserService,
   VehicleService,
 } from '../contracts';
 import { ServiceError } from '../errors';
 import { savePdf } from '../files';
-import { http, httpAll, httpBinary } from '../http';
-import type { InvoiceFilter, JobStatus, LocationFix, Session, User, WithholdingType } from '@/types';
+import { http, httpAll, httpBinary, type Paged } from '../http';
+import type { InvoiceFilter, JobFilter, JobStatus, LocationFix, Session, User, WithholdingType } from '@/types';
 import { isEmail } from '@/utils/validation';
 import {
   customerAddressFromApi,
@@ -195,19 +196,40 @@ const BILLING_TO_API = { not_invoiced: 'NotInvoiced', in_draft: 'InDraft', invoi
 const jobAction = async (id: string, action: string, json: unknown = {}) =>
   jobDetailFromApi(await http<ApiJobDetail>(`/api/jobs/${id}/${action}`, { method: 'PATCH', json }));
 
+const jobQuery = (filter: JobFilter) => ({
+  search: filter.query,
+  status: filter.statuses?.map((s) => s.replace(/(^|_)([a-z])/g, (_, __, c: string) => c.toUpperCase())),
+  customerId: filter.customerId,
+  driverId: filter.driverId,
+  startDate: filter.dateFrom,
+  endDate: filter.dateTo,
+  billingStatus: filter.billingStatus ? BILLING_TO_API[filter.billingStatus] : undefined,
+});
+
+interface ApiListSummary {
+  count: number;
+  total: number;
+  months: { year: number; month: number; count: number; total: number }[];
+}
+
+const summaryFromApi = (s: ApiListSummary): ListSummary => ({
+  count: s.count,
+  total: s.total,
+  months: s.months.map((m) => ({ month: `${m.year}-${String(m.month).padStart(2, '0')}`, count: m.count, total: m.total })),
+});
+
 export const apiJobService: JobService = {
   async list(filter = {}) {
-    const jobs = await httpAll<ApiJob>('/api/jobs', {
-      search: filter.query,
-      status: filter.statuses?.map((s) => s.replace(/(^|_)([a-z])/g, (_, __, c: string) => c.toUpperCase())),
-      customerId: filter.customerId,
-      driverId: filter.driverId,
-      startDate: filter.dateFrom,
-      endDate: filter.dateTo,
-      billingStatus: filter.billingStatus ? BILLING_TO_API[filter.billingStatus] : undefined,
-    });
+    const jobs = await httpAll<ApiJob>('/api/jobs', jobQuery(filter));
     return jobs.map((j) => jobFromApi(j));
   },
+
+  async listPage(filter, page, pageSize) {
+    const res = await http<Paged<ApiJob>>('/api/jobs', { query: { ...jobQuery(filter), pageNumber: page, pageSize } });
+    return { items: res.items.map((j) => jobFromApi(j)), totalCount: res.totalCount };
+  },
+
+  summary: async (filter) => summaryFromApi(await http<ApiListSummary>('/api/jobs/summary', { query: jobQuery(filter) })),
 
   get: async (id) => jobDetailFromApi(await http<ApiJobDetail>(`/api/jobs/${id}`)),
 
@@ -260,24 +282,35 @@ export const apiJobService: JobService = {
   restore: (id) => jobAction(id, 'restore'),
 };
 
-const INVOICE_STATUS_TO_API: Record<NonNullable<InvoiceFilter['status']>, string> = {
-  draft: 'Draft',
-  issued: 'Issued',
-  cancelled: 'Cancelled',
-  failed: 'Failed',
+const INVOICE_STATUS_TO_API: Record<NonNullable<InvoiceFilter['status']>, string[]> = {
+  // Uygulamada "Taslak" sağlayıcıda bekleyen (imza bekleyen) faturaları da kapsar.
+  draft: ['Draft', 'Pending'],
+  issued: ['Issued'],
+  cancelled: ['Cancelled'],
+  failed: ['Failed'],
 };
+
+const invoiceQuery = (filter: InvoiceFilter) => ({
+  customerId: filter.customerId,
+  startDate: filter.dateFrom,
+  endDate: filter.dateTo,
+  status: filter.status ? INVOICE_STATUS_TO_API[filter.status] : undefined,
+});
 
 export const apiInvoiceService: InvoiceService = {
   async list(filter = {}) {
     if (!isAdmin()) return [];
-    const list = await httpAll<ApiInvoiceListItem>('/api/invoices', {
-      customerId: filter.customerId,
-      startDate: filter.dateFrom,
-      endDate: filter.dateTo,
-      status: filter.status ? INVOICE_STATUS_TO_API[filter.status] : undefined,
-    });
+    const list = await httpAll<ApiInvoiceListItem>('/api/invoices', invoiceQuery(filter));
     return list.map(invoiceFromApiList);
   },
+
+  async listPage(filter, page, pageSize) {
+    if (!isAdmin()) return { items: [], totalCount: 0 };
+    const res = await http<Paged<ApiInvoiceListItem>>('/api/invoices', { query: { ...invoiceQuery(filter), pageNumber: page, pageSize } });
+    return { items: res.items.map(invoiceFromApiList), totalCount: res.totalCount };
+  },
+
+  summary: async (filter) => summaryFromApi(await http<ApiListSummary>('/api/invoices/summary', { query: invoiceQuery(filter) })),
 
   get: async (id) => invoiceFromApiDetail(await http<ApiInvoiceDetail>(`/api/invoices/${id}`)),
 

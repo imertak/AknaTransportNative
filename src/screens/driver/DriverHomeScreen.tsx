@@ -17,7 +17,6 @@ import { useRefresh } from '@/hooks/useRefresh';
 import { routes } from '@/navigation/routes';
 import { colors, radius, spacing } from '@/theme';
 import type { TransportJob } from '@/types';
-import { formatDateLong, todayISO } from '@/utils/format';
 
 export default function DriverHomeScreen() {
   const user = useCurrentUser();
@@ -38,7 +37,7 @@ export default function DriverHomeScreen() {
         contentContainerStyle={{ paddingBottom: spacing.huge }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textInverseMuted} />}>
-        <PageHeader overline={formatDateLong(todayISO())} title={`Merhaba, ${user.fullName.split(' ')[0]}`}
+        <PageHeader title={`Merhaba, ${user.fullName.split(' ')[0]}`}
           subtitle={vehicleLabel}
           right={
             <View style={styles.headerActions}>

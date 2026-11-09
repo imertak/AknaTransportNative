@@ -16,3 +16,4 @@ export * from './Controls';
 export * from './Data';
 export * from './MonthHeader';
 export * from './LoadMoreFooter';
+export * from './CollapsibleCard';

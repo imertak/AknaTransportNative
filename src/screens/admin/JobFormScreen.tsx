@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowUp, History, Info, MapPin, MapPinCheck, Phone, Plus, Route, X } from 'lucide-react-native';
+import { ArrowUp, History, Info, MapPin, MapPinCheck, Phone, Plus, X } from 'lucide-react-native';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -8,6 +8,7 @@ import {
   BottomBar,
   Button,
   Card,
+  CollapsibleCard,
   DateField,
   EmptyState,
   Input,
@@ -30,7 +31,7 @@ import { jobActions } from '@/store';
 import { colors, hitSlop, radius, spacing } from '@/theme';
 import type { Customer, GeoPoint, JobContact, JobInput, JobStop, StopType, TransportJob, Vehicle, VehicleType } from '@/types';
 import { capitalizeWords, formatAmountInput, formatCurrency, parseAmount, todayISO } from '@/utils/format';
-import { buildRouteDescription, STOP_TYPE_LABEL, toStops } from '@/utils/stops';
+import { STOP_TYPE_LABEL } from '@/utils/stops';
 import { hasErrors, required, type Errors } from '@/utils/validation';
 
 interface StopDraft {
@@ -141,6 +142,10 @@ function defaultVehicle(vehicles: Vehicle[], driverId: string, current: string):
   return own.length === 1 ? own[0]!.id : NO_VEHICLE;
 }
 
+/** Kapalı "Yetkili kişiler" kartında görünen özet: "Yük sahibi: Ali, Teslim alan". */
+const contactSummary = (contacts: { role: string; name: string }[]) =>
+  contacts.map((c) => [c.role, c.name].filter((x) => x.trim()).join(': ') || 'Kişi').join(', ');
+
 const stopInputs = (stops: StopDraft[]) => stops.map(({ type, address, point }) => ({ type, address, point }));
 
 export default function JobFormScreen() {
@@ -216,9 +221,6 @@ export default function JobFormScreen() {
       return { ...f, stops: f.stops.map((s) => (s.key === key ? prev : s.key === prev.key ? stop : s)) };
     });
 
-  // Otomatik güzergah: önce tüm yüklemeler, sonra tüm teslimatlar. Elle yazılan açıklamadan ayrıdır.
-  const routePreview = useMemo(() => buildRouteDescription(toStops(stopInputs(form.stops))), [form.stops]);
-
   /** Müşteri seçildiğinde son işinden bilgileri getirir (yalnızca boş alanlar). */
   const applyCustomer = (customerId: string) => {
     const r = prefill(form, customerId, customers, jobs, isEdit);
@@ -235,6 +237,11 @@ export default function JobFormScreen() {
     ],
     [assignable, user.id],
   );
+  const assignedDriver = assignable.find((u) => u.id === form.driverId);
+  const assignedVehicle = allVehicles.find((v) => v.id === form.vehicleId);
+  const assignmentSummary = assignedDriver
+    ? [assignedDriver.id === user.id ? `${assignedDriver.fullName} (Ben)` : assignedDriver.fullName, assignedVehicle?.plate].filter(Boolean).join(' · ')
+    : form.driverId && form.driverId !== NO_DRIVER ? 'Şoför seçildi' : 'Atanmadı';
   const vehicleOptions = useMemo<SelectOption[]>(
     () => [
       { value: NO_VEHICLE, label: 'Araç seçme', description: 'Araç daha sonra seçilebilir' },
@@ -429,28 +436,21 @@ export default function JobFormScreen() {
             {renderGroup('pickup')}
             <View style={styles.divider} />
             {renderGroup('delivery')}
-            <View style={styles.route}>
-              <View style={styles.routeHead}>
-                <Route size={16} color={colors.text} />
-                <Text variant="label">Otomatik güzergah</Text>
-              </View>
-              <Text variant="body" tone={routePreview ? 'default' : 'tertiary'}>{routePreview || 'Duraklar girildikçe oluşur.'}</Text>
-              <Text variant="bodySmall" tone="tertiary">Önce tüm yükleme, sonra tüm teslimat noktaları sıralanır. Duraklar değişince yeniden oluşturulur.</Text>
-            </View>
             <Input
               label="Ek açıklama"
               multiline
               value={form.description}
               autoCapitalize="words"
               onChangeText={(v) => set('description', capitalizeWords(v))}
-              placeholder="Örn. +1 eleman yevmiyesi, gece yükleme"
-              hint="Elle yazılır; otomatik güzergahtan ayrı saklanır ve PDF'te güzergahın yanında görünür."
             />
           </Card>
         </Section>
 
-        <Section title="Yetkili kişiler">
-          <Card style={styles.card}>
+        <Section>
+          <CollapsibleCard
+            title="Yetkili kişiler"
+            summary={form.contacts.length ? contactSummary(form.contacts) : 'Eklenmedi'}
+            forceOpen={!!errors.contactErrors && Object.keys(errors.contactErrors).length > 0}>
             {form.contacts.length === 0 ? (
               <Text variant="bodySmall" tone="secondary">Yük sahibi, teslim alan gibi kişilerin telefonlarını ekleyin; şoför iş detayından arayabilir.</Text>
             ) : null}
@@ -493,11 +493,11 @@ export default function JobFormScreen() {
                 <Text variant="label">Yetkili kişi ekle</Text>
               </Pressable>
             ) : null}
-          </Card>
+          </CollapsibleCard>
         </Section>
 
-        <Section title="Atama">
-          <Card style={styles.card}>
+        <Section>
+          <CollapsibleCard title="Atama" summary={assignmentSummary}>
             {driverLocked ? (
               <Text variant="bodySmall" tone="secondary">Kapanmış işlerde şoför ve araç ataması değiştirilemez.</Text>
             ) : (
@@ -530,12 +530,12 @@ export default function JobFormScreen() {
               </>
             )}
             <Input label="Şoföre / operasyona not" multiline autoCapitalize="words" value={form.notes} onChangeText={(v) => set('notes', capitalizeWords(v))} placeholder="Örn. mağaza 09:00'da açılıyor" />
-          </Card>
+          </CollapsibleCard>
         </Section>
       </ScrollContent>
       <BottomBar>
         <Button label="Vazgeç" variant="secondary" onPress={() => router.back()} style={{ flex: 1 }} />
-        <Button label={isEdit ? 'Kaydet' : 'İşi oluştur'} onPress={submit} loading={pending} style={{ flex: 2 }} />
+        <Button label={isEdit ? 'Kaydet' : 'İşi oluştur'} variant="accent" onPress={submit} loading={pending} style={{ flex: 2 }} />
       </BottomBar>
 
       <OptionSheet
@@ -585,6 +585,4 @@ const styles = StyleSheet.create({
   roles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   roleChip: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surface },
   roleChipOn: { backgroundColor: colors.ink, borderColor: colors.ink },
-  route: { gap: spacing.xs, backgroundColor: colors.surfaceMuted, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
-  routeHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

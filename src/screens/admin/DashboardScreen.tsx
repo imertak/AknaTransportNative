@@ -36,9 +36,7 @@ import type { JobStatus, TransportJob } from "@/types";
 import {
   MONTH_NAMES,
   formatCurrency,
-  formatDateLong,
   formatRelative,
-  todayISO,
 } from "@/utils/format";
 
 const openJob = (job: TransportJob) => router.push(routes.job(job.id));
@@ -109,7 +107,6 @@ export default function DashboardScreen() {
     <Screen>
       {/* Selamlama ve aylık gelir bölümü sabit kalır; altındaki içerik kayar. */}
       <PageHeader
-        overline={formatDateLong(todayISO())}
         title={`Merhaba, ${firstName}`}
         right={
           <View style={styles.headerActions}>

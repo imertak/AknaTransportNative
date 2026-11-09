@@ -288,7 +288,7 @@ export default function InvoiceDetailScreen() {
         ) : null}
         {invoice.requiresSmsSignature ? (
           <>
-            <Button label="SMS ile imzala ve kes" icon={MessageSquareLock} loading={signing.pending} onPress={requestSms} />
+            <Button label="SMS ile imzala ve kes" variant="accent" icon={MessageSquareLock} loading={signing.pending} onPress={requestSms} />
             <Button label="Portal taslağını sil" icon={Trash2} variant="secondary" loading={action.pending} onPress={discard} />
           </>
         ) : !cancelled ? (
@@ -306,7 +306,7 @@ export default function InvoiceDetailScreen() {
         footer={
           <View style={styles.row}>
             <Button label="Yeni kod" variant="secondary" style={{ flex: 1 }} disabled={signing.pending} onPress={requestSms} />
-            <Button label="İmzala" style={{ flex: 2 }} loading={signing.pending} disabled={smsCode.trim().length < 4} onPress={sign} />
+            <Button label="İmzala" variant="accent" style={{ flex: 2 }} loading={signing.pending} disabled={smsCode.trim().length < 4} onPress={sign} />
           </View>
         }>
         <View style={{ paddingHorizontal: spacing.xl }}>

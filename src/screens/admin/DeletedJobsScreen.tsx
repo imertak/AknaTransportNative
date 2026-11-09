@@ -98,7 +98,7 @@ export default function DeletedJobsScreen() {
   );
 }
 
-const Separator = monthSeparator(spacing.sm + 2);
+const Separator = monthSeparator(spacing.md + 2);
 
 const styles = StyleSheet.create({
   list: { padding: spacing.lg, paddingBottom: spacing.huge, flexGrow: 1 },

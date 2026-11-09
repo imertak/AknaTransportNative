@@ -2,11 +2,9 @@ import { Platform, type TextStyle, type ViewStyle } from 'react-native';
 
 /**
  * AKNA Transport tasarım sistemi.
- * Palet: siyah (#000000), gri (#999999), açık gri (#F2F2F2), beyaz ve vurgu rengi olarak neon
- * yeşil (#CCFF00). Neon yeşil açık zeminde okunmadığı için yalnızca dolgu olarak kullanılır ve
- * üzerindeki yazı/ikon her zaman siyahtır (onAccent): ana aksiyon butonu, "Yeni iş" butonu,
- * bildirim rozeti, haritadaki hedef nokta. Siyah zeminde (koyu başlık, öne çıkan sayı kutusu)
- * yazı rengi olarak da kullanılabilir. Hata/yıkıcı aksiyonlar ayrı kırmızıdır (danger).
+ * Palet: siyah (#000000), gri (#999999), açık gri (#F2F2F2) ve beyaz. Ayrı bir vurgu rengi yoktur:
+ * açık zeminde ana aksiyon siyah, koyu zeminde (giriş ekranı, koyu başlık, öne çıkan kutu) beyazdır.
+ * Hata/yıkıcı aksiyonlar kırmızıdır (danger).
  */
 export const colors = {
   ink: '#000000',
@@ -33,17 +31,15 @@ export const colors = {
   dangerSoft: '#FFEBEE',
   dangerBorder: '#F2C4C4',
 
-  /** Vurgu rengi: neon yeşil. Yalnızca dolgu; üzerindeki içerik onAccent (siyah). */
-  accent: '#CCFF00',
-  accentSoft: '#F4FFCC',
-  /** Vurgu renginin basılı hali. */
-  accentPressed: '#B8E600',
-  /** Vurgu rengi zeminin üzerindeki yazı ve ikon. */
+  /** Koyu zemindeki vurgu: beyaz. Üzerindeki içerik onAccent (siyah). */
+  accent: '#FFFFFF',
+  accentSoft: '#F2F2F2',
+  accentPressed: '#E6E6E6',
   onAccent: '#000000',
 
   /** Haritada gidilen hedef nokta. */
-  destination: '#CCFF00',
-  destinationHalo: 'rgba(204, 255, 0, 0.35)',
+  destination: '#FFFFFF',
+  destinationHalo: 'rgba(0, 0, 0, 0.18)',
 
   overlay: 'rgba(0, 0, 0, 0.5)',
 } as const;

@@ -533,7 +533,7 @@ export default function JobFormScreen() {
       </ScrollContent>
       <BottomBar>
         <Button label="Vazgeç" variant="secondary" onPress={() => router.back()} style={{ flex: 1 }} />
-        <Button label={isEdit ? 'Kaydet' : 'İşi oluştur'} variant="accent" onPress={submit} loading={pending} style={{ flex: 2 }} />
+        <Button label={isEdit ? 'Kaydet' : 'İşi oluştur'} onPress={submit} loading={pending} style={{ flex: 2 }} />
       </BottomBar>
 
       <OptionSheet

@@ -278,7 +278,7 @@ export default function InvoiceFormScreen() {
       </ScrollContent>
       <BottomBar>
         <Button label="Vazgeç" variant="secondary" onPress={() => router.back()} style={{ flex: 1 }} />
-        <Button label="Taslak fatura oluştur" variant="accent" onPress={submit} loading={pending} style={{ flex: 2 }} />
+        <Button label="Taslak fatura oluştur" onPress={submit} loading={pending} style={{ flex: 2 }} />
       </BottomBar>
     </Screen>
   );

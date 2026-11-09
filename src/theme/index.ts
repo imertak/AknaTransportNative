@@ -2,8 +2,9 @@ import { Platform, type TextStyle, type ViewStyle } from 'react-native';
 
 /**
  * AKNA Transport tasarım sistemi.
- * Siyah, beyaz ve gri tonlarından oluşan sade bir palet. Tek işlevsel renk
- * hata/yıkıcı aksiyonlar için kullanılan koyu kırmızıdır.
+ * Siyah, beyaz ve gri tonlarına üçüncü renk olarak bordo (#6D001A) eşlik eder: aktif sekme,
+ * öne çıkan sayı kutuları, bildirim rozetleri ve haritadaki hedef nokta. Hata/yıkıcı aksiyonlar
+ * bordodan ayrışsın diye ayrı bir kırmızı (danger) kullanır.
  */
 export const colors = {
   ink: '#000000',
@@ -30,12 +31,15 @@ export const colors = {
   dangerSoft: '#FFEBEE',
   dangerBorder: '#F2C4C4',
 
-  accent: '#D32F2F',
-  accentSoft: '#FFEBEE',
+  /** Marka rengi: bordo. */
+  accent: '#6D001A',
+  accentSoft: '#F6E5EA',
+  /** Bordonun basılı / koyu hali. */
+  accentPressed: '#520013',
 
   /** Haritada gidilen hedef nokta. */
-  destination: '#FF5A1F',
-  destinationHalo: 'rgba(255, 90, 31, 0.25)',
+  destination: '#6D001A',
+  destinationHalo: 'rgba(109, 0, 26, 0.22)',
 
   overlay: 'rgba(0, 0, 0, 0.5)',
 } as const;

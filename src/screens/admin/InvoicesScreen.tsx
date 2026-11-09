@@ -4,8 +4,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import { InvoiceRow } from '@/components/invoices/InvoiceRow';
-import { Button, Chip, DateField, EmptyState, IconButton, MonthHeader, PageHeader, Screen, SegmentedControl, SelectField, Sheet, Text, type SelectOption } from '@/components/ui';
+import { Button, Chip, DateField, EmptyState, IconButton, LoadMoreFooter, MonthHeader, PageHeader, Screen, SegmentedControl, SelectField, Sheet, Text, type SelectOption } from '@/components/ui';
 import { useCustomers, useInvoices } from '@/hooks/useData';
+import { usePagedRows } from '@/hooks/usePagedRows';
 import { useRefresh } from '@/hooks/useRefresh';
 import { routes } from '@/navigation/routes';
 import { matchesInvoiceFilter } from '@/services/invoiceUtils';
@@ -35,10 +36,12 @@ export default function InvoicesScreen() {
   const data = useMemo(() => invoices.filter((i) => matchesInvoiceFilter(i, filter)), [invoices, filter]);
   const total = useMemo(() => data.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + i.total, 0), [data]);
   // Faturalar düzenlenme ayına göre bölünür (yeniden eskiye).
-  const rows = useMemo(
+  const allRows = useMemo(
     () => groupByMonth([...data].sort((a, b) => b.issueDate.localeCompare(a.issueDate) || b.invoiceNo.localeCompare(a.invoiceNo)), (i) => i.issueDate, (i) => i.id),
     [data],
   );
+  // Sayfalama: filtre değişince ilk sayfaya dönülür.
+  const page = usePagedRows(allRows, filter);
   const open = useCallback((inv: Invoice) => router.push(routes.invoice(inv.id)), []);
   const customerOptions = useMemo<SelectOption[]>(() => [{ value: ALL, label: 'Tüm müşteriler' }, ...customers.map((c) => ({ value: c.id, label: c.companyName }))], [customers]);
   const customerName = customers.find((c) => c.id === customerId)?.companyName;
@@ -69,7 +72,7 @@ export default function InvoicesScreen() {
         />
       </PageHeader>
       <FlatList
-        data={rows}
+        data={page.rows}
         keyExtractor={monthRowKey}
         contentContainerStyle={styles.list}
         refreshing={refreshing}
@@ -107,6 +110,9 @@ export default function InvoicesScreen() {
             </View>
           )
         }
+        onEndReached={page.loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={<LoadMoreFooter shown={page.shown} total={page.total} unit="fatura" onMore={page.loadMore} />}
         ListEmptyComponent={
           <EmptyState
             icon={ReceiptText}

@@ -5,9 +5,10 @@ import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-na
 
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobFilterSheet, type AdvancedFilter } from '@/components/jobs/JobFilterSheet';
-import { Button, Chip, EmptyState, IconButton, LoadingState, MonthHeader, monthSeparator, PageHeader, Screen, SearchBar, Text } from '@/components/ui';
+import { Button, Chip, EmptyState, IconButton, LoadingState, LoadMoreFooter, MonthHeader, monthSeparator, PageHeader, Screen, SearchBar } from '@/components/ui';
 import { IN_PROGRESS_STATUSES } from '@/constants/jobStatus';
 import { useCustomers, useDataStatus, useFilteredJobs, useUserMap } from '@/hooks/useData';
+import { usePagedRows } from '@/hooks/usePagedRows';
 import { useRefresh } from '@/hooks/useRefresh';
 import { sortJobs } from '@/services/jobUtils';
 import { routes } from '@/navigation/routes';
@@ -55,7 +56,9 @@ export default function JobsScreen() {
   const total = useMemo(() => jobs.reduce((s, j) => (j.status === 'cancelled' ? s : s + j.price), 0), [jobs]);
 
   // Liste aylara bölünür (iş tarihine göre, yeniden eskiye).
-  const rows = useMemo(() => groupByMonth([...jobs].sort(sortJobs), (j) => j.date, (j) => j.id), [jobs]);
+  const allRows = useMemo(() => groupByMonth([...jobs].sort(sortJobs), (j) => j.date, (j) => j.id), [jobs]);
+  // Sayfalama: filtre veya arama değişince ilk sayfaya dönülür.
+  const page = usePagedRows(allRows, filter);
 
   const openJob = useCallback((job: TransportJob) => router.push(routes.job(job.id)), []);
   const renderItem = useCallback(
@@ -110,7 +113,7 @@ export default function JobsScreen() {
         <LoadingState label="İşler yükleniyor" />
       ) : (
         <FlatList
-          data={rows}
+          data={page.rows}
           keyExtractor={monthRowKey}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
@@ -127,7 +130,9 @@ export default function JobsScreen() {
               action={<Button label="Yeni iş oluştur" icon={Plus} size="sm" onPress={() => router.push(routes.newJob())} />}
             />
           }
-          ListFooterComponent={jobs.length ? <Text variant="bodySmall" tone="tertiary" align="center" style={{ marginTop: spacing.lg }}>{jobs.length} iş listelendi</Text> : undefined}
+          onEndReached={page.loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<LoadMoreFooter shown={page.shown} total={page.total} unit="iş" onMore={page.loadMore} />}
         />
       )}
 

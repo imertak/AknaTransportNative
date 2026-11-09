@@ -25,8 +25,8 @@ export interface ButtonProps {
 
 const V: Record<Variant, { bg: string; fg: string; border: string; pressed: string }> = {
   primary: { bg: colors.ink, fg: colors.textInverse, border: colors.ink, pressed: colors.inkPressed },
-  /** Ekranın ana aksiyonu (ör. "İşi oluştur"). Bordo; bir ekranda en fazla bir kez kullanılır. */
-  accent: { bg: colors.accent, fg: colors.textInverse, border: colors.accent, pressed: colors.accentPressed },
+  /** Ekranın ana aksiyonu (ör. "İşi oluştur"). Neon yeşil, siyah yazı; bir ekranda en fazla bir kez. */
+  accent: { bg: colors.accent, fg: colors.onAccent, border: colors.accent, pressed: colors.accentPressed },
   secondary: { bg: colors.surface, fg: colors.text, border: colors.borderStrong, pressed: colors.surfaceSunken },
   ghost: { bg: 'transparent', fg: colors.text, border: 'transparent', pressed: colors.surfaceSunken },
   danger: { bg: colors.surface, fg: colors.danger, border: colors.dangerBorder, pressed: colors.dangerSoft },

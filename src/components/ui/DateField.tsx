@@ -91,16 +91,18 @@ interface DateFieldProps {
   value?: ISODate | null;
   onChange: (iso: ISODate) => void;
   error?: string;
+  /** Alan adının yanındaki "i" ikonunda gösterilen açıklama. */
+  hint?: string;
   required?: boolean;
   min?: ISODate;
   max?: ISODate;
   placeholder?: string;
 }
 
-export const DateField = memo(function DateField({ label, value, onChange, error, required, min, max, placeholder = 'Tarih seçin' }: DateFieldProps) {
+export const DateField = memo(function DateField({ label, value, onChange, error, hint, required, min, max, placeholder = 'Tarih seçin' }: DateFieldProps) {
   const [open, setOpen] = useState(false);
   return (
-    <FieldShell label={label} error={error} required={required}>
+    <FieldShell label={label} error={error} hint={hint} required={required}>
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"

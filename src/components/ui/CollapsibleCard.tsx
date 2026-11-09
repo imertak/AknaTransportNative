@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { LayoutAnimation, Platform, Pressable, StyleSheet, UIManager, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/theme';
+import { InfoTip } from './InfoTip';
 import { Text } from './Text';
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
   defaultOpen?: boolean;
   /** true iken (ör. içinde hata varsa) kart kapatılamaz ve açık görünür. */
   forceOpen?: boolean;
+  /** Başlığın yanında "i" ikonuyla açılan açıklama. */
+  info?: string;
   children: ReactNode;
 }
 
@@ -23,7 +26,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const TOGGLE_ANIMATION = LayoutAnimation.create(200, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity);
 
 /** Başlığına dokununca açılıp kapanan kart. Formdaki isteğe bağlı bölümler için. */
-export function CollapsibleCard({ title, summary, defaultOpen = false, forceOpen, children }: Props) {
+export function CollapsibleCard({ title, summary, defaultOpen = false, forceOpen, info, children }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const expanded = open || !!forceOpen;
   return (
@@ -39,11 +42,14 @@ export function CollapsibleCard({ title, summary, defaultOpen = false, forceOpen
         accessibilityLabel={`${title}${summary ? `, ${summary}` : ''}`}
         style={({ pressed }) => [styles.head, pressed && { backgroundColor: colors.surfaceMuted }]}>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="subheading">{title}</Text>
+          <View style={styles.titleRow}>
+            <Text variant="subheading">{title}</Text>
+            {info ? <InfoTip text={info} label={`${title} hakkında`} size={14} /> : null}
+          </View>
           {summary ? <Text variant="bodySmall" tone="secondary" numberOfLines={1}>{summary}</Text> : null}
         </View>
         <View style={expanded ? styles.chevronOpen : undefined}>
-          <ChevronDown size={20} color={expanded ? colors.accent : colors.textSecondary} />
+          <ChevronDown size={20} color={expanded ? colors.text : colors.textSecondary} />
         </View>
       </Pressable>
       {expanded ? <View style={styles.body}>{children}</View> : null}
@@ -54,6 +60,7 @@ export function CollapsibleCard({ title, summary, defaultOpen = false, forceOpen
 const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, overflow: 'hidden' },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   chevronOpen: { transform: [{ rotate: '180deg' }] },
   body: { gap: spacing.lg, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: spacing.lg },
 });

@@ -4,6 +4,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useBottomInset } from '@/hooks/useBottomInset';
 
 import { colors, spacing } from '@/theme';
+import { InfoTip } from './InfoTip';
 import { Text } from './Text';
 
 export function Screen({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
@@ -39,17 +40,26 @@ export function BottomBar({ children }: { children: ReactNode }) {
 
 interface SectionProps {
   title?: string;
+  /** Başlığın yanında "i" ikonuyla açılan açıklama. */
+  info?: string;
   action?: ReactNode;
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
-export const Section = memo(function Section({ title, action, children, style }: SectionProps) {
+export const Section = memo(function Section({ title, info, action, children, style }: SectionProps) {
   return (
     <View style={[styles.section, style]}>
       {title || action ? (
         <View style={styles.sectionHead}>
-          {title ? <Text variant="caption" tone="tertiary">{title}</Text> : <View />}
+          {title ? (
+            <View style={styles.titleRow}>
+              <Text variant="caption" tone="tertiary">{title}</Text>
+              {info ? <InfoTip text={info} label={`${title} hakkında`} size={14} /> : null}
+            </View>
+          ) : (
+            <View />
+          )}
           {action}
         </View>
       ) : null}
@@ -65,6 +75,7 @@ export const Row = ({ children, gap = spacing.sm, style }: { children: ReactNode
 );
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   flex: { flex: 1 },
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.huge, gap: spacing.xl },

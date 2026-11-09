@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { InvoicePreview } from '@/components/invoices/InvoicePreview';
-import { BottomBar, Button, Card, DateField, EmptyState, Input, NavHeader, Screen, ScrollContent, Section, SegmentedControl, SelectField, Text, type SelectOption } from '@/components/ui';
+import { BottomBar, Button, Card, DateField, EmptyState, Input, LabelWithInfo, NavHeader, Screen, ScrollContent, Section, SegmentedControl, SelectField, Text, type SelectOption } from '@/components/ui';
 import { APP_CONFIG } from '@/constants/config';
 import { useCurrentUser } from '@/contexts/AuthContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
@@ -183,10 +183,9 @@ export default function InvoiceFormScreen() {
               hitSlop={6}>
               {singleLine ? <SquareCheck size={22} color={colors.ink} /> : <Square size={22} color={colors.textTertiary} />}
               <View style={{ flex: 1 }}>
-                <Text variant="subheading">Tek kalem: {SINGLE_LINE_TITLE}</Text>
-                <Text variant="bodySmall" tone="secondary">
-                  İşler faturaya tek tek yazılmaz, toplam tutar tek satırda kesilir. İş dökümünde işler yine ayrı ayrı yer alır.
-                </Text>
+                <LabelWithInfo info="İşler faturaya tek tek yazılmaz, toplam tutar tek satırda kesilir. İş dökümünde işler yine ayrı ayrı yer alır.">
+                  <Text variant="subheading">Tek kalem: {SINGLE_LINE_TITLE}</Text>
+                </LabelWithInfo>
               </View>
             </Pressable>
             <DateField label="Fatura tarihi" required value={issueDate} onChange={setIssueDate} />

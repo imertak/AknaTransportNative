@@ -80,7 +80,7 @@ export const VehicleMarker = memo(function VehicleMarker({ id, coordinate, headi
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', width: 96 },
   ring: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  ringSelected: { backgroundColor: 'rgba(109, 0, 26, 0.18)', borderWidth: 2, borderColor: colors.accent },
+  ringSelected: { backgroundColor: 'rgba(204, 255, 0, 0.35)', borderWidth: 2, borderColor: colors.ink },
   body: {
     width: 34,
     height: 34,
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.danger,
     borderWidth: 2,
     borderColor: colors.surface,
   },

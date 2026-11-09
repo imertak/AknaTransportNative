@@ -39,5 +39,5 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.ink,
   },
-  badgeText: { color: colors.textInverse, fontSize: 10, fontWeight: '700', lineHeight: 12 },
+  badgeText: { color: colors.onAccent, fontSize: 10, fontWeight: '700', lineHeight: 12 },
 });

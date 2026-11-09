@@ -2,10 +2,10 @@ import { Banknote, FileText, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { Button, Chip, DateField, FieldShell, Input, SegmentedControl, Sheet, Text } from '@/components/ui';
+import { Button, Chip, DateField, FieldShell, Input, SegmentedControl, Sheet } from '@/components/ui';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { accountService, PAYMENT_METHODS, type LedgerEntry, type TransactionType } from '@/services/accounts';
-import { colors, radius, spacing } from '@/theme';
+import { spacing } from '@/theme';
 import { confirm } from '@/utils/confirm';
 import { formatCurrency, parseAmount, todayISO } from '@/utils/format';
 
@@ -15,11 +15,9 @@ const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
   { value: 'Charge', label: 'Borç' },
 ];
 
-const TYPE_HINT: Record<TransactionType, string> = {
-  Collection: 'Müşteriden alınan ödeme. Bakiyeyi düşürür.',
-  Refund: 'Müşteriye yapılan ödeme veya iade. Bakiyeyi artırır.',
-  Charge: 'Faturasız borç (devir, açılış bakiyesi vb.). Bakiyeyi artırır.',
-};
+const TYPE_HINT =
+  'Gelen: müşteriden alınan ödeme, bakiyeyi düşürür. Giden: müşteriye yapılan ödeme veya iade, bakiyeyi artırır. ' +
+  'Borç: faturasız borç (devir, açılış bakiyesi vb.), bakiyeyi artırır. Kesilen faturalar bakiyeye kendiliğinden eklenir; onlar için borç kaydı girmeyin.';
 
 interface Props {
   customerId: string;
@@ -88,7 +86,6 @@ function TransactionForm({ customerId, entry, suggestedAmount, visible, onClose 
       visible={visible}
       onClose={onClose}
       title={editing ? 'Hareketi düzenle' : 'Cari hareket ekle'}
-      subtitle={TYPE_HINT[type]}
       footer={
         <View style={styles.footer}>
           {editing ? <Button label="Sil" variant="danger" icon={Trash2} onPress={remove} disabled={pending} /> : null}
@@ -98,7 +95,9 @@ function TransactionForm({ customerId, entry, suggestedAmount, visible, onClose 
         </View>
       }>
       <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        <SegmentedControl options={TYPE_OPTIONS} value={type} onChange={setType} />
+        <FieldShell label="Hareket türü" hint={TYPE_HINT}>
+          <SegmentedControl options={TYPE_OPTIONS} value={type} onChange={setType} />
+        </FieldShell>
         <Input
           label="Tutar"
           icon={Banknote}
@@ -122,11 +121,6 @@ function TransactionForm({ customerId, entry, suggestedAmount, visible, onClose 
           </FieldShell>
         ) : null}
         <Input label="Açıklama" icon={FileText} value={description} onChangeText={setDescription} placeholder="Ör. Ekim faturaları için ödeme" maxLength={500} />
-        {type === 'Charge' ? (
-          <View style={styles.note}>
-            <Text variant="bodySmall" tone="secondary">Kesilen faturalar bakiyeye kendiliğinden eklenir; onlar için borç kaydı girmeyin.</Text>
-          </View>
-        ) : null}
       </ScrollView>
     </Sheet>
   );
@@ -136,5 +130,4 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: spacing.xl, paddingBottom: spacing.sm, gap: spacing.lg },
   footer: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  note: { backgroundColor: colors.surfaceMuted, borderRadius: radius.sm, padding: spacing.md },
 });

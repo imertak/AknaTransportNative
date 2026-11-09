@@ -22,7 +22,7 @@ export const StopMarker = memo(function StopMarker({ id, kind, order, coordinate
       {target ? (
         <View accessibilityRole="button" accessibilityLabel={label} style={styles.halo}>
           <View style={[styles.base, styles.target]}>
-            <Text variant="caption" style={[styles.text, { color: colors.textInverse }]}>
+            <Text variant="caption" style={[styles.text, { color: colors.onAccent }]}>
               {order}
             </Text>
           </View>
@@ -44,6 +44,6 @@ const styles = StyleSheet.create({
   delivery: { borderRadius: 6, backgroundColor: colors.surface, borderColor: colors.ink },
   done: { opacity: 0.45 },
   halo: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.destinationHalo },
-  target: { borderRadius: 13, backgroundColor: colors.destination, borderColor: colors.surface },
+  target: { borderRadius: 13, backgroundColor: colors.destination, borderColor: colors.ink },
   text: { fontSize: 12, lineHeight: 14, letterSpacing: 0, textTransform: 'none' },
 });

@@ -68,7 +68,7 @@ export default function VehicleTypesScreen() {
           </Card>
         </Section>
 
-        <Section title="Aktif tipler">
+        <Section title="Aktif tipler" info="İş ve araç formlarında yalnızca aktif tipler seçilebilir.">
           <Card padded={false}>
             {active.length === 0 ? (
               <Text variant="bodySmall" tone="tertiary" style={{ padding: spacing.lg }}>Aktif araç tipi yok.</Text>
@@ -76,17 +76,15 @@ export default function VehicleTypesScreen() {
               active.map((t, i) => <TypeRow key={t.id} type={t} first={i === 0} />)
             )}
           </Card>
-          <Text variant="bodySmall" tone="tertiary">İş ve araç formlarında yalnızca aktif tipler seçilebilir.</Text>
         </Section>
 
         {inactive.length ? (
-          <Section title="Pasif tipler">
+          <Section title="Pasif tipler" info="Pasif tipler eski işlerde ve araçlarda adıyla görünmeye devam eder.">
             <Card padded={false}>
               {inactive.map((t, i) => (
                 <TypeRow key={t.id} type={t} first={i === 0} />
               ))}
             </Card>
-            <Text variant="bodySmall" tone="tertiary">Pasif tipler eski işlerde ve araçlarda adıyla görünmeye devam eder.</Text>
           </Section>
         ) : null}
       </ScrollContent>

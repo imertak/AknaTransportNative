@@ -14,7 +14,7 @@ export function useTabScreenOptions() {
   const bottom = useBottomInset();
   return {
     headerShown: false,
-    tabBarActiveTintColor: colors.accent,
+    tabBarActiveTintColor: colors.text,
     tabBarInactiveTintColor: colors.textTertiary,
     tabBarStyle: {
       backgroundColor: colors.surface,

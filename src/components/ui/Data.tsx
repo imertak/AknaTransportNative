@@ -80,8 +80,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   tileEmphasis: { backgroundColor: colors.ink, borderColor: colors.ink },
-  /** Siyah kutuda öne çıkan sayı neon yeşil. */
-  tileEmphasisValue: { color: colors.accent },
+  tileEmphasisValue: { color: colors.textInverse },
   listItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2 },
   listIcon: { width: 36, height: 36, borderRadius: radius.sm + 2, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
 });

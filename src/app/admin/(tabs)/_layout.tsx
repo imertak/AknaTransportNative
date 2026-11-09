@@ -8,7 +8,7 @@ import { routes } from '@/navigation/routes';
 import { tabIcon, useTabScreenOptions } from '@/navigation/tabOptions';
 import { colors } from '@/theme';
 
-/** Alt menünün ortasındaki neon yeşil "yeni iş" butonu (uygulamanın ana aksiyonu). */
+/** Alt menünün ortasındaki siyah yuvarlak "yeni iş" butonu. */
 function CreateJobButton() {
   return (
     <ScalePressable
@@ -18,7 +18,7 @@ function CreateJobButton() {
       accessibilityRole="button"
       accessibilityLabel="Yeni iş oluştur"
     >
-      <Plus size={28} color={colors.onAccent} strokeWidth={2.5} />
+      <Plus size={28} color={colors.textInverse} strokeWidth={2.5} />
     </ScalePressable>
   );
 }
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,

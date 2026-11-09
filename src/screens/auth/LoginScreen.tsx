@@ -130,7 +130,7 @@ export default function LoginScreen() {
             </Pressable>
           </Link>
 
-          <Button label="Giriş yap" variant="accent" size="lg" onPress={submit} loading={loading} fullWidth style={styles.submit} />
+          <Button label="Giriş yap" variant="inverse" size="lg" onPress={submit} loading={loading} fullWidth style={styles.submit} />
         </View>
 
         {!APP_CONFIG.apiBaseUrl ? (

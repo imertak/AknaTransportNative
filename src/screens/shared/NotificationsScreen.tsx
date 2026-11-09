@@ -150,5 +150,5 @@ const styles = StyleSheet.create({
   texts: { flex: 1, gap: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { flex: 1 },
-  dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.accent, borderWidth: 1.5, borderColor: colors.ink, marginTop: 6 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.ink, marginTop: 6 },
 });

@@ -5,14 +5,16 @@ import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-na
 
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobFilterSheet, type AdvancedFilter } from '@/components/jobs/JobFilterSheet';
-import { Button, Chip, EmptyState, IconButton, LoadingState, PageHeader, Screen, SearchBar, Text } from '@/components/ui';
+import { Button, Chip, EmptyState, IconButton, LoadingState, MonthHeader, monthSeparator, PageHeader, Screen, SearchBar, Text } from '@/components/ui';
 import { IN_PROGRESS_STATUSES } from '@/constants/jobStatus';
 import { useCustomers, useDataStatus, useFilteredJobs, useUserMap } from '@/hooks/useData';
 import { useRefresh } from '@/hooks/useRefresh';
+import { sortJobs } from '@/services/jobUtils';
 import { routes } from '@/navigation/routes';
 import { colors, spacing } from '@/theme';
 import type { JobFilter, JobStatus, TransportJob } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { groupByMonth, monthRowKey, type MonthRow } from '@/utils/monthGroups';
 
 type StatusGroup = 'all' | 'pending' | 'assigned' | 'active' | 'completed' | 'cancelled';
 
@@ -52,9 +54,17 @@ export default function JobsScreen() {
   const jobs = useFilteredJobs(filter);
   const total = useMemo(() => jobs.reduce((s, j) => (j.status === 'cancelled' ? s : s + j.price), 0), [jobs]);
 
+  // Liste aylara bölünür (iş tarihine göre, yeniden eskiye).
+  const rows = useMemo(() => groupByMonth([...jobs].sort(sortJobs), (j) => j.date, (j) => j.id), [jobs]);
+
   const openJob = useCallback((job: TransportJob) => router.push(routes.job(job.id)), []);
   const renderItem = useCallback(
-    ({ item }: { item: TransportJob }) => <JobCard job={item} onPress={openJob} showPrice driverName={item.driverId ? userMap.get(item.driverId)?.fullName ?? '—' : undefined} />,
+    ({ item, index }: { item: MonthRow<TransportJob>; index: number }) =>
+      item.kind === 'month' ? (
+        <MonthHeader label={item.label} first={index === 0} summary={`${item.items.length} iş · ${formatCurrency(item.items.reduce((s, j) => (j.status === 'cancelled' ? s : s + j.price), 0))}`} />
+      ) : (
+        <JobCard job={item.item} onPress={openJob} showPrice driverName={item.item.driverId ? userMap.get(item.item.driverId)?.fullName ?? '—' : undefined} />
+      ),
     [openJob, userMap],
   );
 
@@ -100,8 +110,8 @@ export default function JobsScreen() {
         <LoadingState label="İşler yükleniyor" />
       ) : (
         <FlatList
-          data={jobs}
-          keyExtractor={(j) => j.id}
+          data={rows}
+          keyExtractor={monthRowKey}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={Separator}
@@ -134,7 +144,7 @@ export default function JobsScreen() {
   );
 }
 
-const Separator = () => <View style={{ height: spacing.sm + 2 }} />;
+const Separator = monthSeparator(spacing.sm + 2);
 
 const styles = StyleSheet.create({
   searchRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },

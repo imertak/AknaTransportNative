@@ -5,16 +5,18 @@ import { StyleSheet, View } from 'react-native';
 
 import { InvoiceRow } from '@/components/invoices/InvoiceRow';
 import { JobRow } from '@/components/jobs/JobRow';
-import { Button, Card, EmptyState, IconButton, InfoRow, NavHeader, Screen, ScrollContent, Section, StatTile, Text } from '@/components/ui';
+import { Button, Card, EmptyState, IconButton, InfoRow, MonthHeader, NavHeader, Screen, ScrollContent, Section, StatTile, Text } from '@/components/ui';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useCustomer, useInvoices, useJobs } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
+import { sortJobs } from '@/services/jobUtils';
 import { customerActions } from '@/store';
 import { spacing } from '@/theme';
 import type { TransportJob } from '@/types';
 import { confirm } from '@/utils/confirm';
 import { formatCurrency, formatPhone } from '@/utils/format';
 import { callPhone, sendEmail } from '@/utils/links';
+import { groupByMonth } from '@/utils/monthGroups';
 
 const openJob = (job: TransportJob) => router.push(routes.job(job.id));
 
@@ -25,8 +27,11 @@ export default function CustomerDetailScreen() {
   const allInvoices = useInvoices();
   const { run, pending } = useAsyncAction();
 
-  const jobs = useMemo(() => allJobs.filter((j) => j.customerId === id), [allJobs, id]);
-  const invoices = useMemo(() => allInvoices.filter((i) => i.customerId === id), [allInvoices, id]);
+  const jobs = useMemo(() => allJobs.filter((j) => j.customerId === id).sort(sortJobs), [allJobs, id]);
+  const invoices = useMemo(
+    () => allInvoices.filter((i) => i.customerId === id).sort((a, b) => b.issueDate.localeCompare(a.issueDate) || b.invoiceNo.localeCompare(a.invoiceNo)),
+    [allInvoices, id],
+  );
   const billable = jobs.filter((j) => j.status !== 'cancelled');
   const total = billable.reduce((s, j) => s + j.price, 0);
   const invoicedTotal = invoices.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + i.total, 0);
@@ -90,11 +95,18 @@ export default function CustomerDetailScreen() {
 
         <Section title={`Geçmiş nakliye işleri · ${jobs.length}`}>
           {jobs.length ? (
-            <Card style={{ paddingVertical: spacing.xs }}>
-              {jobs.map((j, i) => (
-                <JobRow key={j.id} job={j} onPress={openJob} last={i === jobs.length - 1} />
-              ))}
-            </Card>
+            groupByMonth(jobs, (j) => j.date, (j) => j.id)
+              .filter((r) => r.kind === 'month')
+              .map((month, m) => (
+                <View key={month.key}>
+                  <MonthHeader label={month.label} first={m === 0} summary={`${month.items.length} iş`} />
+                  <Card style={{ paddingVertical: spacing.xs }}>
+                    {month.items.map((j, i) => (
+                      <JobRow key={j.id} job={j} onPress={openJob} last={i === month.items.length - 1} />
+                    ))}
+                  </Card>
+                </View>
+              ))
           ) : (
             <EmptyState compact title="Henüz iş yok" description="Bu müşteri için oluşturulan işler burada listelenir." />
           )}
@@ -102,11 +114,18 @@ export default function CustomerDetailScreen() {
 
         <Section title={`Kesilen faturalar · ${invoices.length}`} action={invoices.length ? <Text variant="bodySmall" tone="secondary">{formatCurrency(invoicedTotal, { decimals: 2 })}</Text> : undefined}>
           {invoices.length ? (
-            <Card padded={false}>
-              {invoices.map((inv, i) => (
-                <InvoiceRow key={inv.id} invoice={inv} onPress={(x) => router.push(routes.invoice(x.id))} last={i === invoices.length - 1} />
-              ))}
-            </Card>
+            groupByMonth(invoices, (inv) => inv.issueDate, (inv) => inv.id)
+              .filter((r) => r.kind === 'month')
+              .map((month, m) => (
+                <View key={month.key}>
+                  <MonthHeader label={month.label} first={m === 0} summary={`${month.items.length} fatura`} />
+                  <Card padded={false}>
+                    {month.items.map((inv, i) => (
+                      <InvoiceRow key={inv.id} invoice={inv} onPress={(x) => router.push(routes.invoice(x.id))} last={i === month.items.length - 1} />
+                    ))}
+                  </Card>
+                </View>
+              ))
           ) : (
             <EmptyState compact icon={ReceiptText} title="Fatura yok" description="Tamamlanan işlerin detayından fatura oluşturabilirsiniz." />
           )}

@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import { ClipboardList } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { JobCard } from '@/components/jobs/JobCard';
-import { EmptyState, PageHeader, Screen, SegmentedControl } from '@/components/ui';
+import { EmptyState, MonthHeader, monthSeparator, PageHeader, Screen, SegmentedControl } from '@/components/ui';
 import { isInProgress } from '@/constants/jobStatus';
 import { can } from '@/constants/permissions';
 import { useCurrentUser } from '@/contexts/AuthContext';
@@ -12,6 +12,7 @@ import { useDriverJobs } from '@/hooks/useData';
 import { useRefresh } from '@/hooks/useRefresh';
 import { routes } from '@/navigation/routes';
 import { colors, spacing } from '@/theme';
+import { groupByMonth, monthRowKey, type MonthRow } from '@/utils/monthGroups';
 import type { TransportJob } from '@/types';
 
 type Tab = 'open' | 'active' | 'waiting';
@@ -25,9 +26,18 @@ export default function DriverJobsScreen() {
 
   const activeList = useMemo(() => open.filter((j) => isInProgress(j.status)), [open]);
   const data = tab === 'open' ? open : tab === 'active' ? activeList : waiting;
+  const rows = useMemo(() => groupByMonth(data, (j) => j.date, (j) => j.id), [data]);
 
   const openJob = useCallback((job: TransportJob) => router.push(routes.job(job.id, 'driver')), []);
-  const renderItem = useCallback(({ item }: { item: TransportJob }) => <JobCard job={item} onPress={openJob} showPrice={showPrice} />, [openJob, showPrice]);
+  const renderItem = useCallback(
+    ({ item, index }: { item: MonthRow<TransportJob>; index: number }) =>
+      item.kind === 'month' ? (
+        <MonthHeader label={item.label} first={index === 0} summary={`${item.items.length} iş`} />
+      ) : (
+        <JobCard job={item.item} onPress={openJob} showPrice={showPrice} />
+      ),
+    [openJob, showPrice],
+  );
 
   return (
     <Screen>
@@ -44,8 +54,8 @@ export default function DriverJobsScreen() {
         />
       </PageHeader>
       <FlatList
-        data={data}
-        keyExtractor={(j) => j.id}
+        data={rows}
+        keyExtractor={monthRowKey}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={Separator}
@@ -56,7 +66,7 @@ export default function DriverJobsScreen() {
   );
 }
 
-const Separator = () => <View style={{ height: spacing.sm + 2 }} />;
+const Separator = monthSeparator(spacing.sm + 2);
 
 const styles = StyleSheet.create({
   list: { padding: spacing.lg, paddingBottom: spacing.huge, flexGrow: 1 },

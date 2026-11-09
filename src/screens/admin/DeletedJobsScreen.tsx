@@ -1,15 +1,16 @@
 import { router } from 'expo-router';
 import { Trash2 } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
-import { Card, EmptyState, ErrorState, LoadingState, NavHeader, Screen, SearchBar, StatusBadge, Text } from '@/components/ui';
+import { Card, EmptyState, ErrorState, LoadingState, MonthHeader, monthSeparator, NavHeader, Screen, SearchBar, StatusBadge, Text } from '@/components/ui';
 import { routes } from '@/navigation/routes';
 import { errorMessage } from '@/services/errors';
 import { jobService } from '@/services/registry';
 import { colors, spacing } from '@/theme';
 import type { TransportJob } from '@/types';
 import { formatDate, formatDateTime, partyLabel } from '@/utils/format';
+import { groupByMonth, monthRowKey, type MonthRow } from '@/utils/monthGroups';
 
 /** Yönetici: mantıksal olarak silinmiş işler. Standart listelerde görünmeyen işler burada incelenir ve geri alınır. */
 export default function DeletedJobsScreen() {
@@ -39,8 +40,14 @@ export default function DeletedJobsScreen() {
     setRefreshing(false);
   }, [load, query]);
 
+  // Liste silinme ayına göre bölünür.
+  const rows = useMemo(() => (jobs ? groupByMonth(jobs, (j) => j.deletedAt ?? j.date, (j) => j.id) : []), [jobs]);
+
   const renderItem = useCallback(
-    ({ item }: { item: TransportJob }) => (
+    ({ item: row, index }: { item: MonthRow<TransportJob>; index: number }) => {
+      if (row.kind === 'month') return <MonthHeader label={row.label} first={index === 0} summary={`${row.items.length} iş`} />;
+      const item = row.item;
+      return (
       <Card onPress={() => router.push(routes.deletedJob(item.id))} style={styles.card}>
         <View style={styles.top}>
           <Text variant="subheading">{item.jobNo}</Text>
@@ -56,7 +63,8 @@ export default function DeletedJobsScreen() {
           </Text>
         </View>
       </Card>
-    ),
+      );
+    },
     [],
   );
 
@@ -71,8 +79,8 @@ export default function DeletedJobsScreen() {
         <LoadingState label="Silinen işler yükleniyor" />
       ) : (
         <FlatList
-          data={jobs}
-          keyExtractor={(j) => j.id}
+          data={rows}
+          keyExtractor={monthRowKey}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={Separator}
@@ -90,7 +98,7 @@ export default function DeletedJobsScreen() {
   );
 }
 
-const Separator = () => <View style={{ height: spacing.sm + 2 }} />;
+const Separator = monthSeparator(spacing.sm + 2);
 
 const styles = StyleSheet.create({
   list: { padding: spacing.lg, paddingBottom: spacing.huge, flexGrow: 1 },

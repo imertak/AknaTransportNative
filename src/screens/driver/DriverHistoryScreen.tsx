@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import { History } from 'lucide-react-native';
 import { useCallback, useMemo } from 'react';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { JobCard } from '@/components/jobs/JobCard';
-import { EmptyState, PageHeader, Screen } from '@/components/ui';
+import { EmptyState, MonthHeader, monthSeparator, PageHeader, Screen } from '@/components/ui';
 import { can } from '@/constants/permissions';
 import { useCurrentUser } from '@/contexts/AuthContext';
 import { useDriverJobs } from '@/hooks/useData';
@@ -13,6 +13,7 @@ import { routes } from '@/navigation/routes';
 import { colors, spacing } from '@/theme';
 import type { TransportJob } from '@/types';
 import { formatCurrency } from '@/utils/format';
+import { groupByMonth, monthRowKey, type MonthRow } from '@/utils/monthGroups';
 
 export default function DriverHistoryScreen() {
   const user = useCurrentUser();
@@ -21,16 +22,29 @@ export default function DriverHistoryScreen() {
   const showPrice = can(user, 'jobs.viewPrice');
   const data = useMemo(() => [...completed].sort((a, b) => b.date.localeCompare(a.date)), [completed]);
   const total = useMemo(() => completed.reduce((s, j) => s + j.price, 0), [completed]);
+  const rows = useMemo(() => groupByMonth(data, (j) => j.date, (j) => j.id), [data]);
 
   const openJob = useCallback((job: TransportJob) => router.push(routes.job(job.id, 'driver')), []);
-  const renderItem = useCallback(({ item }: { item: TransportJob }) => <JobCard job={item} onPress={openJob} showPrice={showPrice} />, [openJob, showPrice]);
+  const renderItem = useCallback(
+    ({ item, index }: { item: MonthRow<TransportJob>; index: number }) =>
+      item.kind === 'month' ? (
+        <MonthHeader
+          label={item.label}
+          first={index === 0}
+          summary={`${item.items.length} iş${showPrice ? ` · ${formatCurrency(item.items.reduce((s, j) => s + j.price, 0))}` : ''}`}
+        />
+      ) : (
+        <JobCard job={item.item} onPress={openJob} showPrice={showPrice} />
+      ),
+    [openJob, showPrice],
+  );
 
   return (
     <Screen>
       <PageHeader title="Geçmiş" subtitle={`${completed.length} tamamlanan iş${showPrice ? ` · ${formatCurrency(total)}` : ''}`} />
       <FlatList
-        data={data}
-        keyExtractor={(j) => j.id}
+        data={rows}
+        keyExtractor={monthRowKey}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={Separator}
@@ -43,7 +57,7 @@ export default function DriverHistoryScreen() {
   );
 }
 
-const Separator = () => <View style={{ height: spacing.sm + 2 }} />;
+const Separator = monthSeparator(spacing.sm + 2);
 
 const styles = StyleSheet.create({
   list: { padding: spacing.lg, paddingBottom: spacing.huge, flexGrow: 1 },

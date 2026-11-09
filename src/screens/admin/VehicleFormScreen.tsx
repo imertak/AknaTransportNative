@@ -138,7 +138,7 @@ export default function VehicleFormScreen() {
   return (
     <Screen>
       <NavHeader title={isEdit ? 'Aracı düzenle' : 'Yeni araç'} subtitle={existing?.plate} />
-      <ScrollContent keyboard>
+      <ScrollContent>
         <Section title="Araç bilgileri">
           <Card style={styles.card}>
             <Input label="Plaka" required autoCapitalize="characters" value={form.plate} onChangeText={(v) => set('plate', v)} error={errors.plate} placeholder="34 ABC 123" />

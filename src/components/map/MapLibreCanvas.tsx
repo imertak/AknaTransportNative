@@ -30,14 +30,15 @@ function boundsOf(points: GeoPoint[]): [number, number, number, number] | null {
 }
 
 /**
- * AKNA haritası (MapLibre Native + OpenStreetMap, özel siyah/beyaz tema). Araçlar, sıralı duraklar ve iş
- * güzergâhı tek bileşende çizilir. Harita bir kez kurulur; konum güncellemelerinde yalnızca ilgili araç
+ * AKNA haritası (MapLibre Native + OpenStreetMap, açık gri tema). Araçlar, sıralı duraklar, iş güzergâhı ve
+ * araçtan gidilen durağa kalan yol tek bileşende çizilir. Harita bir kez kurulur; konum güncellemelerinde yalnızca ilgili araç
  * işaretçisi değişir, stil ve kaynaklar yeniden yüklenmez.
  */
 export const MapLibreCanvas = memo(function MapLibreCanvas({
   vehicles = [],
   stops = [],
   route,
+  leg,
   selectedVehicleId,
   follow = false,
   fitKey = 'default',
@@ -53,7 +54,7 @@ export const MapLibreCanvas = memo(function MapLibreCanvas({
 
   // Kamera hedefleri; ref'te tutulur ki konum güncellemeleri sığdırma efektini tetiklemesin.
   const pointsRef = useRef<GeoPoint[]>([]);
-  pointsRef.current = [...vehicles.map((v) => v.coordinate), ...stops.map((s) => s.coordinate), ...(route?.coordinates ?? [])];
+  pointsRef.current = [...vehicles.map((v) => v.coordinate), ...stops.map((s) => s.coordinate), ...(route?.coordinates ?? []), ...(leg?.coordinates ?? [])];
 
   const fit = useCallback(() => {
     const b = boundsOf(pointsRef.current);
@@ -113,7 +114,8 @@ export const MapLibreCanvas = memo(function MapLibreCanvas({
           if (e.nativeEvent.userInteraction) onUserGesture?.();
         }}>
         <Camera ref={camera} initialViewState={initial} maxZoom={18} minZoom={3} />
-        {route && route.coordinates.length > 1 ? <RouteLayer route={route} /> : null}
+        {route && route.coordinates.length > 1 ? <RouteLayer route={route} tone={leg ? 'muted' : 'job'} /> : null}
+        {leg && leg.coordinates.length > 1 ? <RouteLayer id="akna-leg" route={leg} tone="leg" /> : null}
         {stops.map((s) => (
           <StopMarker key={s.id} {...s} onPress={onStopPress} />
         ))}

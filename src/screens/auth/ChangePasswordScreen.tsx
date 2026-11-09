@@ -1,11 +1,12 @@
 import { KeyRound, Lock } from 'lucide-react-native';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBottomInset } from '@/hooks/useBottomInset';
 
-import { Button, Input, Text } from '@/components/ui';
+import { Button, KEYBOARD_INPUT_OFFSET, Input, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { errorMessage } from '@/services/errors';
 import { colors, radius, spacing } from '@/theme';
@@ -44,29 +45,27 @@ export default function ChangePasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.huge, paddingBottom: bottomInset + spacing.xl }]} keyboardShouldPersistTaps="handled">
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="display" tone="inverse">Yeni şifre belirleyin</Text>
-          <Text tone="inverseMuted">
-            {user?.fullName ? `${user.fullName}, h` : 'H'}esabınız geçici bir şifreyle açıldı. Devam etmek için kendi şifrenizi belirleyin.
-          </Text>
-        </View>
+    <KeyboardAwareScrollView style={styles.root} bottomOffset={KEYBOARD_INPUT_OFFSET} contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.huge, paddingBottom: bottomInset + spacing.xl }]} keyboardShouldPersistTaps="handled">
+      <View style={{ gap: spacing.sm }}>
+        <Text variant="display" tone="inverse">Yeni şifre belirleyin</Text>
+        <Text tone="inverseMuted">
+          {user?.fullName ? `${user.fullName}, h` : 'H'}esabınız geçici bir şifreyle açıldı. Devam etmek için kendi şifrenizi belirleyin.
+        </Text>
+      </View>
 
-        <View style={styles.card}>
-          {errors.form ? (
-            <View style={styles.formError} accessibilityRole="alert">
-              <Text variant="bodySmall" tone="danger">{errors.form}</Text>
-            </View>
-          ) : null}
-          <Input label="Geçici şifre" icon={KeyRound} value={current} onChangeText={setCurrent} secureTextEntry autoComplete="current-password" textContentType="password" error={errors.current} />
-          <Input label="Yeni şifre" icon={Lock} value={next} onChangeText={setNext} secureTextEntry autoComplete="new-password" textContentType="newPassword" error={errors.next} hint="En az 8 karakter, en az bir harf ve bir rakam." />
-          <Input label="Yeni şifre (tekrar)" icon={Lock} value={confirm} onChangeText={setConfirm} secureTextEntry autoComplete="new-password" textContentType="newPassword" returnKeyType="go" onSubmitEditing={submit} error={errors.confirm} />
-          <Button label="Şifreyi kaydet" size="lg" onPress={submit} loading={loading} fullWidth />
-          <Button label="Çıkış yap" variant="ghost" onPress={signOut} fullWidth />
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <View style={styles.card}>
+        {errors.form ? (
+          <View style={styles.formError} accessibilityRole="alert">
+            <Text variant="bodySmall" tone="danger">{errors.form}</Text>
+          </View>
+        ) : null}
+        <Input label="Geçici şifre" icon={KeyRound} value={current} onChangeText={setCurrent} secureTextEntry autoComplete="current-password" textContentType="password" error={errors.current} />
+        <Input label="Yeni şifre" icon={Lock} value={next} onChangeText={setNext} secureTextEntry autoComplete="new-password" textContentType="newPassword" error={errors.next} hint="En az 8 karakter, en az bir harf ve bir rakam." />
+        <Input label="Yeni şifre (tekrar)" icon={Lock} value={confirm} onChangeText={setConfirm} secureTextEntry autoComplete="new-password" textContentType="newPassword" returnKeyType="go" onSubmitEditing={submit} error={errors.confirm} />
+        <Button label="Şifreyi kaydet" size="lg" onPress={submit} loading={loading} fullWidth />
+        <Button label="Çıkış yap" variant="ghost" onPress={signOut} fullWidth />
+      </View>
+    </KeyboardAwareScrollView>
   );
 }
 

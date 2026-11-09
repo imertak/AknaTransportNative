@@ -26,6 +26,8 @@ export interface MapStop {
   subtitle?: string;
   /** Tamamlanmış/geçilmiş durak soluk gösterilir. */
   done?: boolean;
+  /** Aracın şu an gittiği durak: turuncu gösterilir. */
+  target?: boolean;
 }
 
 export interface MapRoute {
@@ -38,6 +40,8 @@ export interface MapCanvasProps {
   vehicles?: MapVehicle[];
   stops?: MapStop[];
   route?: MapRoute | null;
+  /** Araçtan gidilen durağa kalan yol: güzergâhın üstünde kalın çizilir, güzergâh soluklaşır. */
+  leg?: MapRoute | null;
   /** Seçili araç: vurgulanır. */
   selectedVehicleId?: string | null;
   /**

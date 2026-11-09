@@ -374,7 +374,7 @@ export default function JobFormScreen() {
   return (
     <Screen>
       <NavHeader title={isEdit ? 'İşi düzenle' : 'Yeni iş'} subtitle={existing ? existing.jobNo : 'İş numarası otomatik atanır'} />
-      <ScrollContent keyboard>
+      <ScrollContent>
         <Section title="Müşteri">
           <Card style={styles.card}>
             <SelectField label="Müşteri" required searchable options={customerOptions} value={form.customerId || null} onChange={applyCustomer} error={errors.customerId} placeholder="Müşteri seçin" />

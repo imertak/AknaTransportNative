@@ -1,5 +1,6 @@
 import { memo, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useBottomInset } from '@/hooks/useBottomInset';
 
 import { colors, spacing } from '@/theme';
@@ -9,23 +10,24 @@ export function Screen({ children, style }: { children: ReactNode; style?: Style
   return <View style={[styles.screen, style]}>{children}</View>;
 }
 
-/** Klavye uyumlu kaydırılabilir içerik alanı (formlar ve detaylar için). */
-export function ScrollContent({ children, keyboard, contentStyle }: { children: ReactNode; keyboard?: boolean; contentStyle?: StyleProp<ViewStyle> }) {
-  const content = (
-    <ScrollView
+/** Odaklanan input'un klavyenin üstünde kalması için klavyeden bırakılan boşluk. */
+export const KEYBOARD_INPUT_OFFSET = spacing.xxl;
+
+/**
+ * Kaydırılabilir içerik alanı (formlar ve detaylar için). Bir input'a dokunulduğunda ekran kayar ve input
+ * klavyenin hemen üstüne gelir; Android'de pencere klavyeyle küçülmediği için bu iş burada yapılır.
+ */
+export function ScrollContent({ children, contentStyle }: { children: ReactNode; contentStyle?: StyleProp<ViewStyle> }) {
+  return (
+    <KeyboardAwareScrollView
       style={styles.flex}
       contentContainerStyle={[styles.content, contentStyle]}
+      bottomOffset={KEYBOARD_INPUT_OFFSET}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       showsVerticalScrollIndicator={false}>
       {children}
-    </ScrollView>
-  );
-  if (!keyboard) return content;
-  return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {content}
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

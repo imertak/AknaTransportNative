@@ -232,7 +232,7 @@ export default function DriverFormScreen() {
   return (
     <Screen>
       <NavHeader title={isEdit ? 'Şoförü düzenle' : 'Yeni şoför'} subtitle={existing?.fullName} />
-      <ScrollContent keyboard>
+      <ScrollContent>
         <Section title="Şoför bilgileri">
           <Card style={styles.card}>
             <Input label="Ad soyad" required icon={UserRound} value={form.fullName} onChangeText={(v) => set('fullName', v)} error={errors.fullName} autoCapitalize="words" textContentType="name" />

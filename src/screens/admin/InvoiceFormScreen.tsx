@@ -134,7 +134,7 @@ export default function InvoiceFormScreen() {
   return (
     <Screen>
       <NavHeader title="Fatura oluştur" subtitle="Taslak fatura" />
-      <ScrollContent keyboard>
+      <ScrollContent>
         <View style={styles.notice}>
           <Info size={18} color={colors.text} />
           <Text variant="bodySmall" style={{ flex: 1 }}>

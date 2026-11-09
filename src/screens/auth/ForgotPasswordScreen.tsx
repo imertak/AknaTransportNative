@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { ChevronLeft, KeyRound, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBottomInset } from '@/hooks/useBottomInset';
 
-import { Button, IconButton, Input, Text } from '@/components/ui';
+import { Button, IconButton, Input, KEYBOARD_INPUT_OFFSET, Text } from '@/components/ui';
 import { authService } from '@/services';
 import { errorMessage } from '@/services/errors';
 import { colors, radius, spacing } from '@/theme';
@@ -62,75 +63,73 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: bottomInset + spacing.xl }]} keyboardShouldPersistTaps="handled">
-        <IconButton icon={ChevronLeft} label="Geri" onPress={back} tone="dark" />
-        <View style={{ gap: spacing.sm, marginTop: spacing.xxl }}>
-          <Text variant="display" tone="inverse">Şifremi unuttum</Text>
-          <Text tone="inverseMuted">
-            Hesabınıza kayıtlı e-posta adresini girin. Şifre sıfırlama kodu e-postanıza gönderilecek.
-          </Text>
-        </View>
+    <KeyboardAwareScrollView style={styles.root} bottomOffset={KEYBOARD_INPUT_OFFSET} contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: bottomInset + spacing.xl }]} keyboardShouldPersistTaps="handled">
+      <IconButton icon={ChevronLeft} label="Geri" onPress={back} tone="dark" />
+      <View style={{ gap: spacing.sm, marginTop: spacing.xxl }}>
+        <Text variant="display" tone="inverse">Şifremi unuttum</Text>
+        <Text tone="inverseMuted">
+          Hesabınıza kayıtlı e-posta adresini girin. Şifre sıfırlama kodu e-postanıza gönderilecek.
+        </Text>
+      </View>
 
-        <View style={styles.card}>
-          {sent && done ? (
-            <View style={{ gap: spacing.md, alignItems: 'flex-start' }}>
-              <View style={styles.icon}>
-                <Lock size={22} color={colors.text} />
-              </View>
-              <Text variant="heading">Şifreniz güncellendi</Text>
-              <Text variant="bodySmall" tone="secondary">Yeni şifrenizle giriş yapabilirsiniz. Diğer cihazlardaki oturumlarınız kapatıldı.</Text>
-              <Button label="Girişe dön" onPress={back} fullWidth />
+      <View style={styles.card}>
+        {sent && done ? (
+          <View style={{ gap: spacing.md, alignItems: 'flex-start' }}>
+            <View style={styles.icon}>
+              <Lock size={22} color={colors.text} />
             </View>
-          ) : sent ? (
-            <View style={{ gap: spacing.lg }}>
-              <Text variant="bodySmall" tone="secondary">
-                {email} adresi kayıtlıysa sıfırlama kodu gönderildi. Kodu ve yeni şifrenizi girin.
-              </Text>
-              {resetErrors.form ? (
-                <Text variant="bodySmall" tone="danger" accessibilityRole="alert">{resetErrors.form}</Text>
-              ) : null}
-              <Input label="Sıfırlama kodu" icon={KeyRound} value={code} onChangeText={setCode} autoCapitalize="none" autoCorrect={false} error={resetErrors.code} />
-              <Input
-                label="Yeni şifre"
-                icon={Lock}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
-                autoComplete="new-password"
-                textContentType="newPassword"
-                returnKeyType="go"
-                onSubmitEditing={reset}
-                error={resetErrors.password}
-                hint="En az 8 karakter, en az bir harf ve bir rakam."
-              />
-              <Button label="Şifreyi güncelle" onPress={reset} loading={resetting} size="lg" fullWidth />
-            </View>
-          ) : (
-            <>
-              <Input
-                label="E-posta"
-                icon={Mail}
-                value={email}
-                onChangeText={(v) => {
-                  setEmail(v);
-                  setError(undefined);
-                }}
-                placeholder="ornek@akna.com"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
-                returnKeyType="send"
-                onSubmitEditing={submit}
-                error={error}
-                autoFocus
-              />
-              <Button label="Sıfırlama talebi gönder" onPress={submit} loading={loading} size="lg" fullWidth />
-            </>
-          )}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Text variant="heading">Şifreniz güncellendi</Text>
+            <Text variant="bodySmall" tone="secondary">Yeni şifrenizle giriş yapabilirsiniz. Diğer cihazlardaki oturumlarınız kapatıldı.</Text>
+            <Button label="Girişe dön" onPress={back} fullWidth />
+          </View>
+        ) : sent ? (
+          <View style={{ gap: spacing.lg }}>
+            <Text variant="bodySmall" tone="secondary">
+              {email} adresi kayıtlıysa sıfırlama kodu gönderildi. Kodu ve yeni şifrenizi girin.
+            </Text>
+            {resetErrors.form ? (
+              <Text variant="bodySmall" tone="danger" accessibilityRole="alert">{resetErrors.form}</Text>
+            ) : null}
+            <Input label="Sıfırlama kodu" icon={KeyRound} value={code} onChangeText={setCode} autoCapitalize="none" autoCorrect={false} error={resetErrors.code} />
+            <Input
+              label="Yeni şifre"
+              icon={Lock}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
+              returnKeyType="go"
+              onSubmitEditing={reset}
+              error={resetErrors.password}
+              hint="En az 8 karakter, en az bir harf ve bir rakam."
+            />
+            <Button label="Şifreyi güncelle" onPress={reset} loading={resetting} size="lg" fullWidth />
+          </View>
+        ) : (
+          <>
+            <Input
+              label="E-posta"
+              icon={Mail}
+              value={email}
+              onChangeText={(v) => {
+                setEmail(v);
+                setError(undefined);
+              }}
+              placeholder="ornek@akna.com"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+              returnKeyType="send"
+              onSubmitEditing={submit}
+              error={error}
+              autoFocus
+            />
+            <Button label="Sıfırlama talebi gönder" onPress={submit} loading={loading} size="lg" fullWidth />
+          </>
+        )}
+      </View>
+    </KeyboardAwareScrollView>
   );
 }
 

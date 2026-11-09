@@ -13,15 +13,12 @@ import { useCurrentUser } from '@/contexts/AuthContext';
 import { useLocationTracking } from '@/contexts/LocationContext';
 import { useDriverJobs } from '@/hooks/useData';
 import { useJobRoute } from '@/hooks/useJobRoute';
+import { useLegRoute } from '@/hooks/useLegRoute';
 import { routes } from '@/navigation/routes';
 import { colors, spacing } from '@/theme';
-import type { TransportJob } from '@/types';
 import { distanceMeters, formatDistance } from '@/utils/geo';
-import { jobMapStops } from '@/utils/jobMap';
+import { headingToDelivery, jobMapStops } from '@/utils/jobMap';
 import { openDirections } from '@/utils/links';
-
-/** Yükleme tamamlandıktan sonra hedef teslimat noktasıdır. */
-const headingToDelivery = (job: TransportJob) => job.status === 'loading' || job.status === 'delivering';
 
 export default function DriverMapScreen() {
   const user = useCurrentUser();
@@ -34,6 +31,8 @@ export default function DriverMapScreen() {
 
   const stops = useMemo(() => (job ? jobMapStops(job) : []), [job]);
   const route = useJobRoute(stops);
+  // Gidilen durağa kalan yol: konumum ile turuncu durak arası.
+  const leg = useLegRoute(lastFix, stops.find((s) => s.target)?.coordinate);
   const [follow, setFollow] = useState(false);
   const vehicles = useMemo<MapVehicle[]>(
     () => (lastFix ? [{ id: 'me', coordinate: lastFix, heading: lastFix.heading, self: true }] : []),
@@ -49,6 +48,7 @@ export default function DriverMapScreen() {
         vehicles={vehicles}
         stops={stops}
         route={route}
+        leg={leg}
         selectedVehicleId={follow ? 'me' : null}
         follow={follow}
         fitKey={job?.id ?? 'none'}

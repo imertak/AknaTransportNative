@@ -19,15 +19,18 @@ export const MonthHeader = memo(function MonthHeader({ label, summary, first }: 
   );
 });
 
-/** Ay başlığının önünde/arkasında boşluk bırakmayan öğe ayırıcı (FlatList ItemSeparatorComponent). */
+/**
+ * Aylara bölünmüş listede öğe ayırıcı (FlatList ItemSeparatorComponent). FlatList ayırıcıya yalnızca
+ * öncesindeki satırı verir: ay başlığının altına boşluk konmaz, öğelerden sonra konur.
+ */
 export function monthSeparator(height: number) {
-  return function MonthSeparator({ leadingItem, trailingItem }: { leadingItem?: MonthRow<unknown>; trailingItem?: MonthRow<unknown> }) {
-    if (leadingItem?.kind !== 'item' || trailingItem?.kind !== 'item') return null;
+  return function MonthSeparator({ leadingItem }: { leadingItem?: MonthRow<unknown> }) {
+    if (leadingItem?.kind !== 'item') return null;
     return <View style={{ height }} />;
   };
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: spacing.xs, paddingTop: spacing.xl, paddingBottom: spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: spacing.xs, paddingTop: spacing.md, paddingBottom: spacing.sm },
   first: { paddingTop: spacing.xs },
 });

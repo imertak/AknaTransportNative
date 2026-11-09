@@ -1,20 +1,24 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { FileText, Mail, MapPin, Pencil, Phone, Plus, ReceiptText, Trash2, UserRound } from 'lucide-react-native';
-import { useMemo } from 'react';
+import { Banknote, FileText, Mail, MapPin, Pencil, Phone, Plus, ReceiptText, Trash2, UserRound, Wallet } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { LedgerRow } from '@/components/customers/LedgerRow';
+import { TransactionSheet } from '@/components/customers/TransactionSheet';
 import { InvoiceRow } from '@/components/invoices/InvoiceRow';
 import { JobRow } from '@/components/jobs/JobRow';
 import { Button, Card, EmptyState, IconButton, InfoRow, MonthHeader, NavHeader, Screen, ScrollContent, Section, StatTile, Text } from '@/components/ui';
+import { useCustomerLedger } from '@/hooks/useAccounts';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useCustomer, useInvoices, useJobs } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
+import type { LedgerEntry } from '@/services/accounts';
 import { sortJobs } from '@/services/jobUtils';
 import { customerActions } from '@/store';
 import { spacing } from '@/theme';
 import type { TransportJob } from '@/types';
 import { confirm } from '@/utils/confirm';
-import { formatCurrency, formatPhone } from '@/utils/format';
+import { formatCurrency, formatDate, formatPhone } from '@/utils/format';
 import { callPhone, sendEmail } from '@/utils/links';
 import { groupByMonth } from '@/utils/monthGroups';
 
@@ -67,6 +71,8 @@ export default function CustomerDetailScreen() {
         </View>
 
         <Button label="Bu müşteri için yeni iş" icon={Plus} onPress={() => router.push(routes.newJob(customer.id))} />
+
+        <AccountSection customerId={customer.id} />
 
         <Section title="İletişim">
           <Card padded={false} style={styles.listCard}>
@@ -134,6 +140,71 @@ export default function CustomerDetailScreen() {
         {jobs.length === 0 ? <Button label="Müşteriyi sil" variant="danger" icon={Trash2} onPress={remove} loading={pending} /> : null}
       </ScrollContent>
     </Screen>
+  );
+}
+
+const LEDGER_PREVIEW = 8;
+
+/** Cari hesap: bakiye, gelen/giden tutarlar ve ekstre. Kesilen faturalar otomatik borç olarak görünür. */
+function AccountSection({ customerId }: { customerId: string }) {
+  const { data, error, loading, reload } = useCustomerLedger(customerId);
+  const [sheet, setSheet] = useState<{ entry: LedgerEntry | null } | null>(null);
+  const [showAll, setShowAll] = useState(false);
+
+  const openEntry = (e: LedgerEntry) => {
+    if (e.kind === 'Invoice' && e.invoiceId) router.push(routes.invoice(e.invoiceId));
+    else setSheet({ entry: e });
+  };
+
+  const b = data?.balance;
+  const entries = data?.entries ?? [];
+  const visible = showAll ? entries : entries.slice(0, LEDGER_PREVIEW);
+
+  return (
+    <Section title="Cari hesap">
+      {error && !data ? (
+        <Card style={{ gap: spacing.sm }}>
+          <Text variant="bodySmall" tone="danger">{error}</Text>
+          <Button label="Tekrar dene" variant="secondary" size="sm" onPress={reload} />
+        </Card>
+      ) : (
+        <>
+          <View style={styles.stats}>
+            <StatTile
+              label={b && b.balance < 0 ? 'Müşterinin alacağı' : 'Bakiye (alacağımız)'}
+              value={b ? formatCurrency(Math.abs(b.balance), { decimals: 2 }) : loading ? '…' : '—'}
+              hint={b?.lastMovementDate ? `Son hareket ${formatDate(b.lastMovementDate)}` : undefined}
+              emphasis
+            />
+          </View>
+          <View style={styles.stats}>
+            <StatTile label="Kesilen fatura" value={b ? formatCurrency(b.invoiced + b.charged) : '—'} hint={b ? `${b.invoiceCount} fatura${b.charged ? ' + borç kaydı' : ''}` : undefined} />
+            <StatTile label="Gelen" value={b ? formatCurrency(b.collected) : '—'} hint="Tahsilat" />
+            <StatTile label="Giden" value={b ? formatCurrency(b.refunded) : '—'} hint="İade / ödeme" />
+          </View>
+          <Button label="Tahsilat / ödeme ekle" icon={Banknote} variant="secondary" onPress={() => setSheet({ entry: null })} />
+          {entries.length ? (
+            <Card padded={false}>
+              {visible.map((e, i) => (
+                <LedgerRow key={`${e.kind}-${e.id}`} entry={e} onPress={openEntry} last={i === visible.length - 1} />
+              ))}
+            </Card>
+          ) : !loading ? (
+            <EmptyState compact icon={Wallet} title="Hareket yok" description="Fatura kesildiğinde veya tahsilat girildiğinde burada görünür." />
+          ) : null}
+          {entries.length > LEDGER_PREVIEW ? (
+            <Button label={showAll ? 'Daha az göster' : `Tüm hareketler (${entries.length})`} variant="ghost" size="sm" onPress={() => setShowAll(!showAll)} />
+          ) : null}
+        </>
+      )}
+      <TransactionSheet
+        customerId={customerId}
+        visible={!!sheet}
+        entry={sheet?.entry}
+        suggestedAmount={b && b.balance > 0 ? b.balance : undefined}
+        onClose={() => setSheet(null)}
+      />
+    </Section>
   );
 }
 

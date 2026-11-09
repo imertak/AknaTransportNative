@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { ArrowLeftRight, BadgeCheck, CarFront, Database, KeyRound, Lock, LogOut, Mail, Phone, ShieldUser, Trash2, Truck, UserRound } from 'lucide-react-native';
-import { useState } from 'react';
+import { ArrowLeftRight, BadgeCheck, Bell, BellOff, CarFront, Database, KeyRound, Lock, LogOut, Mail, Phone, ShieldUser, Trash2, Truck, UserRound } from 'lucide-react-native';
+import { useState, useSyncExternalStore } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Avatar, Badge, Button, Card, InfoRow, Input, ListItem, NavHeader, Screen, ScrollContent, Section, Sheet, Text } from '@/components/ui';
@@ -14,6 +14,8 @@ import { useToast } from '@/contexts/ToastContext';
 import { useDriverVehicles } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
 import { errorMessage } from '@/services/errors';
+import { notificationService } from '@/services/notifications';
+import { pushStatusStore, registerForPush, type PushStatus } from '@/services/push';
 import { colors, radius, spacing } from '@/theme';
 import { confirm } from '@/utils/confirm';
 import { formatPhone } from '@/utils/format';
@@ -63,6 +65,8 @@ export default function ProfileScreen() {
             <InfoRow icon={BadgeCheck} label="Hesap durumu" value={user.isActive ? 'Aktif' : 'Pasif'} last />
           </Card>
         </Section>
+
+        <PushSection />
 
         <Section title="Güvenlik">
           <Card padded={false}>
@@ -138,6 +142,70 @@ export default function ProfileScreen() {
   );
 }
 
+const PUSH_LABEL: Record<PushStatus['state'], string> = {
+  idle: 'Henüz kaydolmadı',
+  registering: 'Kaydediliyor…',
+  registered: 'Bu telefon bildirim alacak şekilde kayıtlı',
+  denied: 'Bildirim izni kapalı',
+  unsupported: 'Bu cihazda desteklenmiyor',
+  noProject: 'Yapılandırma eksik',
+  error: 'Kayıt başarısız',
+};
+
+/** Telefon bildirimi kaydının durumu, yeniden deneme ve deneme bildirimi. Sorunun nerede olduğunu gösterir. */
+function PushSection() {
+  const toast = useToast();
+  const status = useSyncExternalStore(pushStatusStore.subscribe, pushStatusStore.get);
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const ok = status.state === 'registered';
+
+  const retry = async () => {
+    setResult(null);
+    await registerForPush();
+  };
+
+  const test = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      const r = await notificationService.sendTest();
+      if (r.errors.length === 0 && r.delivered > 0) {
+        toast.show(`Deneme bildirimi gönderildi (${r.delivered} cihaz). Birkaç saniye içinde gelmeli.`, 'success');
+      } else {
+        setResult([`Kayıtlı cihaz: ${r.deviceCount}, ulaşan: ${r.delivered}.`, ...r.errors].join('\n'));
+      }
+    } catch (e) {
+      setResult(errorMessage(e, 'Deneme bildirimi gönderilemedi.'));
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <Section title="Bildirimler">
+      <Card style={styles.pushCard}>
+        <View style={styles.pushRow}>
+          {ok ? <Bell size={20} color={colors.text} /> : <BellOff size={20} color={colors.danger} />}
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="subheading">{PUSH_LABEL[status.state]}</Text>
+            {status.message ? <Text variant="bodySmall" tone="secondary">{status.message}</Text> : null}
+          </View>
+        </View>
+        {result ? (
+          <View style={styles.formError} accessibilityRole="alert">
+            <Text variant="bodySmall" tone="danger">{result}</Text>
+          </View>
+        ) : null}
+        <View style={styles.pushActions}>
+          <Button label="Tekrar kaydet" variant="secondary" size="sm" onPress={retry} loading={status.state === 'registering'} />
+          <Button label="Deneme bildirimi gönder" size="sm" onPress={test} loading={testing} />
+        </View>
+      </Card>
+    </Section>
+  );
+}
+
 function ChangePasswordSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { changePassword } = useAuth();
   const toast = useToast();
@@ -204,5 +272,8 @@ const styles = StyleSheet.create({
   listCard: { paddingHorizontal: spacing.lg },
   sep: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderStrong, marginLeft: 64 },
   sheetBody: { paddingHorizontal: spacing.xl, paddingBottom: spacing.sm, gap: spacing.lg },
+  pushCard: { gap: spacing.md },
+  pushRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  pushActions: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   formError: { backgroundColor: colors.dangerSoft, borderRadius: radius.sm, padding: spacing.md },
 });

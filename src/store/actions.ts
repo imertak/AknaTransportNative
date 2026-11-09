@@ -239,6 +239,12 @@ export const invoiceActions = {
     }));
     return inv;
   },
+  /** İptal edilmiş faturayı kalıcı olarak siler (işler iptalde zaten faturadan çıkarılmıştır). */
+  async remove(id: string) {
+    await invoiceService.remove(id);
+    set((s) => ({ invoices: s.invoices.filter((i) => i.id !== id) }));
+    return true;
+  },
 };
 
 export const locationActions = {

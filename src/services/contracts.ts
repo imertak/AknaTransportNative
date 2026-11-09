@@ -124,6 +124,8 @@ export interface InvoiceService {
   /** Taslak fatura oluşturur. Resmi geçerliliği yoktur. */
   createDemo(input: InvoiceInput, actorId: string): Promise<Invoice>;
   cancel(id: string): Promise<Invoice>;
+  /** İptal edilmiş faturayı kalıcı olarak siler. Diğer durumlarda sunucu reddeder. */
+  remove(id: string): Promise<void>;
   /**
    * Sunucunun ürettiği PDF'i indirir ve yerel dosya yolunu döndürür.
    * null: bu veri kaynağında sunucu PDF'i yoktur, PDF cihazda üretilmelidir.

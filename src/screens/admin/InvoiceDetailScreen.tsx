@@ -156,6 +156,18 @@ export default function InvoiceDetailScreen() {
     if (ok) await action.run(() => invoiceActions.cancel(invoice.id), { success: 'Fatura iptal edildi.' });
   };
 
+  const remove = async () => {
+    const ok = await confirm({
+      title: 'Faturayı sil',
+      message: `${invoice.invoiceNo} kalıcı olarak silinecek ve faturalar listesinden kalkacak. Bu işlem geri alınamaz.`,
+      confirmLabel: 'Sil',
+      destructive: true,
+    });
+    if (!ok) return;
+    const done = await action.run(() => invoiceActions.remove(invoice.id), { success: 'Fatura silindi.' });
+    if (done) router.back();
+  };
+
   return (
     <Screen>
       <NavHeader title={invoice.invoiceNo} subtitle={invoice.customerName} />
@@ -281,7 +293,9 @@ export default function InvoiceDetailScreen() {
           </>
         ) : !cancelled ? (
           <Button label="Faturayı iptal et" variant="danger" icon={Ban} onPress={cancel} />
-        ) : null}
+        ) : (
+          <Button label="Faturayı sil" variant="danger" icon={Trash2} loading={action.pending} onPress={remove} />
+        )}
       </ScrollContent>
 
       <Sheet

@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -72,20 +73,22 @@ function NavBarArea({ children }: { children: ReactNode }) {
 export default function RootLayout() {
   return (
     <SafeAreaProvider style={{ backgroundColor: colors.ink }}>
-      <StatusBar style="light" />
-      <ToastProvider>
-        <AuthProvider>
-          <RealtimeProvider>
-            <LocationProvider>
-              <NotificationProvider>
-                <NavBarArea>
-                  <RootNavigator />
-                </NavBarArea>
-              </NotificationProvider>
-            </LocationProvider>
-          </RealtimeProvider>
-        </AuthProvider>
-      </ToastProvider>
+      <KeyboardProvider>
+        <StatusBar style="light" />
+        <ToastProvider>
+          <AuthProvider>
+            <RealtimeProvider>
+              <LocationProvider>
+                <NotificationProvider>
+                  <NavBarArea>
+                    <RootNavigator />
+                  </NavBarArea>
+                </NotificationProvider>
+              </LocationProvider>
+            </RealtimeProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

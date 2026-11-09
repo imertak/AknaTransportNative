@@ -48,7 +48,7 @@ export default function VehicleTypesScreen() {
   return (
     <Screen>
       <NavHeader title="Araç tipleri" subtitle={`${active.length} aktif tip`} />
-      <ScrollContent keyboard>
+      <ScrollContent>
         <Section title="Yeni araç tipi">
           <Card style={{ gap: spacing.md }}>
             <Input

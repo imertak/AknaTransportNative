@@ -13,6 +13,7 @@ import { isInProgress } from '@/constants/jobStatus';
 import { useRealtime } from '@/contexts/RealtimeContext';
 import { useJobs, useLocations, useUserMap, useVehicles } from '@/hooks/useData';
 import { useJobRoute } from '@/hooks/useJobRoute';
+import { useLegRoute } from '@/hooks/useLegRoute';
 import { useNow } from '@/hooks/useNow';
 import { routes } from '@/navigation/routes';
 import { locationActions } from '@/store';
@@ -94,6 +95,8 @@ export default function FleetMapScreen() {
   const selectedJob = selected?.jobs[0];
   const stops = selectedJob ? jobMapStops(selectedJob) : [];
   const route = useJobRoute(stops);
+  // Seçili aracın gittiği durağa kalan yol.
+  const leg = useLegRoute(selected?.fix, stops.find((s) => s.target)?.coordinate);
 
   const select = useCallback((id: string | null) => setSelection({ id, follow: false }), []);
   const startFollow = useCallback((id: string) => setSelection({ id, follow: true }), []);
@@ -117,6 +120,7 @@ export default function FleetMapScreen() {
         vehicles={mapVehicles}
         stops={stops}
         route={route}
+        leg={leg}
         selectedVehicleId={selectedId}
         follow={follow}
         fitKey={selectedId ?? 'fleet'}

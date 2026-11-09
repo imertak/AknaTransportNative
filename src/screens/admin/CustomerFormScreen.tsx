@@ -98,7 +98,7 @@ export default function CustomerFormScreen() {
   return (
     <Screen>
       <NavHeader title={isEdit ? 'Müşteriyi düzenle' : 'Yeni müşteri'} subtitle={existing?.companyName} />
-      <ScrollContent keyboard>
+      <ScrollContent>
         <Section title="Firma">
           <Card style={styles.card}>
             <Input label="Firma adı" required value={form.companyName} onChangeText={(v) => set('companyName', v)} error={errors.companyName} placeholder="Örn. Starbucks" />

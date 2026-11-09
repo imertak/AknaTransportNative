@@ -33,6 +33,10 @@ export const colors = {
   accent: '#D32F2F',
   accentSoft: '#FFEBEE',
 
+  /** Haritada gidilen hedef nokta. */
+  destination: '#FF5A1F',
+  destinationHalo: 'rgba(255, 90, 31, 0.25)',
+
   overlay: 'rgba(0, 0, 0, 0.5)',
 } as const;
 

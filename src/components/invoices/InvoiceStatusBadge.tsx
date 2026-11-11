@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
 
 import { Badge, type BadgeTone } from '@/components/ui';
 import type { Invoice, InvoiceStatus } from '@/types';
@@ -21,8 +22,8 @@ const TONE: Record<InvoiceStatus, BadgeTone> = {
   earsiv_failed: 'danger',
 };
 
-export const InvoiceStatusBadge = memo(function InvoiceStatusBadge({ invoice }: { invoice: Invoice }) {
+export const InvoiceStatusBadge = memo(function InvoiceStatusBadge({ invoice, style }: { invoice: Invoice; style?: StyleProp<ViewStyle> }) {
   // Başka yerde kesilip elle yüklenen fatura e-Arşiv'den gelmez.
   const label = invoice.manual && invoice.status === 'earsiv_issued' ? 'Elle yüklendi' : INVOICE_STATUS_LABEL[invoice.status];
-  return <Badge label={label} tone={TONE[invoice.status]} />;
+  return <Badge label={label} tone={TONE[invoice.status]} style={style} />;
 });

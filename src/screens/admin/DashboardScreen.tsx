@@ -1,5 +1,5 @@
 import { router, type Href } from "expo-router";
-import { ArrowLeftRight, Building2, ChevronLeft, ChevronRight, Tags, Truck, UserRound, UsersRound } from "lucide-react-native";
+import { Building2, ChevronLeft, ChevronRight, Tags, Truck, UserRound, UsersRound } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
@@ -20,7 +20,7 @@ import {
   Text,
 } from "@/components/ui";
 import { JOB_STATUS_LABEL, isInProgress } from "@/constants/jobStatus";
-import { useAuth, useCurrentUser } from "@/contexts/AuthContext";
+import { useCurrentUser } from "@/contexts/AuthContext";
 import {
   useDashboardStats,
   useJobs,
@@ -45,7 +45,6 @@ const jobsWith = (status: string): Href =>
 
 export default function DashboardScreen() {
   const user = useCurrentUser();
-  const { setViewMode } = useAuth();
   const stats = useDashboardStats();
   const jobs = useJobs();
   const users = useUsers();
@@ -206,14 +205,6 @@ export default function DashboardScreen() {
         </ScrollView>
 
         <View style={styles.body}>
-          <Button
-            label="Şoför görünümüne dön"
-            icon={ArrowLeftRight}
-            variant="secondary"
-            onPress={() => setViewMode("driver")}
-            accessibilityHint="Rolünüz değişmez; yalnızca şoför ekranlarına geçersiniz"
-          />
-
           <Card padded={false}>
             <ListItem icon={Building2} title="Müşteriler" subtitle="Müşteri kayıtları, bakiyeler ve geçmiş işler" onPress={() => router.push(routes.customers)} />
             <View style={styles.sep} />

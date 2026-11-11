@@ -2,7 +2,7 @@ import { Search, X } from 'lucide-react-native';
 import { memo } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, inputSelection, inputSelectionInverse, radius, spacing, typography } from '@/theme';
 import { initials } from '@/utils/format';
 import { ScalePressable } from './ScalePressable';
 import { Text } from './Text';
@@ -66,7 +66,7 @@ export const SearchBar = memo(function SearchBar({ value, onChange, placeholder 
         placeholder={placeholder}
         placeholderTextColor={dark ? colors.inkMuted : colors.textTertiary}
         style={[styles.searchInput, dark && { color: colors.textInverse }]}
-        selectionColor={dark ? colors.textInverse : colors.ink}
+        {...(dark ? inputSelectionInverse : inputSelection)}
         autoCorrect={false}
         returnKeyType="search"
         accessibilityLabel={placeholder}

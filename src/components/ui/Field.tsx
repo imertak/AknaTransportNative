@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { memo, useState, type ComponentRef, type ReactNode, type Ref } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, inputSelection, radius, spacing, typography } from '@/theme';
 import { InfoTip } from './InfoTip';
 import { Text } from './Text';
 
@@ -52,8 +52,7 @@ export const Input = memo(
           <TextInput
             ref={ref}
             placeholderTextColor={colors.textTertiary}
-            selectionColor={colors.ink}
-            cursorColor={colors.ink}
+            {...inputSelection}
             multiline={multiline}
             accessibilityLabel={label}
             onFocus={(e) => {

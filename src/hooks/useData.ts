@@ -153,12 +153,3 @@ export function useDriverJobs(userId: string | undefined): DriverJobs {
     };
   }, [jobs, userId]);
 }
-
-/** Müşteri bazında son işten iş formu için önerilen değerler. */
-export function useCustomerLastJob(customerId: string | undefined): TransportJob | undefined {
-  const jobs = useJobs();
-  return useMemo(() => {
-    if (!customerId) return undefined;
-    return jobs.filter((j) => j.customerId === customerId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-  }, [jobs, customerId]);
-}

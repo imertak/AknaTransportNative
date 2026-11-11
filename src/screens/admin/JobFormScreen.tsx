@@ -25,11 +25,11 @@ import { isClosed } from '@/constants/jobStatus';
 import { useVehicleTypeOptions, vehicleTypeLabel } from '@/constants/vehicles';
 import { useCurrentUser } from '@/contexts/AuthContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
-import { useAssignableUsers, useCustomerAddresses, useCustomers, useDriverVehicles, useJob, useJobs, useVehicles } from '@/hooks/useData';
+import { useAssignableUsers, useCustomerAddresses, useCustomers, useDriverVehicles, useJob, useVehicles } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
 import { jobActions } from '@/store';
 import { colors, hitSlop, radius, spacing } from '@/theme';
-import type { Customer, GeoPoint, JobContact, JobInput, JobStop, StopType, TransportJob, Vehicle, VehicleType } from '@/types';
+import type { GeoPoint, JobContact, JobInput, JobStop, StopType, Vehicle, VehicleType } from '@/types';
 import { capitalizeWords, formatAmountInput, formatCurrency, parseAmount, todayISO } from '@/utils/format';
 import { STOP_TYPE_LABEL } from '@/utils/stops';
 import { hasErrors, required, type Errors } from '@/utils/validation';
@@ -115,25 +115,6 @@ function validate(f: FormState): FormErrors {
   return e;
 }
 
-/** Müşterinin son işinden boş alanları doldurur (yalnızca yeni işte). */
-function prefill(f: FormState, customerId: string, customers: Customer[], jobs: TransportJob[], isEdit: boolean): { form: FormState; note: string | null } {
-  const customer = customers.find((c) => c.id === customerId);
-  const last = jobs.filter((j) => j.customerId === customerId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-  const next: FormState = { ...f, customerId };
-  if (!isEdit) {
-    // Firma adı müşteriden gelir; mağaza adı isteğe bağlıdır, yalnızca son işten önerilir.
-    next.storeName = f.storeName || last?.storeName || '';
-    if (last) {
-      next.vehicleType = f.vehicleType || last.vehicleType;
-      if (f.stops.every((s) => !s.address.trim())) next.stops = fromStops(last.stops);
-      if (f.contacts.every(isBlankContact)) next.contacts = fromContacts(last.contacts);
-      next.price = f.price || formatAmountInput(String(last.price));
-    }
-  }
-  const note = !isEdit && last ? `Bilgiler ${customer?.companyName ?? ''} müşterisinin son işinden (${last.jobNo}) getirildi. Gerekirse düzenleyin.` : null;
-  return { form: next, note };
-}
-
 /** Şoför seçilince: tek aktif aracı varsa o, yoksa boş. */
 function defaultVehicle(vehicles: Vehicle[], driverId: string, current: string): string {
   if (driverId === NO_DRIVER) return NO_VEHICLE;
@@ -154,21 +135,12 @@ export default function JobFormScreen() {
   const existing = useJob(id);
   const isEdit = !!id;
   const customers = useCustomers();
-  const jobs = useJobs();
   const assignable = useAssignableUsers();
   const allVehicles = useVehicles();
   const { run, pending } = useAsyncAction();
 
-  // Müşteri detayından gelindiyse ön doldurma ilk durumda uygulanır.
-  const [initial] = useState(() =>
-    !isEdit && presetCustomer && customers.some((c) => c.id === presetCustomer)
-      ? prefill(empty(presetCustomer), presetCustomer, customers, jobs, false)
-      : null,
-  );
   const [form, setForm] = useState<FormState>(() =>
-    initial
-      ? initial.form
-      : existing
+    existing
       ? {
           customerId: existing.customerId,
           date: existing.date,
@@ -185,7 +157,6 @@ export default function JobFormScreen() {
       : empty(presetCustomer),
   );
   const [errors, setErrors] = useState<FormErrors>({});
-  const [prefillNote, setPrefillNote] = useState<string | null>(initial?.note ?? null);
   const [mapStop, setMapStop] = useState<string | null>(null);
   const [historyFor, setHistoryFor] = useState<string | null>(null);
   const submitted = useRef(false);
@@ -221,12 +192,8 @@ export default function JobFormScreen() {
       return { ...f, stops: f.stops.map((s) => (s.key === key ? prev : s.key === prev.key ? stop : s)) };
     });
 
-  /** Müşteri seçildiğinde son işinden bilgileri getirir (yalnızca boş alanlar). */
-  const applyCustomer = (customerId: string) => {
-    const r = prefill(form, customerId, customers, jobs, isEdit);
-    update(() => r.form);
-    setPrefillNote(r.note);
-  };
+  /** Müşteri seçimi yalnızca müşteriyi değiştirir; önceki işlerden alan doldurulmaz. */
+  const applyCustomer = (customerId: string) => set('customerId', customerId);
 
   const customerOptions = useMemo<SelectOption[]>(() => customers.map((c) => ({ value: c.id, label: c.companyName, description: c.contactName })), [customers]);
   const vehicleTypeOptions: SelectOption<VehicleType>[] = useVehicleTypeOptions(existing?.vehicleType);
@@ -389,12 +356,6 @@ export default function JobFormScreen() {
               <Plus size={16} color={colors.text} />
               <Text variant="label">Yeni müşteri ekle</Text>
             </Pressable>
-            {prefillNote ? (
-              <View style={styles.note}>
-                <Info size={16} color={colors.textSecondary} />
-                <Text variant="bodySmall" tone="secondary" style={{ flex: 1 }}>{prefillNote}</Text>
-              </View>
-            ) : null}
             <Input
               label="Mağaza adı (isteğe bağlı)"
               autoCapitalize="words"

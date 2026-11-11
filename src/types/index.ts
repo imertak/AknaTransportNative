@@ -272,6 +272,8 @@ export interface Invoice {
   requiresSmsSignature?: boolean;
   /** true: faturaya işler tek tek değil, tek kalem "Nakliye Bedeli" olarak yazılır (iş dökümü değişmez). */
   singleLine?: boolean;
+  /** true: fatura başka yerde kesildi, PDF'i elle yüklendi (e-Arşiv referansı yok). */
+  manual?: boolean;
   /** e-Arşiv entegrasyonunda dolacak alanlar. */
   externalId?: string;
   ettn?: string;

@@ -13,6 +13,7 @@ import type {
 } from '../contracts';
 import { ServiceError } from '../errors';
 import { savePdf } from '../files';
+import { Platform } from 'react-native';
 import { http, httpAll, httpBinary, type Paged } from '../http';
 import type { InvoiceFilter, JobFilter, JobStatus, LocationFix, Session, User, WithholdingType } from '@/types';
 import { isEmail } from '@/utils/validation';
@@ -349,6 +350,19 @@ export const apiInvoiceService: InvoiceService = {
   },
 
   withholdingTypes: () => http<WithholdingType[]>('/api/invoices/withholding-types'),
+
+  async uploadManualPdf(id, file, invoiceNumber) {
+    const form = new FormData();
+    if (Platform.OS === 'web' && file.file) {
+      form.append('file', file.file, file.name);
+    } else {
+      // React Native FormData dosyayı { uri, name, type } nesnesiyle gönderir.
+      form.append('file', { uri: file.uri, name: file.name, type: file.mimeType ?? 'application/pdf' } as unknown as Blob);
+    }
+    if (invoiceNumber?.trim()) form.append('invoiceNumber', invoiceNumber.trim());
+    // Content-Type verilmez: fetch multipart sınırını (boundary) kendisi ekler.
+    return invoiceFromApiDetail(await http<ApiInvoiceDetail>(`/api/invoices/${id}/manual-pdf`, { method: 'POST', body: form }));
+  },
 };
 
 export const apiEArchiveGateway: EArchiveGateway = {

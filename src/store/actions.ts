@@ -8,7 +8,9 @@ import {
   userService,
   vehicleService,
 } from '@/services';
+import { notifyAccountsChanged } from '@/services/accounts';
 import { errorMessage } from '@/services/errors';
+import type { PickedFile } from '@/services/files';
 import { sortJobs } from '@/services/jobUtils';
 import type { UserInput } from '@/services/contracts';
 import type { CustomerInput, InvoiceInput, JobInput, JobStatus, User, Vehicle, VehicleInput, VehicleTypeDef } from '@/types';
@@ -214,6 +216,17 @@ export const invoiceActions = {
   async sendEmail(id: string) {
     const inv = await invoiceMailer.send(id);
     set((s) => ({ invoices: upsert(s.invoices, inv) }));
+    return inv;
+  },
+  /** Başka yerde kesilen faturanın PDF'ini yükler; işler "Faturalandırıldı" olur ve cari bakiye tazelenir. */
+  async uploadManualPdf(id: string, file: PickedFile, invoiceNumber?: string) {
+    const inv = await invoiceService.uploadManualPdf(id, file, invoiceNumber);
+    const ids = new Set(inv.jobIds?.length ? inv.jobIds : [inv.jobId]);
+    set((s) => ({
+      invoices: upsert(s.invoices, inv),
+      jobs: inv.status === 'earsiv_issued' ? s.jobs.map((j) => (ids.has(j.id) ? { ...j, billingStatus: 'invoiced' as const } : j)) : s.jobs,
+    }));
+    notifyAccountsChanged();
     return inv;
   },
   async discardDraft(id: string) {

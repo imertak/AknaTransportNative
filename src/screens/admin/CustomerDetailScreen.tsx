@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { LedgerRow } from '@/components/customers/LedgerRow';
+import { MonthlyAccountCards, monthsFromLedger } from '@/components/customers/MonthlyAccountCards';
 import { TransactionSheet } from '@/components/customers/TransactionSheet';
 import { InvoiceRow } from '@/components/invoices/InvoiceRow';
 import { JobRow } from '@/components/jobs/JobRow';
@@ -157,8 +158,17 @@ function AccountSection({ customerId }: { customerId: string }) {
   };
 
   const b = data?.balance;
-  const entries = data?.entries ?? [];
+  const entries = useMemo(() => data?.entries ?? [], [data]);
   const visible = showAll ? entries : entries.slice(0, LEDGER_PREVIEW);
+  const months = useMemo(() => monthsFromLedger(entries), [entries]);
+  // Ekstre de ay ay: her ayın başlığı ve o ayın hareketleri.
+  const visibleByMonth = useMemo(() => {
+    const groups: { key: string; label: string; items: LedgerEntry[] }[] = [];
+    for (const row of groupByMonth(visible, (e) => e.date, (e) => `${e.kind}-${e.id}`)) {
+      if (row.kind === 'month') groups.push({ key: row.key, label: row.label, items: row.items });
+    }
+    return groups;
+  }, [visible]);
 
   return (
     <Section title="Cari hesap">
@@ -177,18 +187,21 @@ function AccountSection({ customerId }: { customerId: string }) {
               emphasis
             />
           </View>
-          <View style={styles.stats}>
-            <StatTile label="Kesilen fatura" value={b ? formatCurrency(b.invoiced + b.charged) : '—'} hint={b ? `${b.invoiceCount} fatura${b.charged ? ' + borç kaydı' : ''}` : undefined} />
-            <StatTile label="Gelen" value={b ? formatCurrency(b.collected) : '—'} hint="Tahsilat" />
-            <StatTile label="Giden" value={b ? formatCurrency(b.refunded) : '—'} hint="İade / ödeme" />
-          </View>
+          {data ? <MonthlyAccountCards months={months} /> : null}
           <Button label="Tahsilat / ödeme ekle" icon={Banknote} variant="secondary" onPress={() => setSheet({ entry: null })} />
           {entries.length ? (
-            <Card padded={false}>
-              {visible.map((e, i) => (
-                <LedgerRow key={`${e.kind}-${e.id}`} entry={e} onPress={openEntry} last={i === visible.length - 1} />
+            <View>
+              {visibleByMonth.map((g, gi) => (
+                <View key={g.key}>
+                  <MonthHeader label={g.label} first={gi === 0} />
+                  <Card padded={false}>
+                    {g.items.map((e, i) => (
+                      <LedgerRow key={`${e.kind}-${e.id}`} entry={e} onPress={openEntry} last={i === g.items.length - 1} />
+                    ))}
+                  </Card>
+                </View>
               ))}
-            </Card>
+            </View>
           ) : !loading ? (
             <EmptyState compact icon={Wallet} title="Hareket yok" description="Fatura kesildiğinde veya tahsilat girildiğinde burada görünür." />
           ) : null}

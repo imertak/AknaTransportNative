@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ban, ChevronRight, FileSpreadsheet, FileText, Mail, MessageSquareLock, Send, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
+import { Ban, ChevronRight, FileSpreadsheet, FileText, FileUp, Mail, MessageSquareLock, Send, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -10,7 +10,7 @@ import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useCustomer, useInvoice, useJobs } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
 import { invoiceService, reportService } from '@/services';
-import { type PdfFile } from '@/services/files';
+import { pickPdf, type PdfFile, type PickedFile } from '@/services/files';
 import { PdfReadySheet } from '@/components/PdfReadySheet';
 import { invoiceActions } from '@/store';
 import { colors, spacing } from '@/theme';
@@ -42,6 +42,11 @@ export default function InvoiceDetailScreen() {
   const [smsCode, setSmsCode] = useState('');
   /** Hazırlanan PDF: önce önizlenir, sonra paylaşılır. */
   const [pdf, setPdf] = useState<PdfFile | null>(null);
+  /** Elle fatura yükleme: başka yerde kesilen faturanın PDF'i. */
+  const upload = useAsyncAction();
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<PickedFile | null>(null);
+  const [uploadNo, setUploadNo] = useState('');
 
   // Liste yanıtında e-posta/e-Arşiv ayrıntıları yoktur; detay açılınca fatura tazelenir.
   useEffect(() => {
@@ -61,8 +66,12 @@ export default function InvoiceDetailScreen() {
 
   const isDemo = invoice.mode === 'demo';
   const cancelled = invoice.status === 'cancelled';
-  const eArchiveLabel =
-    invoice.status === 'earsiv_failed'
+  const manual = invoice.manual === true;
+  /** Taslak veya başarısız faturaya ya da elle yüklenmiş faturaya dosya yüklenebilir. */
+  const canUpload = !cancelled && (isDemo || (manual && invoice.status === 'earsiv_issued'));
+  const eArchiveLabel = manual && invoice.status === 'earsiv_issued'
+    ? `Elle yüklendi${invoice.externalId ? ` · No ${invoice.externalId}` : ''}`
+    : invoice.status === 'earsiv_failed'
       ? 'Gönderim başarısız · tekrar deneyebilirsiniz'
       : isDemo
         ? 'Kesilmedi · taslak belge'
@@ -151,8 +160,35 @@ export default function InvoiceDetailScreen() {
     if (inv) setTimeout(() => invoiceActions.refresh(invoice.id).catch(() => {}), 6000);
   };
 
+  const openUpload = () => {
+    setUploadFile(null);
+    setUploadNo(manual ? (invoice.externalId ?? '') : '');
+    setUploadOpen(true);
+  };
+
+  const choosePdf = async () => {
+    const f = await upload.run(pickPdf, { error: 'Dosya seçilemedi.' });
+    if (f) setUploadFile(f);
+  };
+
+  const submitUpload = async () => {
+    if (!uploadFile) return;
+    const inv = await upload.run(() => invoiceActions.uploadManualPdf(invoice.id, uploadFile, uploadNo), {
+      success: manual ? 'Fatura dosyası değiştirildi.' : 'Fatura yüklendi. İş dökümüyle birlikte kullanabilirsiniz.',
+      error: 'Fatura yüklenemedi.',
+    });
+    if (inv) setUploadOpen(false);
+  };
+
   const cancel = async () => {
-    const ok = await confirm({ title: 'Faturayı iptal et', message: `${invoice.invoiceNo} iptal edilecek ve iş yeniden faturalanabilir hale gelecek.`, confirmLabel: 'İptal et', destructive: true });
+    const ok = await confirm({
+      title: 'Faturayı iptal et',
+      message: manual
+        ? `${invoice.invoiceNo} uygulamada iptal edilecek ve iş yeniden faturalanabilir hale gelecek. Fatura başka yerde kesildiği için asıl iptali orada yapın.`
+        : `${invoice.invoiceNo} iptal edilecek ve iş yeniden faturalanabilir hale gelecek.`,
+      confirmLabel: 'İptal et',
+      destructive: true,
+    });
     if (ok) await action.run(() => invoiceActions.cancel(invoice.id), { success: 'Fatura iptal edildi.' });
   };
 
@@ -276,6 +312,15 @@ export default function InvoiceDetailScreen() {
           </View>
         ) : null}
 
+        {canUpload ? (
+          <Button
+            label={manual ? 'Fatura dosyasını değiştir' : 'Faturayı elle yükle'}
+            icon={FileUp}
+            variant="secondary"
+            onPress={openUpload}
+            accessibilityHint="Başka yerde kesilen faturanın PDF'ini yükler; iş dökümü aynen kullanılır"
+          />
+        ) : null}
         {isDemo && !cancelled ? (
           <Button
             label="e-Arşiv'e gönder"
@@ -321,6 +366,40 @@ export default function InvoiceDetailScreen() {
             textContentType="oneTimeCode"
             maxLength={10}
             hint="İmza mali işlem oluşturur: fatura kesilir ve müşteriye e-postası gönderilir."
+          />
+        </View>
+      </Sheet>
+      <Sheet
+        visible={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        title={manual ? 'Fatura dosyasını değiştir' : 'Faturayı elle yükle'}
+        subtitle="Faturayı başka yerde kestirdiyseniz PDF'ini yükleyin. Fatura kesilmiş sayılır, cari bakiyeye yazılır ve iş dökümü aynen kullanılır. Müşteriye otomatik e-posta gitmez."
+        footer={
+          <Button
+            label={manual ? 'Dosyayı değiştir' : 'Yükle'}
+            icon={FileUp}
+            loading={upload.pending}
+            disabled={!uploadFile}
+            onPress={submitUpload}
+          />
+        }>
+        <View style={{ paddingHorizontal: spacing.xl, gap: spacing.md }}>
+          <Button
+            label={uploadFile ? uploadFile.name : 'PDF seç'}
+            icon={FileText}
+            variant="secondary"
+            disabled={upload.pending}
+            onPress={choosePdf}
+            accessibilityHint="Cihazdan fatura PDF'ini seçer"
+          />
+          <Input
+            label="Fatura numarası (isteğe bağlı)"
+            value={uploadNo}
+            onChangeText={setUploadNo}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={50}
+            hint="Kesilen faturanın üzerindeki numara. Dökümde ve e-postada bu numara görünür."
           />
         </View>
       </Sheet>

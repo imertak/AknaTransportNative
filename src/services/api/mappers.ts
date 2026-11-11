@@ -188,6 +188,8 @@ export interface ApiInvoiceListItem {
   withholdingCode: string | null;
   withholdingAmount: number;
   payableAmount: number;
+  /** true: fatura başka yerde kesildi, PDF'i elle yüklendi. Eski sunucularda gelmez. */
+  isManual?: boolean;
 }
 
 export interface ApiInvoiceDetail extends Omit<ApiInvoiceListItem, 'firstJobId' | 'firstJobNumber' | 'description' | 'jobCount'> {
@@ -495,11 +497,13 @@ export function invoiceFromApiList(i: ApiInvoiceListItem): Invoice {
     vatAmount: i.vatAmount,
     total: i.grandTotal,
     // Liste yanıtında e-posta durumu yoktur; detay açıldığında güncellenir.
-    email: { to: i.customerEmail ?? '', status: i.status === 'Issued' ? 'queued' : 'not_sent' },
+    // Elle yüklenen faturada otomatik e-posta gönderilmez.
+    email: { to: i.customerEmail ?? '', status: i.status === 'Issued' && !i.isManual ? 'queued' : 'not_sent' },
     externalId: i.eArchiveInvoiceNumber ?? undefined,
     withholdingCode: i.withholdingCode ?? undefined,
     withholdingAmount: i.withholdingAmount ?? 0,
     payableAmount: i.payableAmount ?? i.grandTotal,
+    manual: i.isManual ?? false,
     createdAt: i.createdAt,
   };
 }
@@ -549,6 +553,7 @@ export function invoiceFromApiDetail(i: ApiInvoiceDetail): Invoice {
     bankName: i.bankName ?? undefined,
     requiresSmsSignature: i.requiresSmsSignature,
     singleLine: i.singleLine ?? false,
+    manual: i.isManual ?? false,
     createdAt: i.createdAt,
   };
 }

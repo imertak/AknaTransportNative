@@ -3,13 +3,14 @@ import { Building2, ChevronRight, Plus } from 'lucide-react-native';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
+import { MonthlyAccountCards } from '@/components/customers/MonthlyAccountCards';
 import { Avatar, Button, Card, EmptyState, IconButton, NavHeader, Screen, SearchBar, SegmentedControl, StatTile, Text } from '@/components/ui';
 import { useBalances } from '@/hooks/useAccounts';
 import { useCustomers, useJobs } from '@/hooks/useData';
 import { useRefresh } from '@/hooks/useRefresh';
 import { routes } from '@/navigation/routes';
 import { colors, spacing } from '@/theme';
-import type { BalanceTotals, CustomerBalance } from '@/services/accounts';
+import type { BalanceMonth, BalanceTotals, CustomerBalance } from '@/services/accounts';
 import type { Customer } from '@/types';
 import { formatCurrency, searchKey } from '@/utils/format';
 
@@ -83,16 +84,19 @@ export default function CustomersScreen() {
   return (
     <Screen>
       <NavHeader title="Müşteriler" subtitle={`${customers.length} kayıtlı müşteri`} right={<IconButton icon={Plus} label="Yeni müşteri" tone="dark" onPress={() => router.push(routes.newCustomer)} />}>
-        <SearchBar value={query} onChange={setQuery} placeholder="Firma, yetkili, e-posta, vergi no" dark />
-        <SegmentedControl
-          dark
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: 'all', label: 'Tümü' },
-            { value: 'balance', label: 'Bakiyesi olanlar', count: balances.data?.totals.customersWithBalance },
-          ]}
-        />
+        {/* Arama ile alttaki sekmeler arasında boşluk: yanlışlıkla sekmeye dokunulmasın. */}
+        <View style={styles.headerControls}>
+          <SearchBar value={query} onChange={setQuery} placeholder="Firma, yetkili, e-posta, vergi no" dark />
+          <SegmentedControl
+            dark
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: 'all', label: 'Tümü' },
+              { value: 'balance', label: 'Bakiyesi olanlar', count: balances.data?.totals.customersWithBalance },
+            ]}
+          />
+        </View>
       </NavHeader>
       <FlatList
         data={data}
@@ -100,7 +104,7 @@ export default function CustomersScreen() {
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={Separator}
-        ListHeaderComponent={balances.data ? <BalanceSummary totals={balances.data.totals} /> : undefined}
+        ListHeaderComponent={balances.data ? <BalanceSummary totals={balances.data.totals} months={balances.data.months} /> : undefined}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />}
         ListEmptyComponent={
           <EmptyState
@@ -117,8 +121,11 @@ export default function CustomersScreen() {
   );
 }
 
-/** Tüm müşterilerin toplam bakiyesi ve gelen/giden tutarlar. */
-function BalanceSummary({ totals }: { totals: BalanceTotals }) {
+/**
+ * Toplam alacak tüm dönemleri kapsar; kesilen fatura / gelen / giden kartları ay ay yana kaydırılır.
+ * Aylık veri vermeyen eski sunucuda tüm dönemlerin toplamı gösterilir.
+ */
+function BalanceSummary({ totals, months }: { totals: BalanceTotals; months?: BalanceMonth[] | null }) {
   return (
     <View style={styles.summary}>
       <StatTile
@@ -127,11 +134,15 @@ function BalanceSummary({ totals }: { totals: BalanceTotals }) {
         hint={`${totals.customersWithBalance} müşteride açık bakiye`}
         emphasis
       />
-      <View style={styles.summaryRow}>
-        <StatTile label="Kesilen fatura" value={formatCurrency(totals.invoiced + totals.charged)} />
-        <StatTile label="Gelen" value={formatCurrency(totals.collected)} />
-        <StatTile label="Giden" value={formatCurrency(totals.refunded)} />
-      </View>
+      {months ? (
+        <MonthlyAccountCards months={months} />
+      ) : (
+        <View style={styles.summaryRow}>
+          <StatTile label="Kesilen fatura" value={formatCurrency(totals.invoiced + totals.charged)} />
+          <StatTile label="Gelen" value={formatCurrency(totals.collected)} />
+          <StatTile label="Giden" value={formatCurrency(totals.refunded)} />
+        </View>
+      )}
     </View>
   );
 }
@@ -144,4 +155,5 @@ const styles = StyleSheet.create({
   balance: { alignItems: 'flex-end', gap: 2 },
   summary: { gap: spacing.sm, marginBottom: spacing.md },
   summaryRow: { flexDirection: 'row', gap: spacing.sm },
+  headerControls: { gap: spacing.md },
 });

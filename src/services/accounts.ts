@@ -42,9 +42,24 @@ export interface BalanceTotals {
   customersWithBalance: number;
 }
 
+/** Bir aydaki hareketler (fatura tarihi / hareket tarihine göre). */
+export interface BalanceMonth {
+  year: number;
+  /** 1–12 */
+  month: number;
+  invoiced: number;
+  invoiceCount: number;
+  charged: number;
+  collected: number;
+  refunded: number;
+}
+
 export interface BalanceOverview {
+  /** Tüm dönemlerin toplamı (bakiye dahil). */
   totals: BalanceTotals;
   items: CustomerBalance[];
+  /** Aynı hareketler ay ay, yeniden eskiye. Eski sunucularda gelmez. */
+  months?: BalanceMonth[] | null;
 }
 
 export interface LedgerEntry {

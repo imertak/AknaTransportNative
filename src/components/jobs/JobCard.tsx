@@ -7,6 +7,7 @@ import { vehicleTypeLabel } from '@/constants/vehicles';
 import { colors, spacing } from '@/theme';
 import type { TransportJob } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { InvoicedMark } from './InvoicedMark';
 import { RouteLine } from './RouteLine';
 
 interface Props {
@@ -14,14 +15,19 @@ interface Props {
   onPress: (job: TransportJob) => void;
   showPrice?: boolean;
   driverName?: string;
+  /** Faturalandırılmış işte durum etiketinin yanında yeşil fatura simgesi (yönetici listeleri). */
+  showBilling?: boolean;
 }
 
-export const JobCard = memo(function JobCard({ job, onPress, showPrice, driverName }: Props) {
+export const JobCard = memo(function JobCard({ job, onPress, showPrice, driverName, showBilling }: Props) {
   return (
     <Card onPress={() => onPress(job)} accessibilityLabel={`${job.jobNo} ${job.customerName}`} style={styles.card}>
       <View style={styles.top}>
         <Text variant="caption" tone="tertiary">{job.jobNo}</Text>
-        <StatusBadge status={job.status} />
+        <View style={styles.badges}>
+          <StatusBadge status={job.status} />
+          {showBilling && job.billingStatus === 'invoiced' ? <InvoicedMark /> : null}
+        </View>
       </View>
       <Text variant="heading" numberOfLines={1}>{job.customerName}</Text>
       <View style={styles.meta}>
@@ -55,6 +61,7 @@ export const JobCard = memo(function JobCard({ job, onPress, showPrice, driverNa
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  badges: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   meta: { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
   route: { marginTop: spacing.xs, padding: spacing.md, backgroundColor: colors.surfaceMuted, borderRadius: 12 },

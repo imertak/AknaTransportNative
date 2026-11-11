@@ -31,6 +31,9 @@ export const colors = {
   dangerSoft: '#FFEBEE',
   dangerBorder: '#F2C4C4',
 
+  /** Yalnızca "faturalandırıldı" işareti (yeşil fatura simgesi). */
+  success: '#2E7D32',
+
   /** Koyu zemindeki vurgu: beyaz. Üzerindeki içerik onAccent (siyah). */
   accent: '#FFFFFF',
   accentSoft: '#F2F2F2',

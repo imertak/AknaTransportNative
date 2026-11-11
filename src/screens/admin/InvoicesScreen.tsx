@@ -122,7 +122,7 @@ export default function InvoicesScreen() {
               label={row.label}
               first={index === 0}
               summary={`${months.get(row.month)?.count ?? row.items.length} fatura · ${formatCurrency(
-                months.get(row.month)?.total ?? row.items.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + i.total, 0),
+                months.get(row.month)?.total ?? row.items.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + (i.payableAmount ?? i.total), 0),
               )}`}
             />
           ) : (

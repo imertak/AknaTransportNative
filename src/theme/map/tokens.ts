@@ -5,7 +5,7 @@
 export interface MapThemeTokens {
   name: string;
   background: string;
-  /** Park, orman, çim: arka plandan çok az ayrışır. */
+  /** Park, orman, çim: yumuşak yeşil. */
   green: string;
   residential: string;
   water: string;
@@ -34,10 +34,10 @@ export interface MapThemeTokens {
 export const aknaLightMapTheme: MapThemeTokens = {
   name: 'akna-light',
   background: '#F6F6F6',
-  green: '#EEF0EE',
+  green: '#CFE6C3',
   residential: '#F1F1F1',
-  water: '#DDE1E5',
-  waterLabel: '#8B939B',
+  water: '#A9D3EE',
+  waterLabel: '#3F7AA6',
   building: '#EAEAEA',
   buildingOutline: '#DEDEDE',
   motorway: '#C3C6CA',

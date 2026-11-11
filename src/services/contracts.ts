@@ -20,6 +20,7 @@ import type {
   VehicleTypeDef,
   VehicleLocation,
 } from '@/types';
+import type { PickedFile } from './files';
 
 /**
  * Servis sözleşmeleri. .NET Web API
@@ -153,6 +154,11 @@ export interface InvoiceService {
   downloadPdf(id: string, kind: 'invoice' | 'job-report', number: string): Promise<string | null>;
   /** KDV tevkifat kodları. */
   withholdingTypes(): Promise<WithholdingType[]>;
+  /**
+   * Başka yerde kesilen faturanın PDF'ini yükler. Taslak fatura kesilmiş (elle) sayılır; iş dökümü aynen kullanılır.
+   * Elle yüklenmiş faturada dosyayı (ve verilirse numarayı) değiştirir. Müşteriye otomatik e-posta gitmez.
+   */
+  uploadManualPdf(id: string, file: PickedFile, invoiceNumber?: string): Promise<Invoice>;
 }
 
 /** e-Arşiv entegratörü sözleşmesi (API aşamasında backend üzerinden çağrılacak). */

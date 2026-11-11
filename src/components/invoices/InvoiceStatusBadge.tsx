@@ -22,5 +22,7 @@ const TONE: Record<InvoiceStatus, BadgeTone> = {
 };
 
 export const InvoiceStatusBadge = memo(function InvoiceStatusBadge({ invoice }: { invoice: Invoice }) {
-  return <Badge label={INVOICE_STATUS_LABEL[invoice.status]} tone={TONE[invoice.status]} />;
+  // Başka yerde kesilip elle yüklenen fatura e-Arşiv'den gelmez.
+  const label = invoice.manual && invoice.status === 'earsiv_issued' ? 'Elle yüklendi' : INVOICE_STATUS_LABEL[invoice.status];
+  return <Badge label={label} tone={TONE[invoice.status]} />;
 });

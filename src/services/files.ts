@@ -1,3 +1,4 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -20,6 +21,23 @@ export async function savePdf(bytes: ArrayBuffer, fileName: string): Promise<str
   target.create();
   await target.write(new Uint8Array(bytes));
   return target.uri;
+}
+
+/** Cihazdan seçilen dosya (elle fatura yükleme). Web'de `file` tarayıcının File nesnesidir. */
+export interface PickedFile {
+  uri: string;
+  name: string;
+  mimeType?: string;
+  size?: number;
+  file?: Blob;
+}
+
+/** Cihazdan tek bir PDF seçtirir; vazgeçilirse null. */
+export async function pickPdf(): Promise<PickedFile | null> {
+  const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true, multiple: false });
+  const asset = result.canceled ? undefined : result.assets[0];
+  if (!asset) return null;
+  return { uri: asset.uri, name: asset.name || 'fatura.pdf', mimeType: asset.mimeType ?? 'application/pdf', size: asset.size, file: asset.file };
 }
 
 /** Hazırlanmış PDF: önizleme ve paylaşım aynı dosyayı kullanır. */

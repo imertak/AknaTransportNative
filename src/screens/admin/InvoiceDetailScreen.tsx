@@ -14,10 +14,10 @@ import { pickPdf, type PdfFile, type PickedFile } from '@/services/files';
 import { PdfReadySheet } from '@/components/PdfReadySheet';
 import { invoiceActions } from '@/store';
 import { colors, spacing } from '@/theme';
-import type { InvoiceEmailStatus } from '@/types';
+import type { InvoiceEmailStatus, InvoiceItem } from '@/types';
 import { confirm } from '@/utils/confirm';
 import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
-import { SINGLE_LINE_TITLE } from '@/utils/invoiceText';
+import { lineQuantityLabel, SINGLE_LINE_TITLE } from '@/utils/invoiceText';
 import { composeJobText } from '@/utils/stops';
 
 const EMAIL_LABEL: Record<InvoiceEmailStatus, string> = {
@@ -81,8 +81,10 @@ export default function InvoiceDetailScreen() {
           ? `ETTN ${invoice.ettn}`
           : 'Gönderim bekleniyor';
 
+  // Serbest fatura: işe bağlı olmayan, elle girilen kalemler (iş dökümü yok).
+  const freeForm = !!invoice.freeForm;
   // Kalemler detayda gelir; demo kayıtlarda iş listesinden türetilir.
-  const items =
+  const items: InvoiceItem[] =
     invoice.items ??
     jobs
       .filter((j) => (invoice.jobIds?.length ? invoice.jobIds : [invoice.jobId]).includes(j.id))
@@ -211,18 +213,17 @@ export default function InvoiceDetailScreen() {
         <InvoicePreview
           invoiceNo={invoice.invoiceNo}
           issueDate={invoice.issueDate}
-          jobNo={items.length > 1 ? `${items.length} iş` : invoice.jobNo}
+          jobNo={freeForm ? '—' : items.length > 1 ? `${items.length} iş` : invoice.jobNo}
           customer={customer ?? { companyName: invoice.customerName, taxOffice: '', taxNumber: '', billingAddress: '' }}
           description={invoice.description}
           lines={
             invoice.singleLine
               ? [{ key: 'single', title: SINGLE_LINE_TITLE, detail: '', amount: invoice.subtotal }]
-              : items.map((it) => ({
-                  key: it.jobId,
-                  title: `${it.jobNo} · ${formatDate(it.jobDate)}`,
-                  detail: it.description,
-                  amount: it.amount,
-                }))
+              : items.map((it, i) =>
+                  it.jobId
+                    ? { key: it.id ?? it.jobId, title: `${it.jobNo} · ${formatDate(it.jobDate)}`, detail: it.description, amount: it.amount }
+                    : { key: it.id ?? String(i), title: it.description, detail: '', amount: it.amount, quantityLabel: lineQuantityLabel(it.quantity, it.unitPrice) },
+                )
           }
           subtotal={invoice.subtotal}
           vatRate={invoice.vatRate}
@@ -240,7 +241,9 @@ export default function InvoiceDetailScreen() {
 
         <View style={styles.row}>
           <Button label="Fatura PDF" icon={FileText} variant="secondary" style={{ flex: 1 }} loading={share.pending} onPress={() => share.run(shareInvoicePdf, { error: 'Fatura PDF indirilemedi.' })} />
-          <Button label="İş dökümü PDF" icon={FileSpreadsheet} variant="secondary" style={{ flex: 1 }} loading={jobReport.pending} onPress={() => jobReport.run(shareJobReportPdf, { error: 'İş dökümü PDF indirilemedi.' })} />
+          {freeForm ? null : (
+            <Button label="İş dökümü PDF" icon={FileSpreadsheet} variant="secondary" style={{ flex: 1 }} loading={jobReport.pending} onPress={() => jobReport.run(shareJobReportPdf, { error: 'İş dökümü PDF indirilemedi.' })} />
+          )}
         </View>
 
         {!cancelled ? (
@@ -250,13 +253,21 @@ export default function InvoiceDetailScreen() {
             loading={mail.pending}
             disabled={invoice.manualEmail?.status === 'queued'}
             onPress={sendEmail}
-            accessibilityHint="Fatura PDF'i ve iş dökümünü müşterinin e-posta adreslerine gönderir"
+            accessibilityHint={freeForm ? "Fatura PDF'ini müşterinin e-posta adreslerine gönderir" : "Fatura PDF'i ve iş dökümünü müşterinin e-posta adreslerine gönderir"}
           />
         ) : null}
 
-        <Section title={`Faturadaki işler · ${items.length}`}>
+        <Section title={`${freeForm ? 'Fatura kalemleri' : 'Faturadaki işler'} · ${items.length}`}>
           <Card padded={false}>
-            {items.map((it, i) => (
+            {items.map((it, i) => !it.jobId ? (
+              <View key={it.id ?? String(i)} style={[styles.item, i < items.length - 1 && styles.itemBorder]}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text variant="label">{it.description}</Text>
+                  <Text variant="bodySmall" tone="secondary">{lineQuantityLabel(it.quantity, it.unitPrice)}</Text>
+                </View>
+                <Text variant="label" style={{ fontVariant: ['tabular-nums'] }}>{formatCurrency(it.amount, { decimals: 2 })}</Text>
+              </View>
+            ) : (
               <Pressable
                 key={it.jobId}
                 onPress={() => router.push(routes.job(it.jobId))}

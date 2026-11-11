@@ -9,12 +9,14 @@ import { formatCurrency, formatDate } from '@/utils/format';
 /** Resmi olmayan (henüz kesilmemiş) faturalar "taslak" olarak etiketlenir. */
 const DRAFT = { word: 'Taslak', stamp: 'TASLAK' };
 
-/** Faturadaki her iş ayrı bir satırdır (1 adet). */
+/** Faturadaki her iş ayrı bir satırdır (1 adet). Serbest faturada satırlar elle girilir. */
 export interface InvoicePreviewLine {
   key: string;
   title: string;
   detail: string;
   amount: number;
+  /** Ör. "3 adet × 1.500 ₺". Boşsa "1 adet". */
+  quantityLabel?: string;
 }
 
 interface Props {
@@ -90,11 +92,11 @@ export const InvoicePreview = memo(function InvoicePreview(p: Props) {
               <View key={l.key} style={[styles.lineItem, i > 0 && styles.lineBorder]}>
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Text variant="label" numberOfLines={1}>{l.title}</Text>
-                  <Text variant="bodySmall" tone="secondary" numberOfLines={2}>{l.detail || '—'}</Text>
+                  {l.detail ? <Text variant="bodySmall" tone="secondary" numberOfLines={2}>{l.detail}</Text> : null}
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 2 }}>
                   <Text variant="label" style={styles.num}>{formatCurrency(l.amount, { decimals: 2 })}</Text>
-                  <Text variant="caption" tone="tertiary">1 adet</Text>
+                  <Text variant="caption" tone="tertiary">{l.quantityLabel ?? '1 adet'}</Text>
                 </View>
               </View>
             ))}

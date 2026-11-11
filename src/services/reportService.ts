@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 import { vehicleTypeLabel } from '@/constants/vehicles';
 import type { Customer, DateRange, Invoice, JobsReport, TransportJob } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, partyLabel } from '@/utils/format';
-import { SINGLE_LINE_TITLE } from '@/utils/invoiceText';
+import { formatQuantity, SINGLE_LINE_TITLE } from '@/utils/invoiceText';
 import { composeJobText } from '@/utils/stops';
 import { savePdf, type PdfFile } from './files';
 import { httpBinary } from './http';
@@ -263,7 +263,7 @@ function invoiceHtml(invoice: Invoice, customer: Customer | null): string {
       </div>
       <div>
         <div class="label">Fatura bilgileri</div>
-        İş no: ${esc(invoice.jobNos?.length ? invoice.jobNos.join(', ') : invoice.jobNo)}<br/>
+        ${invoice.freeForm ? '' : `İş no: ${esc(invoice.jobNos?.length ? invoice.jobNos.join(', ') : invoice.jobNo)}<br/>`}
         Durum: ${INVOICE_STATUS_TEXT[invoice.status]}<br/>
         ${invoice.ettn ? `ETTN: ${esc(invoice.ettn)}` : ''}
       </div>
@@ -275,7 +275,11 @@ function invoiceHtml(invoice: Invoice, customer: Customer | null): string {
           ? `<tr><td>${esc(SINGLE_LINE_TITLE)}</td><td class="num">1 Adet</td><td class="num">${formatCurrency(invoice.subtotal, { decimals: 2 })}</td></tr>`
           : invoice.items?.length
           ? invoice.items
-              .map((it) => `<tr><td>${esc(it.jobNo)} · ${formatDate(it.jobDate)} · ${esc(it.description)}</td><td class="num">1 Adet</td><td class="num">${formatCurrency(it.amount, { decimals: 2 })}</td></tr>`)
+              .map((it) =>
+                it.jobId
+                  ? `<tr><td>${esc(it.jobNo)} · ${formatDate(it.jobDate)} · ${esc(it.description)}</td><td class="num">1 Adet</td><td class="num">${formatCurrency(it.amount, { decimals: 2 })}</td></tr>`
+                  : `<tr><td>${esc(it.description)}</td><td class="num">${formatQuantity(it.quantity ?? 1)} Adet</td><td class="num">${formatCurrency(it.amount, { decimals: 2 })}</td></tr>`,
+              )
               .join('')
           : `<tr><td>${esc(invoice.description)}</td><td class="num"></td><td class="num">${formatCurrency(invoice.subtotal, { decimals: 2 })}</td></tr>`
       }</tbody>

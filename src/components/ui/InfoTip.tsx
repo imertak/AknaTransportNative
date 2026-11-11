@@ -12,7 +12,7 @@ const EDGE = spacing.lg;
  * Başlık veya alan adının yanındaki küçük "i" ikonu. Dokununca açıklama ikonun hemen altında küçük bir
  * balonda açılır; ekranda herhangi bir yere dokununca kapanır. Ekranda sürekli duran açıklama metinleri yerine.
  */
-export function InfoTip({ text, label = 'Açıklama', size = 16 }: { text: string; label?: string; size?: number }) {
+export function InfoTip({ text, label = 'Açıklama', size = 16, color = colors.textTertiary }: { text: string; label?: string; size?: number; color?: string }) {
   const anchor = useRef<ComponentRef<typeof Pressable>>(null);
   const [pos, setPos] = useState<{ x: number; y: number; h: number } | null>(null);
   const { width } = useWindowDimensions();
@@ -34,7 +34,7 @@ export function InfoTip({ text, label = 'Açıklama', size = 16 }: { text: strin
         accessibilityLabel={label}
         accessibilityHint="Açıklamayı gösterir"
         style={({ pressed }) => [styles.icon, pressed && { opacity: 0.6 }]}>
-        <Info size={size} color={colors.textTertiary} />
+        <Info size={size} color={color} />
       </Pressable>
       <Modal visible={!!pos} transparent animationType="fade" onRequestClose={() => setPos(null)} statusBarTranslucent>
         <Pressable style={StyleSheet.absoluteFill} onPress={() => setPos(null)} accessibilityLabel="Açıklamayı kapat">

@@ -25,7 +25,7 @@ export const InvoiceRow = memo(function InvoiceRow({ invoice, onPress, showCusto
         <Text variant="subheading" numberOfLines={1}>{showCustomer ? invoice.customerName : invoice.invoiceNo}</Text>
         <Text variant="bodySmall" tone="secondary" numberOfLines={1}>
           {showCustomer ? `${invoice.invoiceNo} · ` : ''}
-          {formatDate(invoice.issueDate)} · {(invoice.jobCount ?? 1) > 1 ? `${invoice.jobCount} iş` : invoice.jobNo}
+          {formatDate(invoice.issueDate)} · {invoice.jobCount === 0 ? 'İşsiz fatura' : (invoice.jobCount ?? 1) > 1 ? `${invoice.jobCount} iş` : invoice.jobNo}
         </Text>
       </View>
       <View style={styles.right}>

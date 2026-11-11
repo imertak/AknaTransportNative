@@ -6,6 +6,7 @@ import { colors, spacing } from '@/theme';
 import type { TransportJob } from '@/types';
 import { formatCurrency, formatDateShort } from '@/utils/format';
 import { composeJobText } from '@/utils/stops';
+import { InvoicedMark } from './InvoicedMark';
 
 /** Kart içindeki yoğun liste satırı (dashboard, müşteri geçmişi). */
 export const JobRow = memo(function JobRow({ job, onPress, showPrice = true, last }: { job: TransportJob; onPress: (job: TransportJob) => void; showPrice?: boolean; last?: boolean }) {
@@ -24,7 +25,10 @@ export const JobRow = memo(function JobRow({ job, onPress, showPrice = true, las
       </View>
       <View style={styles.right}>
         {showPrice ? <Text variant="subheading" style={{ fontVariant: ['tabular-nums'] }}>{formatCurrency(job.price)}</Text> : null}
-        <StatusBadge status={job.status} />
+        <View style={styles.badges}>
+          <StatusBadge status={job.status} />
+          {job.billingStatus === 'invoiced' ? <InvoicedMark /> : null}
+        </View>
       </View>
     </Pressable>
   );
@@ -34,5 +38,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderStrong },
   date: { width: 52, height: 44, borderRadius: 10, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
+  badges: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   right: { alignItems: 'flex-end', gap: 6 },
 });

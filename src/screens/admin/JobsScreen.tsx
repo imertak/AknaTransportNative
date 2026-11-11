@@ -92,7 +92,7 @@ export default function JobsScreen() {
       item.kind === 'month' ? (
         <MonthHeader label={item.label} first={index === 0} summary={monthSummary(months.get(item.month), item.items)} />
       ) : (
-        <JobCard job={item.item} onPress={openJob} showPrice driverName={item.item.driverId ? userMap.get(item.item.driverId)?.fullName ?? '—' : undefined} />
+        <JobCard job={item.item} onPress={openJob} showPrice showBilling driverName={item.item.driverId ? userMap.get(item.item.driverId)?.fullName ?? '—' : undefined} />
       ),
     [openJob, userMap, months],
   );

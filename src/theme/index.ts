@@ -90,6 +90,24 @@ export const shadow: ViewStyle = Platform.select({
   default: {},
 }) as ViewStyle;
 
+/**
+ * Metin kutularının imleç ve seçim renkleri. Android seçim zeminini selectionColor ile birebir boyar;
+ * opak siyah verilirse seçilen yazı görünmez olur. Bu yüzden Android'de zemin yarı saydam, imleç ve
+ * tutamaçlar opaktır. iOS seçim zeminine kendi saydamlığını uygular, orada opak renk verilir.
+ */
+export const inputSelection = {
+  selectionColor: Platform.OS === 'ios' ? colors.ink : 'rgba(0, 0, 0, 0.18)',
+  selectionHandleColor: colors.ink,
+  cursorColor: colors.ink,
+} as const;
+
+/** Koyu zemindeki metin kutuları için (giriş ekranı, koyu arama). */
+export const inputSelectionInverse = {
+  selectionColor: Platform.OS === 'ios' ? colors.textInverse : 'rgba(255, 255, 255, 0.35)',
+  selectionHandleColor: colors.textInverse,
+  cursorColor: colors.textInverse,
+} as const;
+
 export const hitSlop = { top: 10, bottom: 10, left: 10, right: 10 };
 
 export const theme = { colors, spacing, radius, typography, shadow };

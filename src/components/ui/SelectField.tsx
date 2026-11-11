@@ -2,7 +2,7 @@ import { Check, ChevronDown, Search } from 'lucide-react-native';
 import { memo, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, inputSelection, radius, spacing, typography } from '@/theme';
 import { searchKey } from '@/utils/format';
 import { FieldShell } from './Field';
 import { Sheet } from './Sheet';
@@ -38,7 +38,7 @@ export function OptionSheet<T extends string>({ visible, onClose, title, options
       {searchable ? (
         <View style={styles.search}>
           <Search size={18} color={colors.textTertiary} />
-          <TextInput value={query} onChangeText={setQuery} placeholder="Ara" placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCorrect={false} />
+          <TextInput value={query} onChangeText={setQuery} placeholder="Ara" placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCorrect={false} {...inputSelection} />
         </View>
       ) : null}
       <FlatList

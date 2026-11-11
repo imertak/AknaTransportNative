@@ -12,7 +12,7 @@ import { Button, Text } from '@/components/ui';
 import { APP_CONFIG } from '@/constants/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { errorMessage } from '@/services/errors';
-import { colors, hitSlop, radius, spacing } from '@/theme';
+import { colors, hitSlop, inputSelectionInverse, radius, spacing } from '@/theme';
 import { isEmail } from '@/utils/validation';
 
 /** Koyu zemin üzerinde okunabilir hata rengi (tema kırmızısı siyah üstünde fazla koyu kalıyor). */
@@ -210,8 +210,7 @@ function PillInput({ icon: Icon, right, error, onFocus, onBlur, ref, ...rest }: 
           {...rest}
           style={styles.pillText}
           placeholderTextColor={colors.inkMuted}
-          selectionColor={colors.textInverse}
-          cursorColor={colors.textInverse}
+          {...inputSelectionInverse}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);

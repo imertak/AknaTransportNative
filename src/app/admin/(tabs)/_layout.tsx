@@ -1,5 +1,5 @@
 import { Tabs, router } from 'expo-router';
-import { ClipboardList, LayoutGrid, Map, Plus, ReceiptText } from 'lucide-react-native';
+import { ClipboardList, House, Map, Plus, ReceiptText } from 'lucide-react-native';
 import { StyleSheet } from 'react-native';
 
 import { ScalePressable } from '@/components/ui';
@@ -23,11 +23,11 @@ function CreateJobButton() {
   );
 }
 
-/** Müşteriler ve Profilim alt menüde yer almaz: müşterilere panelden, profile sağ üstten ulaşılır. */
+/** Müşteriler ve Profilim alt menüde yer almaz: müşterilere ana sayfadan, profile sağ üstten ulaşılır. */
 export default function AdminTabs() {
   return (
     <Tabs screenOptions={useTabScreenOptions()}>
-      <Tabs.Screen name="dashboard" options={{ title: 'Panel', tabBarIcon: tabIcon(LayoutGrid) }} />
+      <Tabs.Screen name="dashboard" options={{ title: 'Ana Sayfa', tabBarIcon: tabIcon(House) }} />
       <Tabs.Screen name="jobs" options={{ title: 'İşler', tabBarIcon: tabIcon(ClipboardList) }} />
       <Tabs.Screen
         name="create"

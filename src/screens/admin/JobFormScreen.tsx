@@ -520,7 +520,7 @@ export default function JobFormScreen() {
                     <View style={styles.note}>
                       <Info size={16} color={colors.textSecondary} />
                       <Text variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
-                        Bu şoföre atanmış aktif araç yok. Araç ataması Panel › Araçlar ekranından yapılır.
+                        Bu şoföre atanmış aktif araç yok. Araç ataması Ana Sayfa › Araçlar ekranından yapılır.
                       </Text>
                     </View>
                   )

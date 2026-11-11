@@ -9,6 +9,9 @@ import { formatCurrency, formatDate } from '@/utils/format';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 
 export const InvoiceRow = memo(function InvoiceRow({ invoice, onPress, showCustomer, last }: { invoice: Invoice; onPress: (inv: Invoice) => void; showCustomer?: boolean; last?: boolean }) {
+  // Tevkifatlı faturada müşterinin ödeyeceği tutar (genel toplam − tevkifat) gösterilir.
+  const withheld = !!invoice.withholdingCode && (invoice.withholdingAmount ?? 0) > 0;
+  const amount = withheld ? (invoice.payableAmount ?? invoice.total) : invoice.total;
   return (
     <Pressable
       onPress={() => onPress(invoice)}
@@ -27,8 +30,9 @@ export const InvoiceRow = memo(function InvoiceRow({ invoice, onPress, showCusto
       </View>
       <View style={{ alignItems: 'flex-end', gap: 4 }}>
         <Text variant="subheading" style={[{ fontVariant: ['tabular-nums'] }, invoice.status === 'cancelled' && styles.strike]}>
-          {formatCurrency(invoice.total, { decimals: 2 })}
+          {formatCurrency(amount, { decimals: 2 })}
         </Text>
+        {withheld ? <Text variant="caption" tone="tertiary">Tevkifat düşülmüş</Text> : null}
         <InvoiceStatusBadge invoice={invoice} />
       </View>
     </Pressable>

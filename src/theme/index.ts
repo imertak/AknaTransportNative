@@ -33,6 +33,9 @@ export const colors = {
 
   /** Yalnızca "faturalandırıldı" işareti (yeşil fatura simgesi). */
   success: '#2E7D32',
+  /** Hesaplanmış tutar kutularının açık yeşil zemini ve kenarı. */
+  successSoft: '#E8F5E9',
+  successBorder: '#C8E6C9',
 
   /** Koyu zemindeki vurgu: beyaz. Üzerindeki içerik onAccent (siyah). */
   accent: '#FFFFFF',

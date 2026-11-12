@@ -320,18 +320,28 @@ export const apiInvoiceService: InvoiceService = {
    * resmi fatura yalnızca e-Arşiv sağlayıcısı üzerinden kesilir.
    */
   async createDemo(input) {
+    const jobIds = input.jobIds?.length ? input.jobIds : input.jobId ? [input.jobId] : [];
+    // Serbest fatura (iş yok): kalemler elle girilir; müşteri kayıtlıysa kimliği, değilse bilgileri gönderilir.
+    const freeForm = jobIds.length === 0 && !!input.lines?.length;
     const detail = await http<ApiInvoiceDetail>('/api/invoices', {
       method: 'POST',
-      // Tutar sunucuda işlerin fiyatından hesaplanır; aynı müşteriye ait birden fazla iş tek faturada birleşir.
+      // İşlerden faturada tutar sunucuda işlerin fiyatından hesaplanır; aynı müşteriye ait birden fazla iş tek faturada birleşir.
       json: {
-        jobIds: input.jobIds?.length ? input.jobIds : input.jobId ? [input.jobId] : [],
+        jobIds,
+        ...(freeForm
+          ? {
+              customerId: input.newCustomer ? null : input.customerId ?? null,
+              newCustomer: input.newCustomer ? customerToApi(input.newCustomer) : null,
+              lines: input.lines!.map((l) => ({ description: l.description.trim(), quantity: l.quantity, unitPrice: l.unitPrice })),
+            }
+          : {}),
         invoiceDate: input.issueDate,
         vatRate: input.vatRate,
         notes: input.description.trim() || null,
         withholdingCode: input.withholdingCode ?? null,
         noWithholding: !input.withholdingCode,
         iban: input.iban?.trim() || null,
-        singleLine: input.singleLine ?? false,
+        singleLine: freeForm ? false : input.singleLine ?? false,
       },
     });
     return invoiceFromApiDetail(detail);

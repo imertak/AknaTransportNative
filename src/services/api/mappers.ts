@@ -196,7 +196,20 @@ export interface ApiInvoiceDetail extends Omit<ApiInvoiceListItem, 'firstJobId' 
   notes: string | null;
   eArchiveReference: string | null;
   lastError: string | null;
-  items: { jobId: string; jobNumber: string; jobDate: string; storeName: string; description: string; lineTotal: number }[];
+  /** İş alanları serbest (işe bağlı olmayan) kalemde null'dır. */
+  items: {
+    id?: string;
+    jobId: string | null;
+    jobNumber: string | null;
+    jobDate: string | null;
+    storeName: string | null;
+    description: string;
+    quantity?: number;
+    unitPrice?: number;
+    lineTotal: number;
+  }[];
+  /** true: fatura işlerden değil, elle girilen kalemlerden oluşur. Eski sunucularda gelmez. */
+  isFreeForm?: boolean;
   /** true: faturaya tek kalem "Nakliye Bedeli" yazılır. Eski sunucularda gelmez. */
   singleLine?: boolean;
   email: { recipientEmail: string; status: 'Pending' | 'Sent' | 'Failed'; sentAt: string | null } | null;
@@ -510,18 +523,32 @@ export function invoiceFromApiList(i: ApiInvoiceListItem): Invoice {
 
 export function invoiceFromApiDetail(i: ApiInvoiceDetail): Invoice {
   const first = i.items[0];
+  // Serbest kalemlerin işi yoktur; iş listeleri yalnızca işe bağlı kalemlerden oluşur.
+  const jobItems = i.items.filter((x) => !!x.jobId);
+  const firstJob = jobItems[0];
   return {
     id: i.id,
     invoiceNo: i.invoiceNumber,
     ...invoiceState(i.status, i.eArchiveInvoiceNumber),
     customerId: i.customerId,
     customerName: i.customerName,
-    jobId: first?.jobId ?? '',
-    jobNo: first?.jobNumber ?? '',
-    jobIds: i.items.map((x) => x.jobId),
-    jobNos: i.items.map((x) => x.jobNumber),
-    jobCount: i.items.length,
-    items: i.items.map((x) => ({ jobId: x.jobId, jobNo: x.jobNumber, jobDate: x.jobDate, storeName: x.storeName, description: x.description, amount: x.lineTotal })),
+    jobId: firstJob?.jobId ?? '',
+    jobNo: firstJob?.jobNumber ?? '',
+    jobIds: jobItems.map((x) => x.jobId!),
+    jobNos: jobItems.map((x) => x.jobNumber ?? ''),
+    jobCount: jobItems.length,
+    items: i.items.map((x) => ({
+      id: x.id,
+      jobId: x.jobId ?? '',
+      jobNo: x.jobNumber ?? '',
+      jobDate: x.jobDate ?? '',
+      storeName: x.storeName ?? '',
+      description: x.description,
+      quantity: x.quantity,
+      unitPrice: x.unitPrice,
+      amount: x.lineTotal,
+    })),
+    freeForm: i.isFreeForm ?? (i.items.length > 0 && jobItems.length === 0),
     lastError: i.lastError ?? undefined,
     issueDate: i.invoiceDate,
     description: i.notes ?? first?.description ?? '',

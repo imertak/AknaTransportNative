@@ -2,6 +2,7 @@
  * Fatura yardımcıları: KDV tevkifatı, yazıyla tutar ve IBAN. API'deki hesaplarla birebir aynıdır
  * (Domain/Common/Withholding.cs, AmountInWords.cs, Iban.cs); fatura önizlemesinde kullanılır.
  */
+import { formatCurrency } from './format';
 
 export interface WithholdingType {
   code: string;
@@ -76,3 +77,12 @@ export function isValidIban(value: string): boolean {
 }
 
 export const formatIban = (v: string) => normalizeIban(v).replace(/(.{4})/g, '$1 ').trim();
+
+/** Miktar: 2 → "2", 1.5 → "1,5" (en fazla 3 ondalık). */
+export const formatQuantity = (q: number) => String(Math.round(q * 1000) / 1000).replace('.', ',');
+
+/** Fatura satırının miktar etiketi: 1 adet → "1 adet", 3 × 1.500 → "3 × 1.500 TL". */
+export function lineQuantityLabel(quantity: number | undefined, unitPrice: number | undefined): string {
+  if (!quantity || quantity === 1 || unitPrice === undefined) return `${formatQuantity(quantity || 1)} adet`;
+  return `${formatQuantity(quantity)} × ${formatCurrency(unitPrice)}`;
+}

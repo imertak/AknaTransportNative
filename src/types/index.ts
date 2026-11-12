@@ -274,19 +274,36 @@ export interface Invoice {
   singleLine?: boolean;
   /** true: fatura başka yerde kesildi, PDF'i elle yüklendi (e-Arşiv referansı yok). */
   manual?: boolean;
+  /** true: fatura işlerden değil, elle girilen kalemlerden oluşur (işe bağlı olmayan serbest fatura; iş dökümü yok). */
+  freeForm?: boolean;
   /** e-Arşiv entegrasyonunda dolacak alanlar. */
   externalId?: string;
   ettn?: string;
   createdAt: ISODateTime;
 }
 
+/** Fatura kalemi. Serbest (işe bağlı olmayan) kalemde iş alanları boştur (''). */
 export interface InvoiceItem {
+  /** Kalem kimliği (eski kayıtlarda yoksa iş kimliği kullanılır). */
+  id?: string;
   jobId: string;
   jobNo: string;
   jobDate: ISODate;
   storeName: string;
   description: string;
+  /** Miktar (işlerden gelen kalemde 1). */
+  quantity?: number;
+  /** KDV hariç birim fiyat. */
+  unitPrice?: number;
   amount: number;
+}
+
+/** İşe bağlı olmayan (serbest) fatura kalemi girişi. */
+export interface InvoiceLineInput {
+  description: string;
+  quantity: number;
+  /** KDV hariç birim fiyat. */
+  unitPrice: number;
 }
 
 export type InvoiceInput = Pick<Invoice, 'issueDate' | 'description' | 'subtotal' | 'vatRate'> & {
@@ -298,6 +315,12 @@ export type InvoiceInput = Pick<Invoice, 'issueDate' | 'description' | 'subtotal
   iban?: string;
   /** true: faturaya tek kalem "Nakliye Bedeli" yazılır; işler yalnızca dökümde ayrı ayrı yer alır. */
   singleLine?: boolean;
+  /** Serbest fatura (iş yok): elle girilen kalemler. */
+  lines?: InvoiceLineInput[];
+  /** Serbest fatura: kayıtlı müşteri. */
+  customerId?: string;
+  /** Serbest fatura: kayıtlı olmayan müşteri; fatura ile birlikte müşteri olarak kaydedilir. */
+  newCustomer?: CustomerInput;
 };
 
 export type { WithholdingType } from '@/utils/invoiceText';

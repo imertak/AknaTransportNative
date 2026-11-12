@@ -236,6 +236,11 @@ export const invoiceActions = {
   },
   async createDemo(input: InvoiceInput, actorId: string) {
     const inv = await invoiceService.createDemo(input, actorId);
+    // Kayıtlı olmayan müşteriye kesilen fatura müşteriyi de kaydeder; listede görünsün.
+    if (input.newCustomer) {
+      const c = await customerService.get(inv.customerId).catch(() => null);
+      if (c) set((s) => ({ customers: upsert(s.customers, c).sort((a, b) => a.companyName.localeCompare(b.companyName, 'tr')) }));
+    }
     const jobIdSet = new Set(inv.jobIds?.length ? inv.jobIds : [inv.jobId]);
     set((s) => ({
       invoices: [inv, ...s.invoices.filter((i) => i.id !== inv.id)],

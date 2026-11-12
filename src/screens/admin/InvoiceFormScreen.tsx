@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Plus, ReceiptText, Square, SquareCheck, X } from 'lucide-react-native';
+import { ChevronDown, Plus, ReceiptText, Square, SquareCheck, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { InvoicePreview } from '@/components/invoices/InvoicePreview';
-import { BottomBar, Button, Card, DateField, EmptyState, InfoTip, Input, LabelWithInfo, NavHeader, Screen, ScrollContent, Section, SegmentedControl, SelectField, Text, type SelectOption } from '@/components/ui';
+import { AmountBadge, JobPickerSheet, shortName } from '@/components/invoices/JobPickerSheet';
+import { BottomBar, Button, Card, DateField, EmptyState, FieldShell, InfoTip, Input, LabelWithInfo, NavHeader, Screen, ScrollContent, Section, SegmentedControl, SelectField, Text, type SelectOption } from '@/components/ui';
 import { APP_CONFIG } from '@/constants/config';
 import { useCurrentUser } from '@/contexts/AuthContext';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
@@ -104,17 +105,12 @@ export default function InvoiceFormScreen() {
     return billable.filter((j) => j.customerId === selectedCustomerId);
   }, [billable, selectedCustomerId]);
 
-  const jobOptions = useMemo<SelectOption[]>(
-    () =>
-      availableJobs
-        .filter((j) => !selectedJobIds.includes(j.id))
-        .map((j) => ({
-          value: j.id,
-          label: `${j.jobNo} · ${j.customerName}`,
-          description: `${formatDate(j.date)} · ${formatCurrency(j.price)} · ${composeJobText(j.routeDescription, j.description)}`,
-        })),
-    [availableJobs, selectedJobIds],
-  );
+  // İş seçme perdesi: perde açık kalır, işler tek tek seçilir/çıkarılır.
+  const [jobPickerOpen, setJobPickerOpen] = useState(false);
+  const toggleJob = (id: string) => {
+    setSelectedJobIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setErrors({});
+  };
   const jobsSubtotal = useMemo(() => selectedJobs.reduce((s, j) => s + j.price, 0), [selectedJobs]);
   // İşaretliyse faturaya işler tek tek yazılmaz, tek kalem "Nakliye Bedeli" yazılır. İş dökümü değişmez.
   const [singleLine, setSingleLine] = useState(false);
@@ -287,19 +283,19 @@ export default function InvoiceFormScreen() {
             {mode === 'jobs' ? (
               <Section title="İşler">
                 <Card style={styles.card}>
-                  <SelectField
-                    label="İş ekle"
-                    required={!selectedJobIds.length}
-                    searchable
-                    options={jobOptions}
-                    value={null}
-                    onChange={(id) => {
-                      setSelectedJobIds((prev) => [...prev, id]);
-                      setErrors({});
-                    }}
-                    error={errors.jobs}
-                    placeholder={selectedCustomerId ? 'Aynı müşterinin diğer işlerini ekleyin' : 'Faturalanacak işi seçin'}
-                  />
+                  <FieldShell label="İş ekle" required={!selectedJobIds.length} error={errors.jobs}>
+                    <Pressable
+                      onPress={() => setJobPickerOpen(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Faturalanacak işleri seçin"
+                      style={({ pressed }) => [styles.pickerBox, !!errors.jobs && styles.pickerError, pressed && { backgroundColor: colors.surfaceMuted }]}>
+                      <Text style={{ flex: 1 }} tone="tertiary" numberOfLines={1}>
+                        {selectedCustomerId ? 'Aynı müşterinin diğer işlerini ekleyin' : 'Faturalanacak işleri seçin'}
+                      </Text>
+                      <ChevronDown size={18} color={colors.textTertiary} />
+                    </Pressable>
+                  </FieldShell>
+                  <JobPickerSheet visible={jobPickerOpen} onClose={() => setJobPickerOpen(false)} jobs={availableJobs} selectedIds={selectedJobIds} onToggle={toggleJob} />
                   {selectedJobs.length > 0 && (
                     <View style={{ gap: spacing.sm }}>
                       <Text variant="label" tone="secondary">
@@ -307,12 +303,13 @@ export default function InvoiceFormScreen() {
                       </Text>
                       {selectedJobs.map((j) => (
                         <View key={j.id} style={styles.chip}>
-                          <View style={{ flex: 1 }}>
-                            <Text variant="subheading">
-                              {j.jobNo} · {j.customerName}
+                          <AmountBadge amount={j.price} />
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text variant="subheading" numberOfLines={1}>
+                              {j.jobNo} · {shortName(j.customerName)}
                             </Text>
-                            <Text variant="bodySmall" tone="secondary">
-                              {formatDate(j.date)} · {formatCurrency(j.price)} · {composeJobText(j.routeDescription, j.description)}
+                            <Text variant="bodySmall" tone="secondary" numberOfLines={2}>
+                              {formatDate(j.date)} · {composeJobText(j.routeDescription, j.description)}
                             </Text>
                           </View>
                           <Pressable onPress={() => setSelectedJobIds((prev) => prev.filter((x) => x !== j.id))} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${j.jobNo} işini çıkar`}>
@@ -493,16 +490,25 @@ export default function InvoiceFormScreen() {
                         : 'İşler faturaya ayrı satırlar olarak yazılır; burayı yalnızca ek not için kullanın.'
                   }
                 />
-                <Input
-                  label="Ara toplam (KDV hariç)"
-                  required
-                  editable={false}
-                  keyboardType="decimal-pad"
-                  suffix="TL"
-                  value={formatAmountInput(String(amount).replace('.', ','))}
-                  error={errors.subtotal}
-                  hint={mode === 'jobs' ? 'Seçilen işlerin fiyatlarından sunucuda hesaplanır.' : 'Mal/hizmetlerin tutarlarının toplamıdır.'}
-                />
+                {/* Hesaplanan değer: giriş alanı değil, yeşil özet kutusu. */}
+                <View style={styles.subtotalBox} accessibilityRole="summary" accessibilityLabel={`Ara toplam, KDV hariç: ${formatCurrency(amount, { decimals: 2 })}`}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text variant="label" style={{ color: colors.success }}>
+                      Ara toplam (KDV hariç)
+                    </Text>
+                    <Text variant="caption" tone="secondary">
+                      {mode === 'jobs' ? 'Seçilen işlerin fiyatlarından hesaplanır.' : 'Mal/hizmetlerin tutarlarının toplamıdır.'}
+                    </Text>
+                  </View>
+                  <Text variant="heading" style={styles.subtotalAmount}>
+                    {formatCurrency(amount, { decimals: 2 })}
+                  </Text>
+                </View>
+                {errors.subtotal ? (
+                  <Text variant="bodySmall" style={{ color: colors.danger }}>
+                    {errors.subtotal}
+                  </Text>
+                ) : null}
                 <View style={{ gap: spacing.xs + 2 }}>
                   <Text variant="label" tone="secondary">
                     KDV oranı
@@ -597,5 +603,28 @@ const styles = StyleSheet.create({
   chip: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceMuted, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   lineBox: { gap: spacing.md },
   lineBorder: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.lg },
+  pickerBox: {
+    minHeight: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  pickerError: { borderColor: colors.danger },
+  subtotalBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.successSoft,
+    borderWidth: 1,
+    borderColor: colors.successBorder,
+  },
+  subtotalAmount: { color: colors.success, fontVariant: ['tabular-nums'] },
   lineHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

@@ -257,7 +257,7 @@ export default function InvoiceDetailScreen() {
           />
         ) : null}
 
-        <Section title={`${freeForm ? 'Fatura kalemleri' : 'Faturadaki işler'} · ${items.length}`}>
+        <Section title={`${freeForm ? 'Mal/Hizmetler' : 'Faturadaki işler'} · ${items.length}`}>
           <Card padded={false}>
             {items.map((it, i) => !it.jobId ? (
               <View key={it.id ?? String(i)} style={[styles.item, i < items.length - 1 && styles.itemBorder]}>

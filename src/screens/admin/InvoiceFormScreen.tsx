@@ -38,7 +38,7 @@ const CUSTOMER_MODE_OPTIONS: SelectOption<CustomerMode>[] = [
 const INFO: Record<Mode, string> = {
   jobs: 'Fatura taslak olarak oluşturulur ve resmi değildir. Aynı müşteriye ait birden fazla işi tek faturada birleştirebilirsiniz.',
   free:
-    'İşe bağlı olmadan, kalemleri kendiniz girerek fatura kesersiniz. Fatura taslak olarak oluşturulur ve resmi değildir; iş dökümü yoktur. Yeni müşteri bilgileri fatura ile birlikte müşteri olarak kaydedilir.',
+    'İşe bağlı olmadan, mal/hizmetleri kendiniz girerek fatura kesersiniz. Fatura taslak olarak oluşturulur ve resmi değildir; iş dökümü yoktur. Yeni müşteri bilgileri fatura ile birlikte müşteri olarak kaydedilir.',
 };
 
 /** Elle girilen fatura kalemi (form durumu; tutarlar metin olarak tutulur). */
@@ -404,7 +404,7 @@ export default function InvoiceFormScreen() {
                   </Card>
                 </Section>
 
-                <Section title="Kalemler">
+                <Section title="Mal/Hizmetler">
                   <Card style={styles.card}>
                     {parsedLines.map((l, i) => {
                       const le = errors.lines?.[l.key];
@@ -412,10 +412,10 @@ export default function InvoiceFormScreen() {
                         <View key={l.key} style={[styles.lineBox, i > 0 && styles.lineBorder]}>
                           <View style={styles.lineHead}>
                             <Text variant="label" tone="secondary">
-                              Kalem {i + 1}
+                              Mal/Hizmet {i + 1}
                             </Text>
                             {lines.length > 1 ? (
-                              <Pressable onPress={() => removeLine(l.key)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Kalem ${i + 1} sil`}>
+                              <Pressable onPress={() => removeLine(l.key)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Mal/Hizmet ${i + 1} sil`}>
                                 <X size={18} color={colors.textTertiary} />
                               </Pressable>
                             ) : null}
@@ -461,7 +461,7 @@ export default function InvoiceFormScreen() {
                         </View>
                       );
                     })}
-                    <Button label="Kalem ekle" icon={Plus} variant="secondary" size="sm" onPress={() => setLines((prev) => [...prev, newLine()])} />
+                    <Button label="Mal/Hizmet ekle" icon={Plus} variant="secondary" size="sm" onPress={() => setLines((prev) => [...prev, newLine()])} />
                   </Card>
                 </Section>
               </>
@@ -474,7 +474,7 @@ export default function InvoiceFormScreen() {
                     {singleLine ? <SquareCheck size={22} color={colors.ink} /> : <Square size={22} color={colors.textTertiary} />}
                     <View style={{ flex: 1 }}>
                       <LabelWithInfo info="İşler faturaya tek tek yazılmaz, toplam tutar tek satırda kesilir. İş dökümünde işler yine ayrı ayrı yer alır.">
-                        <Text variant="subheading">Tek kalem: {SINGLE_LINE_TITLE}</Text>
+                        <Text variant="subheading">Tek Mal/Hizmet: {SINGLE_LINE_TITLE}</Text>
                       </LabelWithInfo>
                     </View>
                   </Pressable>
@@ -487,9 +487,9 @@ export default function InvoiceFormScreen() {
                   onChangeText={setDescription}
                   hint={
                     mode === 'free'
-                      ? 'Kalemler faturaya ayrı satırlar olarak yazılır; burayı yalnızca ek not için kullanın.'
+                      ? 'Mal/hizmetler faturaya ayrı satırlar olarak yazılır; burayı yalnızca ek not için kullanın.'
                       : singleLine
-                        ? 'Fatura tek kalem olarak kesilir; burayı yalnızca ek not için kullanın.'
+                        ? 'Fatura tek mal/hizmet satırı olarak kesilir; burayı yalnızca ek not için kullanın.'
                         : 'İşler faturaya ayrı satırlar olarak yazılır; burayı yalnızca ek not için kullanın.'
                   }
                 />
@@ -501,7 +501,7 @@ export default function InvoiceFormScreen() {
                   suffix="TL"
                   value={formatAmountInput(String(amount).replace('.', ','))}
                   error={errors.subtotal}
-                  hint={mode === 'jobs' ? 'Seçilen işlerin fiyatlarından sunucuda hesaplanır.' : 'Kalemlerin tutarlarının toplamıdır.'}
+                  hint={mode === 'jobs' ? 'Seçilen işlerin fiyatlarından sunucuda hesaplanır.' : 'Mal/hizmetlerin tutarlarının toplamıdır.'}
                 />
                 <View style={{ gap: spacing.xs + 2 }}>
                   <Text variant="label" tone="secondary">
@@ -550,7 +550,7 @@ export default function InvoiceFormScreen() {
                     mode === 'free'
                       ? parsedLines.map((l) => ({
                           key: l.key,
-                          title: l.description.trim() || 'Kalem',
+                          title: l.description.trim() || 'Mal/Hizmet',
                           detail: '',
                           amount: l.total,
                           quantityLabel: lineQuantityLabel(l.quantityValue || 1, l.unitPriceValue),

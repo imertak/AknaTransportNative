@@ -1,18 +1,20 @@
-import { useRef, useState, type ComponentRef } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { router } from 'expo-router';
-import { ClipboardPlus, Plus, ReceiptText, X, type LucideIcon } from 'lucide-react-native';
+import { ClipboardPlus, Plus, ReceiptText, type LucideIcon } from 'lucide-react-native';
 import { Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { ScalePressable } from '@/components/ui';
 import { routes } from '@/navigation/routes';
 import { colors, radius } from '@/theme';
 
 const MENU_WIDTH = 200;
+/** "+" simgesinin "×"e dönüşme süresi (ms). */
+const ROTATE_DURATION = 320;
 
 /**
  * Alt menünün ortasındaki siyah "+" butonu. Basınca hemen üstünde "Yeni iş" ve "Yeni fatura"
- * seçeneklerini içeren küçük bir menü açılır; dışına dokununca kapanır.
+ * seçeneklerini içeren küçük bir menü açılır; dışına dokununca kapanır. Açıkken "+" dönerek "×" olur.
  */
 export function CreateMenuButton() {
   const ref = useRef<ComponentRef<typeof View>>(null);
@@ -25,6 +27,13 @@ export function CreateMenuButton() {
     close();
     router.push(href);
   };
+
+  // Menü açılınca "+" 45° dönerek yumuşakça "×" olur, kapanınca geri döner.
+  const rotation = useSharedValue(0);
+  useEffect(() => {
+    rotation.value = withTiming(anchor ? 45 : 0, { duration: ROTATE_DURATION, easing: Easing.out(Easing.cubic) });
+  }, [anchor, rotation]);
+  const iconStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${rotation.value}deg` }] }));
 
   const left = anchor ? Math.min(Math.max(anchor.x - MENU_WIDTH / 2, 12), width - MENU_WIDTH - 12) : 0;
 
@@ -39,7 +48,9 @@ export function CreateMenuButton() {
           accessibilityLabel="Yeni oluştur"
           accessibilityState={{ expanded: !!anchor }}
         >
-          {anchor ? <X size={24} color={colors.textInverse} strokeWidth={2.5} /> : <Plus size={26} color={colors.textInverse} strokeWidth={2.5} />}
+          <Animated.View style={iconStyle}>
+            <Plus size={26} color={colors.textInverse} strokeWidth={2.5} />
+          </Animated.View>
         </ScalePressable>
       </View>
 

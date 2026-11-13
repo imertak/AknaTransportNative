@@ -125,6 +125,12 @@ export const customerActions = {
     await customerService.remove(id);
     set((s) => ({ customers: s.customers.filter((c) => c.id !== id) }));
   },
+  /** Başka bir kayıtla (ör. teklif) birlikte sunucuda oluşturulan müşteriyi listeye ekler. */
+  async load(id: string) {
+    const c = await customerService.get(id);
+    set((s) => ({ customers: upsert(s.customers, c).sort((a, b) => a.companyName.localeCompare(b.companyName, 'tr')) }));
+    return c;
+  },
 };
 
 const sortTypes = (list: VehicleTypeDef[]) => [...list].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'tr'));

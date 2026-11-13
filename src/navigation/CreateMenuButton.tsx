@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { router } from 'expo-router';
-import { ClipboardPlus, Plus, ReceiptText, type LucideIcon } from 'lucide-react-native';
+import { ClipboardPlus, FileSignature, Plus, ReceiptText, type LucideIcon } from 'lucide-react-native';
 import { Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -13,8 +13,8 @@ const MENU_WIDTH = 200;
 const ROTATE_DURATION = 320;
 
 /**
- * Alt menünün ortasındaki siyah "+" butonu. Basınca hemen üstünde "Yeni iş" ve "Yeni fatura"
- * seçeneklerini içeren küçük bir menü açılır; dışına dokununca kapanır. Açıkken "+" dönerek "×" olur.
+ * Alt menünün ortasındaki siyah "+" butonu. Basınca hemen üstünde "Yeni iş", "Yeni fatura"
+ * ve "Yeni teklif" seçeneklerini içeren küçük bir menü açılır; dışına dokununca kapanır. Açıkken "+" dönerek "×" olur.
  */
 export function CreateMenuButton() {
   const ref = useRef<ComponentRef<typeof View>>(null);
@@ -63,6 +63,8 @@ export function CreateMenuButton() {
             <MenuItem icon={ClipboardPlus} label="Yeni iş" onPress={() => go(routes.newJob())} />
             <View style={styles.divider} />
             <MenuItem icon={ReceiptText} label="Yeni fatura" onPress={() => go(routes.newInvoice())} />
+            <View style={styles.divider} />
+            <MenuItem icon={FileSignature} label="Yeni teklif" onPress={() => go(routes.newOffer())} />
           </Animated.View>
         )}
       </Modal>

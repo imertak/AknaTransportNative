@@ -48,7 +48,7 @@ export function useDriverVehicles(driverId: string | undefined): Vehicle[] {
   return useMemo(() => (driverId ? vehicles.filter((v) => v.isActive && v.driverId === driverId) : []), [vehicles, driverId]);
 }
 
-interface RemoteState<T> {
+export interface RemoteState<T> {
   data: T | undefined;
   loading: boolean;
   error: string | null;
@@ -56,7 +56,7 @@ interface RemoteState<T> {
 }
 
 /** Sunucudan veri çeken basit hook; anahtar değişince yeniden yükler. */
-function useRemote<T>(key: string | null, load: () => Promise<T>): RemoteState<T> {
+export function useRemote<T>(key: string | null, load: () => Promise<T>): RemoteState<T> {
   const [nonce, setNonce] = useState(0);
   const requestKey = key ? `${key}#${nonce}` : null;
   const [result, setResult] = useState<{ key: string; data?: T; error: string | null } | null>(null);

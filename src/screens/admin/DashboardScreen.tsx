@@ -1,5 +1,5 @@
 import { router, type Href } from "expo-router";
-import { Building2, ChevronLeft, ChevronRight, Eye, EyeOff, Tags, Truck, UserRound, UsersRound } from "lucide-react-native";
+import { Building2, ChevronLeft, FileSignature, ChevronRight, Eye, EyeOff, Tags, Truck, UserRound, UsersRound } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
@@ -229,6 +229,8 @@ export default function DashboardScreen() {
 
         <View style={styles.body}>
           <Card padded={false}>
+            <ListItem icon={FileSignature} title="Teklifler" subtitle="Fiyat teklifi hazırla, PDF paylaş, kabul edileni işe dönüştür" onPress={() => router.push(routes.offers)} />
+            <View style={styles.sep} />
             <ListItem icon={Building2} title="Müşteriler" subtitle="Müşteri kayıtları, bakiyeler ve geçmiş işler" onPress={() => router.push(routes.customers)} />
             <View style={styles.sep} />
             <ListItem icon={UsersRound} title="Şoförler" subtitle="Şoför ekleme, araç atama ve şifre sıfırlama" onPress={() => router.push(routes.drivers)} />

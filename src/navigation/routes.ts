@@ -28,6 +28,11 @@ export const routes = {
   invoice: (id: string): Href => ({ pathname: '/admin/invoice/[id]', params: { id } }) as Href,
   newInvoice: (jobId?: string): Href => ({ pathname: '/admin/invoice-form', params: jobId ? { jobId } : {} }) as Href,
 
+  offers: '/admin/offers' as Href,
+  offer: (id: string): Href => ({ pathname: '/admin/offer/[id]', params: { id } }) as Href,
+  newOffer: (): Href => '/admin/offer-form' as Href,
+  editOffer: (id: string): Href => ({ pathname: '/admin/offer-form', params: { id } }) as Href,
+
   adminMap: '/admin/map' as Href,
   customers: '/admin/customers' as Href,
   jobReport: '/admin/job-report' as Href,

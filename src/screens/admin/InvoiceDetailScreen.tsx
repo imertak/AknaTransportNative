@@ -70,7 +70,7 @@ export default function InvoiceDetailScreen() {
   /** Taslak veya başarısız faturaya ya da elle yüklenmiş faturaya dosya yüklenebilir. */
   const canUpload = !cancelled && (isDemo || (manual && invoice.status === 'earsiv_issued'));
   const eArchiveLabel = manual && invoice.status === 'earsiv_issued'
-    ? `Elle yüklendi${invoice.externalId ? ` · No ${invoice.externalId}` : ''}`
+    ? `Harici olarak kesildi${invoice.externalId ? ` · No ${invoice.externalId}` : ''}`
     : invoice.status === 'earsiv_failed'
       ? 'Gönderim başarısız · tekrar deneyebilirsiniz'
       : isDemo
@@ -325,7 +325,7 @@ export default function InvoiceDetailScreen() {
 
         {canUpload ? (
           <Button
-            label={manual ? 'Fatura dosyasını değiştir' : 'Faturayı elle yükle'}
+            label={manual ? 'Fatura dosyasını değiştir' : 'Harici fatura yükle'}
             icon={FileUp}
             variant="secondary"
             onPress={openUpload}
@@ -383,7 +383,7 @@ export default function InvoiceDetailScreen() {
       <Sheet
         visible={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        title={manual ? 'Fatura dosyasını değiştir' : 'Faturayı elle yükle'}
+        title={manual ? 'Fatura dosyasını değiştir' : 'Harici fatura yükle'}
         subtitle="Faturayı başka yerde kestirdiyseniz PDF'ini yükleyin. Fatura kesilmiş sayılır, cari bakiyeye yazılır ve iş dökümü aynen kullanılır. Müşteriye otomatik e-posta gitmez."
         footer={
           <Button

@@ -12,6 +12,7 @@ import type {
   VehicleService,
 } from '../contracts';
 import { ServiceError } from '../errors';
+import { File } from 'expo-file-system';
 import { savePdf } from '../files';
 import { Platform } from 'react-native';
 import { http, httpAll, httpBinary, type Paged } from '../http';
@@ -366,8 +367,9 @@ export const apiInvoiceService: InvoiceService = {
     if (Platform.OS === 'web' && file.file) {
       form.append('file', file.file, file.name);
     } else {
-      // React Native FormData dosyayı { uri, name, type } nesnesiyle gönderir.
-      form.append('file', { uri: file.uri, name: file.name, type: file.mimeType ?? 'application/pdf' } as unknown as Blob);
+      // Expo'nun fetch'i (SDK 52+ genel fetch) React Native'in { uri, name, type } nesnesini desteklemez ve istek
+      // gönderilmeden hata verir. Dosya, baytlarını okuyabilen expo-file-system File nesnesiyle eklenir.
+      form.append('file', new File(file.uri) as unknown as Blob, file.name);
     }
     if (invoiceNumber?.trim()) form.append('invoiceNumber', invoiceNumber.trim());
     // Content-Type verilmez: fetch multipart sınırını (boundary) kendisi ekler.

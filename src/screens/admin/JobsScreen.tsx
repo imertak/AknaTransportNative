@@ -18,7 +18,7 @@ import { routes } from '@/navigation/routes';
 import { colors, spacing } from '@/theme';
 import type { JobFilter, JobStatus, TransportJob } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { groupByMonth, monthRowKey, type MonthRow } from '@/utils/monthGroups';
+import { groupByWeek, monthRowKey, type MonthRow } from '@/utils/monthGroups';
 
 type StatusGroup = 'all' | 'pending' | 'assigned' | 'active' | 'completed' | 'cancelled';
 
@@ -80,8 +80,8 @@ export default function JobsScreen() {
   // Yeni iş eklenince veya iş silinince liste sessizce yenilenir.
   useRefreshOnCountChange(storeJobs.length, ready, list.refresh);
 
-  const months = useMemo(() => new Map(list.summary?.months.map((m) => [m.month, m]) ?? []), [list.summary]);
-  const rows = useMemo(() => groupByMonth(jobs, (j) => j.date, (j) => j.id), [jobs]);
+  // Haftalık bölümler: pazartesiden pazara.
+  const rows = useMemo(() => groupByWeek(jobs, (j) => j.date, (j) => j.id), [jobs]);
   const onPullRefresh = useCallback(async () => {
     await Promise.all([onRefresh(), list.refresh()]);
   }, [onRefresh, list]);
@@ -90,11 +90,11 @@ export default function JobsScreen() {
   const renderItem = useCallback(
     ({ item, index }: { item: MonthRow<TransportJob>; index: number }) =>
       item.kind === 'month' ? (
-        <MonthHeader label={item.label} first={index === 0} summary={monthSummary(months.get(item.month), item.items)} />
+        <MonthHeader label={item.label} first={index === 0} summary={weekSummary(item.items)} />
       ) : (
         <JobCard job={item.item} onPress={openJob} showPrice showBilling driverName={item.item.driverId ? userMap.get(item.item.driverId)?.fullName ?? '—' : undefined} />
       ),
-    [openJob, userMap, months],
+    [openJob, userMap],
   );
 
   const activeChips: { key: keyof AdvancedFilter | 'date'; label: string }[] = [];
@@ -177,11 +177,10 @@ export default function JobsScreen() {
   );
 }
 
-/** Ay başlığı özeti: sunucu özeti varsa ayın tamamı, yoksa yüklenenler. İptal edilen işler tutara katılmaz. */
-function monthSummary(month: { count: number; total: number } | undefined, loaded: TransportJob[]) {
-  const count = month?.count ?? loaded.length;
-  const total = month?.total ?? loaded.reduce((s, j) => (j.status === 'cancelled' ? s : s + j.price), 0);
-  return `${count} iş · ${formatCurrency(total)}`;
+/** Hafta başlığı özeti: o haftanın yüklenen işleri. İptal edilen işler tutara katılmaz. */
+function weekSummary(loaded: TransportJob[]) {
+  const total = loaded.reduce((s, j) => (j.status === 'cancelled' ? s : s + j.price), 0);
+  return `${loaded.length} iş · ${formatCurrency(total)}`;
 }
 
 const Separator = monthSeparator(spacing.md + 2);

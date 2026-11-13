@@ -1,6 +1,6 @@
 import { router, type Href } from "expo-router";
-import { Building2, ChevronLeft, ChevronRight, Tags, Truck, UserRound, UsersRound } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { Building2, ChevronLeft, ChevronRight, Eye, EyeOff, Tags, Truck, UserRound, UsersRound } from "lucide-react-native";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
 import { NotificationBell } from "@/components/NotificationBell";
@@ -31,6 +31,7 @@ import {
 } from "@/hooks/useData";
 import { useRefresh } from "@/hooks/useRefresh";
 import { routes } from "@/navigation/routes";
+import { storage } from "@/services/storage";
 import { colors, hitSlop, spacing } from "@/theme";
 import type { JobStatus, TransportJob } from "@/types";
 import {
@@ -43,6 +44,8 @@ const openJob = (job: TransportJob) => router.push(routes.job(job.id));
 const jobsWith = (status: string): Href =>
   ({ pathname: "/admin/jobs", params: { status } }) as Href;
 
+const HIDE_AMOUNTS_KEY = "akna.dashboard.hideAmounts";
+
 export default function DashboardScreen() {
   const user = useCurrentUser();
   const stats = useDashboardStats();
@@ -53,6 +56,17 @@ export default function DashboardScreen() {
   const { refreshing, onRefresh } = useRefresh();
   const now = new Date();
   const [period, setPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
+  // Tutar gizleme: tercih cihazda saklanır, uygulama yeniden açılınca korunur.
+  const [hideAmounts, setHideAmounts] = useState(false);
+  useEffect(() => {
+    storage.getJSON<boolean>(HIDE_AMOUNTS_KEY).then((v) => v && setHideAmounts(true));
+  }, []);
+  const toggleHide = () => {
+    const next = !hideAmounts;
+    setHideAmounts(next);
+    storage.setJSON(HIDE_AMOUNTS_KEY, next).catch(() => {});
+  };
+  const money = (v: number) => (hideAmounts ? "***" : formatCurrency(v));
   const revenue = useMonthRevenue(period.year, period.month);
   const isCurrentMonth = period.year === now.getFullYear() && period.month === now.getMonth() + 1;
   const shiftMonth = (delta: number) =>
@@ -138,9 +152,18 @@ export default function DashboardScreen() {
             </Pressable>
           </View>
           {revenue.data ? (
-            <Text variant="display" tone="inverse" style={styles.tabular}>
-              {formatCurrency(revenue.data.revenue)}
-            </Text>
+            <View style={styles.amountRow}>
+              <Text variant="display" tone="inverse" style={styles.tabular}>
+                {money(revenue.data.revenue)}
+              </Text>
+              <Pressable
+                onPress={toggleHide}
+                hitSlop={hitSlop}
+                accessibilityRole="button"
+                accessibilityLabel={hideAmounts ? "Tutarı göster" : "Tutarı gizle"}>
+                {hideAmounts ? <Eye size={22} color={colors.textInverseMuted} /> : <EyeOff size={22} color={colors.textInverseMuted} />}
+              </Pressable>
+            </View>
           ) : revenue.error ? (
             <Pressable onPress={revenue.reload} accessibilityRole="button">
               <Text variant="bodySmall" tone="inverse">Gelir alınamadı: {revenue.error} · Tekrar dene</Text>
@@ -150,7 +173,7 @@ export default function DashboardScreen() {
           )}
           <Text variant="bodySmall" tone="inverseMuted">
             {revenue.data ? `${revenue.data.completedJobs} tamamlanan iş · İptaller hariç` : " "}
-            {isCurrentMonth ? ` · Açık işler ${formatCurrency(stats.openValue)}` : ""}
+            {isCurrentMonth ? ` · Açık işler ${money(stats.openValue)}` : ""}
           </Text>
         </View>
       </PageHeader>
@@ -333,6 +356,7 @@ const styles = StyleSheet.create({
   revenueLoading: { alignSelf: "flex-start", height: 38 },
   sep: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderStrong, marginLeft: 64 },
   tabular: { fontVariant: ["tabular-nums"] },
+  amountRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   body: { padding: spacing.lg, gap: spacing.xxl },
   statsScroll: { gap: spacing.sm, paddingHorizontal: spacing.lg },
   driver: {

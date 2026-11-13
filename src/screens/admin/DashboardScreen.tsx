@@ -229,8 +229,6 @@ export default function DashboardScreen() {
 
         <View style={styles.body}>
           <Card padded={false}>
-            <ListItem icon={FileSignature} title="Teklifler" subtitle="Fiyat teklifi hazırla, PDF paylaş, kabul edileni işe dönüştür" onPress={() => router.push(routes.offers)} />
-            <View style={styles.sep} />
             <ListItem icon={Building2} title="Müşteriler" subtitle="Müşteri kayıtları, bakiyeler ve geçmiş işler" onPress={() => router.push(routes.customers)} />
             <View style={styles.sep} />
             <ListItem icon={UsersRound} title="Şoförler" subtitle="Şoför ekleme, araç atama ve şifre sıfırlama" onPress={() => router.push(routes.drivers)} />
@@ -238,6 +236,8 @@ export default function DashboardScreen() {
             <ListItem icon={Truck} title="Araçlar" subtitle="Araç kaydı ve şoföre atama" onPress={() => router.push(routes.vehicles)} />
             <View style={styles.sep} />
             <ListItem icon={Tags} title="Araç tipleri" subtitle="Panelvan, Kamyon gibi tipleri ekle ve düzenle" onPress={() => router.push(routes.vehicleTypes)} />
+            <View style={styles.sep} />
+            <ListItem icon={FileSignature} title="Teklifler" subtitle="Fiyat teklifi hazırla, PDF paylaş, kabul edileni işe dönüştür" onPress={() => router.push(routes.offers)} />
           </Card>
 
           <Section

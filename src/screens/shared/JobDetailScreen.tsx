@@ -59,7 +59,7 @@ import {
 import { routes } from "@/navigation/routes";
 import { trackingLinkService } from "@/services/notifications";
 import { jobActions } from "@/store";
-import { colors, spacing } from "@/theme";
+import { colors, radius, spacing } from "@/theme";
 import { confirm } from "@/utils/confirm";
 import {
   formatCurrency,
@@ -316,12 +316,16 @@ export default function JobDetailScreen() {
         <Card style={styles.summary}>
           <View style={styles.summaryTop}>
             <StatusBadge status={job.status} />
-            {showPrice ? (
-              <Text variant="title" style={{ fontVariant: ["tabular-nums"] }}>
-                {formatCurrency(job.price)}
-              </Text>
-            ) : null}
           </View>
+          {/* İş tutarı öne çıkarılır: koyu kutuda büyük rakam. */}
+          {showPrice ? (
+            <View style={styles.priceBox} accessible accessibilityLabel={`İş tutarı ${formatCurrency(job.price, { decimals: 2 })}`}>
+              <Text variant="bodySmall" tone="inverseMuted">İş tutarı · KDV hariç</Text>
+              <Text variant="display" tone="inverse" style={{ fontVariant: ["tabular-nums"] }} numberOfLines={1} adjustsFontSizeToFit>
+                {formatCurrency(job.price, { decimals: 2 })}
+              </Text>
+            </View>
+          ) : null}
           <Text variant="heading">
             {partyLabel(job.customerName, job.storeName)}
           </Text>
@@ -658,6 +662,7 @@ export default function JobDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  priceBox: { backgroundColor: colors.ink, borderRadius: radius.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: 2 },
   summary: { gap: spacing.sm },
   summaryTop: {
     flexDirection: "row",

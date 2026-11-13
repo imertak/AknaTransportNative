@@ -41,3 +41,56 @@ export function groupByMonth<T>(items: readonly T[], date: (item: T) => string |
 }
 
 export const monthRowKey = <T,>(row: MonthRow<T>) => row.key;
+
+/** "2026-11-13" → o haftanın pazartesisi "2026-11-09" (yerel takvim; saat dilimi kayması olmaz). */
+function weekStart(value: string): Date {
+  const [y, m, d] = value.slice(0, 10).split('-').map(Number);
+  const date = new Date(y, (m || 1) - 1, d || 1);
+  const offset = (date.getDay() + 6) % 7; // pazartesi 0 … pazar 6
+  date.setDate(date.getDate() - offset);
+  return date;
+}
+
+const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** Pazartesi–pazar aralığı: "9–15 Kasım 2026", ay/yıl değişiyorsa "27 Ekim – 2 Kasım 2026". */
+export function weekLabel(monday: Date): string {
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const m1 = MONTH_NAMES[monday.getMonth()];
+  const m2 = MONTH_NAMES[sunday.getMonth()];
+  if (monday.getFullYear() !== sunday.getFullYear()) {
+    return `${monday.getDate()} ${m1} ${monday.getFullYear()} – ${sunday.getDate()} ${m2} ${sunday.getFullYear()}`;
+  }
+  if (m1 !== m2) return `${monday.getDate()} ${m1} – ${sunday.getDate()} ${m2} ${sunday.getFullYear()}`;
+  return `${monday.getDate()}–${sunday.getDate()} ${m1} ${sunday.getFullYear()}`;
+}
+
+/**
+ * Listeyi haftalara (pazartesi–pazar) böler; her haftanın önüne başlık satırı ekler. Bu hafta ve geçen hafta
+ * başlıkta belirtilir. `month` alanı haftanın pazartesisidir ("2026-11-09").
+ */
+export function groupByWeek<T>(items: readonly T[], date: (item: T) => string | undefined | null, key: (item: T) => string, today = new Date()): MonthRow<T>[] {
+  const groups = new Map<string, { monday: Date | null; items: T[] }>();
+  for (const item of items) {
+    const value = date(item);
+    const monday = value ? weekStart(value) : null;
+    const k = monday ? isoDay(monday) : '';
+    let g = groups.get(k);
+    if (!g) groups.set(k, (g = { monday, items: [] }));
+    g.items.push(item);
+  }
+  const thisWeek = isoDay(weekStart(isoDay(today)));
+  const lastWeekDate = weekStart(isoDay(today));
+  lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+  const lastWeek = isoDay(lastWeekDate);
+
+  const rows: MonthRow<T>[] = [];
+  for (const [k, g] of groups) {
+    const range = g.monday ? weekLabel(g.monday) : 'Tarihsiz';
+    const label = k === thisWeek ? `Bu hafta · ${range}` : k === lastWeek ? `Geçen hafta · ${range}` : range;
+    rows.push({ kind: 'month', key: `week-${k}`, month: k, label, items: g.items });
+    g.items.forEach((item, i) => rows.push({ kind: 'item', key: key(item), item, first: i === 0, last: i === g.items.length - 1 }));
+  }
+  return rows;
+}

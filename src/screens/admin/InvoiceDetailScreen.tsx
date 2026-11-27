@@ -7,6 +7,7 @@ import { InvoicePreview } from '@/components/invoices/InvoicePreview';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
 import { Button, Card, EmptyState, InfoRow, Input, NavHeader, Screen, ScrollContent, Section, Sheet, Text } from '@/components/ui';
 import { useAsyncAction } from '@/hooks/useAsyncAction';
+import { useSmsCodeAutofill } from '@/hooks/useSmsCodeAutofill';
 import { useCustomer, useInvoice, useJobs } from '@/hooks/useData';
 import { routes } from '@/navigation/routes';
 import { invoiceService, reportService } from '@/services';
@@ -40,6 +41,8 @@ export default function InvoiceDetailScreen() {
   /** GİB portalı imza SMS'i: kod istendiğinde dolar. */
   const [challenge, setChallenge] = useState<{ operationId: string; maskedPhone?: string } | null>(null);
   const [smsCode, setSmsCode] = useState('');
+  // Android: GİB SMS'i gelince onay penceresi çıkar, kod alana yazılır. iOS: kod klavyenin üstünde önerilir.
+  useSmsCodeAutofill(challenge?.operationId ?? null, setSmsCode);
   /** Hazırlanan PDF: önce önizlenir, sonra paylaşılır. */
   const [pdf, setPdf] = useState<PdfFile | null>(null);
   /** Elle fatura yükleme: başka yerde kesilen faturanın PDF'i. */
@@ -375,6 +378,8 @@ export default function InvoiceDetailScreen() {
             autoCorrect={false}
             autoComplete="sms-otp"
             textContentType="oneTimeCode"
+            // iOS kodu yalnızca klavye açıkken önerir: pencere açılınca alan odaklanır.
+            autoFocus
             maxLength={10}
             hint="İmza mali işlem oluşturur: fatura kesilir ve müşteriye e-postası gönderilir."
           />

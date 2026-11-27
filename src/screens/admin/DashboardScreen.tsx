@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   revenue: { gap: spacing.xs, paddingTop: spacing.xs },
   periodRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   revenueLoading: { alignSelf: "flex-start", height: 38 },
-  sep: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderStrong, marginLeft: 64 },
+  sep: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginLeft: 64 },
   tabular: { fontVariant: ["tabular-nums"] },
   amountRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   body: { padding: spacing.lg, gap: spacing.xxl },
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   driverBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderStrong,
+    borderBottomColor: colors.border,
   },
   listCard: { paddingVertical: spacing.xs },
 });

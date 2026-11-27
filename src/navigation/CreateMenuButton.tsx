@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   fab: {
     width: 48,
     height: 48,
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
     backgroundColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
@@ -108,9 +108,9 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 10, paddingVertical: 10, borderRadius: radius.md },
   itemPressed: { backgroundColor: colors.background },
   itemIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',

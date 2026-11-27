@@ -25,7 +25,7 @@ export interface ButtonProps {
 
 const V: Record<Variant, { bg: string; fg: string; border: string; pressed: string }> = {
   primary: { bg: colors.ink, fg: colors.textInverse, border: colors.ink, pressed: colors.inkPressed },
-  secondary: { bg: colors.surface, fg: colors.text, border: colors.borderStrong, pressed: colors.surfaceSunken },
+  secondary: { bg: colors.surface, fg: colors.text, border: colors.border, pressed: colors.surfaceSunken },
   ghost: { bg: 'transparent', fg: colors.text, border: 'transparent', pressed: colors.surfaceSunken },
   danger: { bg: colors.surface, fg: colors.danger, border: colors.dangerBorder, pressed: colors.dangerSoft },
   /** Geri alınması zor işlemlerin son onayı (ör. iş silme). Yalnızca onay ekranlarında kullanılır. */
@@ -88,7 +88,7 @@ export const Button = memo(function Button({
 });
 
 const styles = StyleSheet.create({
-  base: { borderRadius: radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  base: { borderRadius: radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   full: { alignSelf: 'stretch' },
   disabled: { opacity: 0.45 },

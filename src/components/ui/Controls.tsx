@@ -91,9 +91,9 @@ export const Avatar = memo(function Avatar({ name, size = 40, dark }: { name: st
 });
 
 const styles = StyleSheet.create({
-  segment: { flexDirection: 'row', backgroundColor: colors.surfaceSunken, borderRadius: radius.md, padding: 3 },
-  segmentDark: { backgroundColor: colors.inkRaised, borderWidth: 1, borderColor: colors.inkLine },
-  segmentItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: radius.sm + 1, paddingHorizontal: spacing.xs },
+  segment: { flexDirection: 'row', backgroundColor: colors.surfaceSunken, borderRadius: radius.pill, padding: 4 },
+  segmentDark: { backgroundColor: colors.inkRaised },
+  segmentItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: radius.pill, paddingHorizontal: spacing.xs },
   segmentActive: { backgroundColor: colors.surface, shadowColor: colors.ink, shadowOpacity: 0.06, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
   segmentActiveDark: { backgroundColor: colors.surface },
   chip: {
@@ -113,14 +113,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     height: 46,
-    paddingHorizontal: spacing.md + 2,
-    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  searchDark: { backgroundColor: colors.inkRaised, borderColor: colors.inkLine },
+  searchDark: { backgroundColor: colors.inkRaised, borderColor: colors.inkRaised },
   searchInput: { flex: 1, ...typography.body, color: colors.text, paddingVertical: 0 },
   avatar: { backgroundColor: colors.surfaceSunken, alignItems: 'center', justifyContent: 'center' },
-  avatarDark: { backgroundColor: colors.inkRaised, borderWidth: 1, borderColor: colors.inkLine },
+  avatarDark: { backgroundColor: colors.inkRaised },
 });

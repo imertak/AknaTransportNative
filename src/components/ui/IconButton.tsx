@@ -24,7 +24,7 @@ export const IconButton = memo(function IconButton({ icon: Icon, onPress, label,
       accessibilityLabel={label}
       style={(pressed) => [
         styles.base,
-        { width: size, height: size },
+        { width: size, height: size, borderRadius: size / 2 },
         tone === 'light' && styles.light,
         dark && styles.dark,
         pressed && { opacity: 0.7 },
@@ -36,7 +36,7 @@ export const IconButton = memo(function IconButton({ icon: Icon, onPress, label,
 });
 
 const styles = StyleSheet.create({
-  base: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  base: { borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   light: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  dark: { backgroundColor: colors.inkRaised, borderWidth: 1, borderColor: colors.inkLine },
+  dark: { backgroundColor: colors.inkRaised },
 });

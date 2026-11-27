@@ -13,8 +13,8 @@ interface FloatingTabBarProps extends BottomTabBarProps {
 }
 
 /**
- * Kenarlardan boşluklu, köşeleri hafifçe yuvarlatılmış beyaz alt menü. Seçili sekme açık gri bir
- * zemin üzerinde siyah ikon ve yazıyla gösterilir.
+ * Kenarlardan boşluklu, hap biçimli beyaz yüzen alt menü. Seçili sekme koyu bir hap zemin üzerinde
+ * beyaz ikon ve yazıyla gösterilir.
  */
 export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, custom }: FloatingTabBarProps) {
   const bottom = useBottomInset();
@@ -33,7 +33,7 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, cus
 
           const { options } = descriptors[route.key];
           const focused = index === state.index;
-          const color = focused ? colors.text : colors.textTertiary;
+          const color = focused ? colors.textInverse : colors.textTertiary;
           const label = typeof options.title === 'string' ? options.title : route.name;
 
           const onPress = () => {
@@ -50,7 +50,7 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, cus
               role="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
-              style={styles.item}
+              style={[styles.item, focused && styles.itemActive]}
             >
               <View style={[styles.pill, focused && styles.pillActive]}>
                 {options.tabBarIcon?.({ focused, color, size: 22 })}
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: radius.xl,
+    borderRadius: radius.pill,
     padding: 6,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
@@ -87,14 +87,17 @@ const styles = StyleSheet.create({
     }),
   },
   item: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  /** Seçili sekme biraz daha geniş: hap zeminin köşeleri yazıyı kesmesin. */
+  itemActive: { flex: 1.15 },
   pill: {
     alignSelf: 'stretch',
     alignItems: 'center',
     gap: 3,
     paddingVertical: 8,
+    paddingHorizontal: 2,
     marginHorizontal: 2,
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
   },
-  pillActive: { backgroundColor: colors.background },
+  pillActive: { backgroundColor: colors.ink },
   label: { fontSize: 11, fontWeight: '600' },
 });

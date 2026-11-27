@@ -90,5 +90,5 @@ const styles = StyleSheet.create({
   },
   section: { gap: spacing.sm + 2 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xs, minHeight: 20 },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderStrong },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
 });

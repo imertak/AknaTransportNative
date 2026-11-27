@@ -68,7 +68,7 @@ export const ListItem = memo(function ListItem({ icon: Icon, title, subtitle, on
 
 const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
-  infoBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderStrong },
+  infoBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   tile: {
     flex: 1,
     minWidth: 140,
@@ -82,5 +82,5 @@ const styles = StyleSheet.create({
   tileEmphasis: { backgroundColor: colors.ink, borderColor: colors.ink },
   tileEmphasisValue: { color: colors.textInverse },
   listItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2 },
-  listIcon: { width: 36, height: 36, borderRadius: radius.sm + 2, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
+  listIcon: { width: 38, height: 38, borderRadius: radius.pill, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
 });

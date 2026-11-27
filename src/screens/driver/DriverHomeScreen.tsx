@@ -108,6 +108,6 @@ function Stat({ label, value }: { label: string; value: number }) {
 const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', gap: spacing.sm },
   stats: { flexDirection: 'row', gap: spacing.sm },
-  stat: { flex: 1, backgroundColor: colors.inkRaised, borderWidth: 1, borderColor: colors.inkLine, borderRadius: radius.md, padding: spacing.md, gap: 2 },
+  stat: { flex: 1, backgroundColor: colors.inkRaised, borderRadius: radius.lg, padding: spacing.lg, gap: 2 },
   body: { padding: spacing.lg, gap: spacing.xxl },
 });
